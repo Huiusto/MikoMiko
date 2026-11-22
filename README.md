@@ -6,7 +6,7 @@
 
 左侧竖排导航（首页 / 视频 / 动态 / 我的，左下设置），浅色卡片流。
 
-![首页](docs/shots/Home.png)
+![首页](docs/shots/Home-013.png)
 
 ## 功能
 
@@ -119,6 +119,9 @@ MikoMiko/
 - `bbs-api-static.miyoushe.com/apihub/wapi/webHome` —— 首页推荐流
 - `bbs-api.miyoushe.com/post/wapi/getForumPostList` —— 板块帖子
 - `bbs-api.miyoushe.com/post/wapi/getPostFull` —— 帖子详情、视频直链
+- `bbs-api.miyoushe.com/post/wapi/searchPosts` —— 全站搜索（首页搜索）
+- `bbs-api.miyoushe.com/post/wapi/getPostReplies` —— 评论与楼中楼
+- `bbs-api.miyoushe.com/post/wapi/releaseReply` —— 发表评论 / 回复（需登录）
 - `bbs-api.miyoushe.com/user/wapi/getUserFullInfo` —— 用户信息
 
 本项目与米哈游 / 米游社官方无任何关联，接口可能随时变更。
