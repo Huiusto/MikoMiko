@@ -13,6 +13,9 @@ public sealed class UserProfile
     public string Likes { get; set; } = "1.2万";
     public string Views { get; set; } = "8.6万";
     public string Uid { get; set; } = string.Empty;
+    public string IpRegion { get; set; } = "未知";
+    public string Posts { get; set; } = "0";
 
     public string LevelText => $"Lv.{Level}";
+    public string IpText => string.IsNullOrWhiteSpace(IpRegion) ? "IP 未知" : $"IP {IpRegion}";
 }

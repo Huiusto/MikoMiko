@@ -37,6 +37,29 @@ public sealed class MiyousheApi
 
     public string Quality { get; set; }
 
+    /// <summary>作者粉丝数（公开接口，无需 Cookie）：achieve.followed_cnt。</summary>
+    public async Task<string> GetAuthorFansAsync(string uid, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return "";
+        try
+        {
+            using var response = await _http.GetAsync(
+                $"https://bbs-api.miyoushe.com/user/wapi/getUserFullInfo?uid={Uri.EscapeDataString(uid)}", ct);
+            if (!response.IsSuccessStatusCode) return "";
+            using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            var root = document.RootElement;
+            if (root.TryGetProperty("retcode", out var code) && code.GetInt32() != 0) return "";
+            var info = root.GetProperty("data").GetProperty("user_info");
+            if (!info.TryGetProperty("achieve", out var achieve)) return "";
+            var value = Str(achieve, "followed_cnt");
+            return FormatCount(int.TryParse(value, out var number) ? number : 0);
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
     // ---------------------------------------------------------------- 账号操作（需 Cookie）
 
     public bool HasCookie => !string.IsNullOrWhiteSpace(_cookie);
@@ -303,6 +326,16 @@ public sealed class MiyousheApi
 
         detail.Images.AddRange(images);
 
+        // 0.1.4：按官方 structured_content 的原始顺序生成正文块（文本 / 图片 / 视频混排）
+        var blocks = ParseStructuredBlocks(content);
+        if (blocks.Count > 0)
+        {
+            detail.Blocks.AddRange(blocks);
+            var body = string.Join("\n", blocks.Where(b => b.IsText && !string.IsNullOrWhiteSpace(b.Text))
+                .Select(b => b.Text));
+            if (!string.IsNullOrWhiteSpace(body)) detail.Body = body;
+        }
+
         var vodList = Obj(post, "vod_list");
         if (Items(vodList).Any())
         {
@@ -414,6 +447,7 @@ public sealed class MiyousheApi
             Summary = Str(post, "content"),
             Cover = CoverOf(element) ?? Str(post, "cover"),
             Author = Str(user, "nickname"),
+            AuthorUid = Str(user, "uid"),
             AuthorAvatar = Str(user, "avatar_url"),
             TimeText = RelativeTime(Num(post, "created_at")),
             ViewText = FormatCount(Num(stat, "view_num")),
@@ -578,6 +612,64 @@ public sealed class MiyousheApi
         if (diff.TotalDays < 1) return $"{(int)diff.TotalHours} 小时前";
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} 天前";
         return time.ToString("yyyy-MM-dd");
+    }
+
+    /// <summary>官方 structured_content（Quill delta）：按顺序拆成文本 / 图片 / 视频块。</summary>
+    private List<PostBlock> ParseStructuredBlocks(JsonElement? contentElement)
+    {
+        var result = new List<PostBlock>();
+        if (contentElement is null) return result;
+        var raw = Str(contentElement.Value, "structured_content");
+        if (string.IsNullOrWhiteSpace(raw)) return result;
+
+        var trimmed = raw.Trim();
+        if (!trimmed.StartsWith("[") || !trimmed.EndsWith("]")) return result;
+
+        try
+        {
+            using var document = JsonDocument.Parse(trimmed);
+            if (document.RootElement.ValueKind != JsonValueKind.Array) return result;
+            foreach (var op in document.RootElement.EnumerateArray())
+            {
+                if (!op.TryGetProperty("insert", out var insert)) continue;
+                if (insert.ValueKind == JsonValueKind.String)
+                {
+                    var text = insert.GetString() ?? string.Empty;
+                    foreach (var line in text.Split('\n'))
+                    {
+                        var clean = line.Trim();
+                        if (clean.Length == 0) continue;
+                        result.Add(new PostBlock { Kind = "text", Text = clean });
+                    }
+                }
+                else if (insert.ValueKind == JsonValueKind.Object)
+                {
+                    var image = Str(insert, "image");
+                    if (!string.IsNullOrEmpty(image))
+                    {
+                        result.Add(new PostBlock { Kind = "image", Url = image });
+                        continue;
+                    }
+
+                    if (insert.TryGetProperty("vod", out var vod) && vod.ValueKind == JsonValueKind.Object)
+                    {
+                        result.Add(new PostBlock
+                        {
+                            Kind = "video",
+                            Url = PickResolution(Obj(vod, "resolutions")),
+                            Cover = Str(vod, "cover"),
+                            DurationText = DurationText(Num(vod, "duration")),
+                        });
+                    }
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // 结构化正文异常时退回纯文本
+        }
+
+        return result;
     }
 
     /// <summary>正文：图片帖的 content 是一段 JSON（{"imgs":[...],"text":"..."}），需要取 text 并去掉标记。</summary>

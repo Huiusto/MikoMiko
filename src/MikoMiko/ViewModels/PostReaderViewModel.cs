@@ -45,6 +45,19 @@ public sealed partial class PostReaderViewModel : ObservableObject
 
     public ObservableCollection<string> Images { get; }
     public ObservableCollection<CommentItem> Comments { get; } = new();
+    public ObservableCollection<PostBlock> Blocks { get; } = new();
+
+    [ObservableProperty] private bool _isBodyExpanded;
+    [ObservableProperty] private double _bodyMaxHeight = 460;
+    [ObservableProperty] private bool _isLongBody;
+
+    [RelayCommand]
+    private void ToggleBody()
+    {
+        IsBodyExpanded = !IsBodyExpanded;
+        BodyMaxHeight = IsBodyExpanded ? 20000 : 460;
+        OnPropertyChanged(nameof(BodyToggleText));
+    }
 
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private string _author = string.Empty;
@@ -86,6 +99,7 @@ public sealed partial class PostReaderViewModel : ObservableObject
 
     public bool HasImages => Images.Count > 0;
     public bool HasBody => !string.IsNullOrWhiteSpace(Body);
+    public string BodyToggleText => IsBodyExpanded ? "收起" : "展开全文";
     public bool CanSync => !string.IsNullOrWhiteSpace(_settings.Cookie);
     public bool HasReplyTarget => ReplyTargetId != "0" && !string.IsNullOrWhiteSpace(ReplyTargetId);
 
@@ -124,8 +138,30 @@ public sealed partial class PostReaderViewModel : ObservableObject
                         Images.Clear();
                         foreach (var image in detail.Images) Images.Add(image);
                     }
+
+                    if (detail.Blocks.Count > 0)
+                    {
+                        Blocks.Clear();
+                        foreach (var block in detail.Blocks) Blocks.Add(block);
+                    }
                 }
             }
+
+            if (Blocks.Count == 0)
+            {
+                foreach (var line in Body.Split('\n'))
+                {
+                    if (!string.IsNullOrWhiteSpace(line)) Blocks.Add(new PostBlock { Kind = "text", Text = line.Trim() });
+                }
+                foreach (var image in Images)
+                {
+                    Blocks.Add(new PostBlock { Kind = "image", Url = image });
+                }
+            }
+
+            var textLength = Blocks.Where(b => b.IsText).Sum(b => b.Text.Length);
+            IsLongBody = textLength > 600;
+            BodyMaxHeight = IsLongBody ? 460 : 20000;
 
             OnPropertyChanged(nameof(HasImages));
             OnPropertyChanged(nameof(HasBody));

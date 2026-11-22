@@ -10,6 +10,8 @@ public sealed class FeedItem
     public string Summary { get; set; } = string.Empty;
     public string Cover { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
+    public string AuthorUid { get; set; } = string.Empty;
+    public string AuthorFansText { get; set; } = string.Empty;
     public string AuthorAvatar { get; set; } = string.Empty;
     public string TimeText { get; set; } = string.Empty;
     public string ViewText { get; set; } = string.Empty;
@@ -40,6 +42,11 @@ public sealed class FeedItem
     public string VideoUrl { get; set; } = string.Empty;
     public string Bvid { get; set; } = string.Empty;
     public string WebUrl { get; set; } = string.Empty;
+
+    /// <summary>播放数前展示：作者关注数（粉丝）· 播放数。</summary>
+    public string AudienceText => string.IsNullOrEmpty(AuthorFansText)
+        ? $"{ViewText} 播放"
+        : $"{AuthorFansText} 关注 · {ViewText} 播放";
 
     public List<string> Images { get; set; } = new();
     public string Body { get; set; } = string.Empty;

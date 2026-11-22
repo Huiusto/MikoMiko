@@ -1,6 +1,7 @@
 using MikoMiko.Models;
 using MikoMiko.Services;
 using MikoMiko.ViewModels;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -22,7 +23,11 @@ public partial class VideoView : UserControl
     private bool _playRequested;
     private bool _updatePositionLogged;
     private string? _remoteUrl;
+    private string? _proxyUrl;
     private bool _retriedRemote;
+    private double _pendingSeekSeconds = -1;
+    private readonly DanmakuService _danmaku = new();
+    private double _lastDanmakuSecond = -10;
 
     public VideoView(VideoViewModel viewModel, AppSettings settings)
     {
@@ -57,7 +62,13 @@ public partial class VideoView : UserControl
     {
         _vm.IsPlaying = false;
         _positionTimer.Stop();
-        try { Media.Pause(); } catch { }
+        try
+        {
+            Media.Pause();
+            Media.IsMuted = true;
+            Media.Volume = 0;
+        }
+        catch { }
         UpdatePlayIcon();
     }
 
@@ -98,7 +109,10 @@ public partial class VideoView : UserControl
                 else
                 {
                     Media.Pause();
-                    CoverHost.Visibility = Visibility.Visible;
+                    // 0.1.4：暂停必须同时静音并把音量为 0，修复「画面停住但声音还在播」；
+                    // 保留当前画面帧，不再盖回封面。
+                    Media.IsMuted = true;
+                    Media.Volume = 0;
                 }
                 UpdatePlayIcon();
                 break;
@@ -120,6 +134,8 @@ public partial class VideoView : UserControl
     {
         Media.Pause();
         Media.Source = null;
+        VideoStreamProxy.Instance.Release(_proxyUrl);
+        _proxyUrl = null;
         _preparedPath = null;
         CoverHost.Visibility = Visibility.Visible;
         ProgressSlider.Value = 0;
@@ -128,6 +144,8 @@ public partial class VideoView : UserControl
         _updatingSlider = false;
         if (PlayedBar is not null) PlayedBar.Width = 0;
         if (BufferBar is not null) BufferBar.Width = 0;
+        DanmakuHost.Children.Clear();
+        _lastDanmakuSecond = -10;
 
         var local = _vm.Selected?.VideoUrl;
         if (string.IsNullOrWhiteSpace(local))
@@ -141,23 +159,35 @@ public partial class VideoView : UserControl
 
         // 已经缓存过就直接本地播放，最稳
         var cached = VideoCacheService.TryGetCached(url);
-        if (cached is not null)
+        if (cached is not null && File.Exists(cached))
         {
             ApplySource(cached);
             if (_vm.IsPlaying || _playRequested) PlayMedia();
             return;
         }
 
-        // 未缓存时先直接把在线地址交给 MediaElement，边下边播；失败再落盘兜底
+        // 0.1.4：通过本机 Range 代理边缓冲边播，播放器发多少字节请求就取多少，
+        // 不再等整段落盘，拖动进度条也会触发新的 Range 请求。
         _remoteUrl = url;
         _preparedPath = null;
-        Media.Source = new Uri(url, UriKind.Absolute);
-        MediaLog("remote source " + url[..Math.Min(80, url.Length)]);
+        var proxy = VideoStreamProxy.Instance.GetProxyUrl(url);
+        if (proxy is null)
+        {
+            Media.Source = new Uri(url, UriKind.Absolute);
+        }
+        else
+        {
+            _proxyUrl = proxy;
+            Media.Source = new Uri(proxy, UriKind.Absolute);
+        }
+        MediaLog("proxy source " + (_proxyUrl ?? url));
         if (_vm.IsPlaying || _playRequested) PlayMedia();
     }
 
     private void ApplySource(string path)
     {
+        VideoStreamProxy.Instance.Release(_proxyUrl);
+        _proxyUrl = null;
         _remoteUrl = null;
         _preparedPath = path;
         Media.Source = new Uri(path, UriKind.Absolute);
@@ -211,8 +241,10 @@ public partial class VideoView : UserControl
         _playRequested = false;
         _vm.StatusText = string.Empty;
         _updatePositionLogged = false;
+        Media.IsMuted = _vm.IsMuted;
+        Media.Volume = Math.Clamp(_vm.Volume / 100.0, 0, 1);
         Media.Play();
-        MediaLog($"play called pos={Media.Position} state={Media.LoadedBehavior}");
+        CoverHost.Visibility = Visibility.Collapsed;
         Media.SpeedRatio = _speed;
         Media.Volume = Math.Clamp(_vm.Volume / 100.0, 0, 1);
         Media.IsMuted = _vm.IsMuted;
@@ -244,6 +276,19 @@ public partial class VideoView : UserControl
         if (Media.NaturalDuration.HasTimeSpan)
         {
             ProgressSlider.Maximum = Math.Max(1, Media.NaturalDuration.TimeSpan.TotalSeconds);
+        }
+        if (_pendingSeekSeconds >= 0)
+        {
+            try
+            {
+                Media.Position = TimeSpan.FromSeconds(Math.Min(_pendingSeekSeconds,
+                    Media.NaturalDuration.HasTimeSpan ? Media.NaturalDuration.TimeSpan.TotalSeconds : _pendingSeekSeconds));
+            }
+            catch
+            {
+                // 忽略
+            }
+            _pendingSeekSeconds = -1;
         }
 
         UpdatePosition();
@@ -322,6 +367,20 @@ public partial class VideoView : UserControl
         _updatingSlider = false;
         UpdateProgressBars();
         UpdateTimeText();
+
+        // 弹幕：按播放时间从本地库捞取当前秒附近的弹幕并滚动展示
+        if (_vm.ShowDanmaku && _vm.Selected is not null)
+        {
+            var second = Math.Floor(Media.Position.TotalSeconds);
+            if (Math.Abs(second - _lastDanmakuSecond) >= 1)
+            {
+                _lastDanmakuSecond = second;
+                foreach (var entry in _danmaku.Get(_vm.Selected.PostId, second, 1))
+                {
+                    ShowDanmakuText(entry.Text, entry.Author);
+                }
+            }
+        }
     }
 
     /// <summary>白色=未加载，灰色=已缓冲，米蓝=已播放。</summary>
@@ -416,10 +475,15 @@ public partial class VideoView : UserControl
 
     private void Danmaku_Click(object sender, RoutedEventArgs e) => _vm.ShowDanmaku = !_vm.ShowDanmaku;
 
-    private void Auto_Click(object sender, RoutedEventArgs e)
+    private async void Auto_Click(object sender, RoutedEventArgs e)
     {
+        // 0.1.4：真正切换清晰度并重新取直链，保持当前播放位置。
         _autoPlay = !_autoPlay;
-        if (_autoPlay && Media.Source is not null) Media.Play();
+        var wasPlaying = _vm.IsPlaying;
+        var position = Media.Position.TotalSeconds;
+        _pendingSeekSeconds = position;
+        await _vm.ChangeQualityAsync();
+        if (wasPlaying) _vm.IsPlaying = true;
     }
 
     private void FullScreen_Click(object sender, RoutedEventArgs e)
@@ -429,5 +493,56 @@ public partial class VideoView : UserControl
         window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
-    private void SendDanmaku_Click(object sender, RoutedEventArgs e) => DanmakuInput.Clear();
+    private void SendDanmaku_Click(object sender, RoutedEventArgs e)
+    {
+        var text = DanmakuInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(text) || _vm.Selected is null) return;
+
+        var entry = new DanmakuService.Entry
+        {
+            PostId = _vm.Selected.PostId,
+            Text = text,
+            Time = Media.Position.TotalSeconds,
+            Author = string.IsNullOrWhiteSpace(_settings.Nickname) ? "我" : _settings.Nickname,
+            CreatedAt = DateTimeOffset.Now.ToUnixTimeSeconds(),
+        };
+        _danmaku.Add(entry);
+        ShowDanmakuText(entry.Text, entry.Author);
+        DanmakuInput.Clear();
+    }
+
+    private void ShowDanmakuText(string text, string author)
+    {
+        if (DanmakuHost is null || string.IsNullOrWhiteSpace(text)) return;
+
+        var block = new TextBlock
+        {
+            Text = author.Length > 0 ? $"{author}：{text}" : text,
+            Foreground = System.Windows.Media.Brushes.White,
+            FontSize = 15,
+            FontWeight = FontWeights.SemiBold,
+            Effect = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                Color = System.Windows.Media.Colors.Black,
+                ShadowDepth = 1,
+                BlurRadius = 3,
+                Opacity = 0.85,
+            },
+        };
+        DanmakuHost.Children.Add(block);
+        block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        var top = 12 + Random.Shared.Next(0, 220);
+        Canvas.SetTop(block, top);
+        Canvas.SetLeft(block, DanmakuHost.ActualWidth > 0 ? DanmakuHost.ActualWidth : 900);
+
+        var animation = new System.Windows.Media.Animation.DoubleAnimation
+        {
+            From = DanmakuHost.ActualWidth > 0 ? DanmakuHost.ActualWidth : 900,
+            To = -block.DesiredSize.Width - 20,
+            Duration = TimeSpan.FromSeconds(8),
+        };
+        animation.Completed += (_, _) => DanmakuHost.Children.Remove(block);
+        block.BeginAnimation(Canvas.LeftProperty, animation);
+    }
 }

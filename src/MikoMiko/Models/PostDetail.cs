@@ -15,6 +15,9 @@ public sealed class PostDetail
 
     public List<string> Images { get; set; } = new();
 
+    /// <summary>按官方正文顺序排列的混排块：文本 / 图片 / 视频。</summary>
+    public List<PostBlock> Blocks { get; set; } = new();
+
     public long LikeCount { get; set; }
     public long ReplyCount { get; set; }
     public long ViewCount { get; set; }
@@ -31,6 +34,20 @@ public sealed class PostDetail
     public string ReplyText => Counts.Format(ReplyCount);
     public string ViewText => Counts.Format(ViewCount);
     public string FavoriteText => Counts.Format(FavoriteCount);
+}
+
+/// <summary>帖子正文块（保持官方 structured_content 的顺序）。</summary>
+public sealed class PostBlock
+{
+    public string Kind { get; set; } = "text"; // text / image / video
+    public string Text { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+    public string Cover { get; set; } = string.Empty;
+    public string DurationText { get; set; } = string.Empty;
+
+    public bool IsText => Kind == "text";
+    public bool IsImage => Kind == "image";
+    public bool IsVideo => Kind == "video";
 }
 
 /// <summary>评论（含楼中楼）。</summary>

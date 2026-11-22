@@ -78,7 +78,7 @@
                                                Foreground="White" FontSize="11.5" />
                                 </Border>
                             </StackPanel>
-                            <TextBlock Text="{Binding Selected.ViewText, StringFormat={}{0} 播放}" Foreground="#B3FFFFFF" FontSize="11.5"
+                            <TextBlock Text="{Binding Selected.AudienceText}" Foreground="#B3FFFFFF" FontSize="11.5"
                                        Margin="0,3,0,0" />
                         </StackPanel>
                     </StackPanel>
@@ -106,6 +106,13 @@
                         <TextBlock Text="{Binding [Video.Favorite], Source={x:Static loc:Loc.Instance}}"
                                    Foreground="#E6FFFFFF" FontSize="10.5" HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
+                    <StackPanel HorizontalAlignment="Center" Margin="0,0,0,14">
+                        <Button Command="{Binding ToggleCommentsCommand}" Style="{StaticResource CircleActionButton}" Width="36" Height="36">
+                            <Path Data="M1 2 H14 V10 H7 L3 13 V10 H1 Z"
+                                  Stroke="White" StrokeThickness="1.2" Width="15" Height="14" Stretch="Uniform" />
+                        </Button>
+                        <TextBlock Text="评论" Foreground="#E6FFFFFF" FontSize="10.5" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                    </StackPanel>
                     <StackPanel HorizontalAlignment="Center">
                         <Button Command="{Binding OpenInBrowserCommand}" Style="{StaticResource CircleActionButton}" Width="36" Height="36">
                             <Path Data="M1 10 L6 5 M6 5 H2 M6 5 V9 M8 8 V12 H1 V2 H5 M12 8 V12"
@@ -116,11 +123,11 @@
                     </StackPanel>
                 </StackPanel>
 
-                <!-- 序号（不显示滑动提示文字） -->
-                <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,16,0,0"
-                        Background="#33000000" CornerRadius="12" Padding="12,5" IsHitTestVisible="False">
-                    <TextBlock Text="{Binding IndexText}" Foreground="#B3FFFFFF" FontSize="11" />
-                </Border>
+                <!-- 0.1.4：不再显示「第 1/12 个」序号 -->
+
+                <!-- 弹幕层 -->
+                <Canvas x:Name="DanmakuHost" Height="280" VerticalAlignment="Top" Margin="0,54,330,0"
+                        IsHitTestVisible="False" ClipToBounds="True" />
 
                 <!-- 返回封面（播放时显示） -->
                 <Button x:Name="ReturnCoverButton" HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -143,8 +150,34 @@
                             VerticalAlignment="Center" Background="#9A9A9A" CornerRadius="2" />
                     <Border x:Name="PlayedBar" Height="4" Width="0" HorizontalAlignment="Left"
                             VerticalAlignment="Center" Background="#4EA4DD" CornerRadius="2" />
-                    <Slider x:Name="ProgressSlider" Opacity="0" Height="16" Minimum="0" Maximum="1"
-                            ValueChanged="Progress_ValueChanged" />
+                    <Slider x:Name="ProgressSlider" Height="16" Minimum="0" Maximum="1" Background="Transparent"
+                            ValueChanged="Progress_ValueChanged">
+                        <Slider.Template>
+                            <ControlTemplate TargetType="{x:Type Slider}">
+                                <Grid Background="Transparent">
+                                    <Track x:Name="PART_Track">
+                                        <Track.DecreaseRepeatButton>
+                                            <RepeatButton Command="Slider.DecreaseLarge" Background="Transparent"
+                                                          BorderThickness="0" Focusable="False" />
+                                        </Track.DecreaseRepeatButton>
+                                        <Track.IncreaseRepeatButton>
+                                            <RepeatButton Command="Slider.IncreaseLarge" Background="Transparent"
+                                                          BorderThickness="0" Focusable="False" />
+                                        </Track.IncreaseRepeatButton>
+                                        <Track.Thumb>
+                                            <Thumb Width="13" Height="13" Cursor="Hand">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Ellipse Fill="#4EA4DD" Stroke="White" StrokeThickness="1.5" />
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Slider.Template>
+                    </Slider>
                 </Grid>
 
                 <!-- 底部控制栏 -->
@@ -198,8 +231,7 @@
 
                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}" Click="Auto_Click">
-                                <TextBlock Text="{Binding [Video.Auto], Source={x:Static loc:Loc.Instance}}"
-                                           Foreground="#E8FFFFFF" FontSize="12" />
+                                <TextBlock Text="{Binding QualityText}" Foreground="#E8FFFFFF" FontSize="12" />
                             </Button>
                             <Button x:Name="SpeedButton" Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
                                     Click="Speed_Click">
@@ -221,6 +253,70 @@
                                 <Path Data="M0 5 V0 H5 M8 0 H13 V5 M13 9 V14 H8 M5 14 H0 V9"
                                       Stroke="#E8FFFFFF" StrokeThickness="1.2" Width="13" Height="14" Stretch="Uniform" />
                             </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+                <!-- 评论区（右侧抽屉，同步该视频帖的米游社评论） -->
+                <Border Width="390" HorizontalAlignment="Right" Margin="0,0,0,54" Background="#F2181820"
+                        Visibility="{Binding IsCommentsOpen, Converter={StaticResource BoolToVis}}">
+                    <Grid Margin="16,12,16,14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <TextBlock Text="评论" Foreground="White" FontSize="15" FontWeight="SemiBold" />
+                            <Button HorizontalAlignment="Right" Cursor="Hand" Background="Transparent" BorderThickness="0"
+                                    Command="{Binding ToggleCommentsCommand}">
+                                <Path Data="M1 1 L11 11 M11 1 L1 11" Stroke="#CCFFFFFF" StrokeThickness="1.4"
+                                      Width="12" Height="12" Stretch="Uniform" />
+                            </Button>
+                        </Grid>
+
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Comments}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,0,0,14">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="26" Height="26" CornerRadius="13" ClipToBounds="True"
+                                                        Background="#33FFFFFF">
+                                                    <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
+                                                </Border>
+                                                <TextBlock Text="{Binding Author}" Foreground="#CCFFFFFF" FontSize="11.5"
+                                                           Margin="8,4,0,0" />
+                                                <TextBlock Text="{Binding IpRegion}" Foreground="#66FFFFFF" FontSize="10"
+                                                           Margin="6,5,0,0" />
+                                                <TextBlock Text="{Binding TimeText}" Foreground="#66FFFFFF" FontSize="10"
+                                                           Margin="6,5,0,0" />
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding Content}" Foreground="#EEFFFFFF" FontSize="12.5"
+                                                       TextWrapping="Wrap" Margin="34,5,0,0" />
+                                            <TextBlock Text="{Binding LikeText, StringFormat=赞 {0}}" Foreground="#66FFFFFF"
+                                                       FontSize="10" Margin="34,4,0,0" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <StackPanel Grid.Row="2" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding CommentStatus}" Foreground="#80FFFFFF" FontSize="10.5"
+                                       Margin="0,0,0,5" Visibility="{Binding CommentStatus, Converter={StaticResource NotEmptyToVis}}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox Text="{Binding CommentInput, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="34" Background="#26FFFFFF" Foreground="White" BorderThickness="0"
+                                         VerticalContentAlignment="Center" Padding="10,0" FontSize="12" />
+                                <Button Grid.Column="1" Content="发送" Height="34" Padding="16,0" Margin="8,0,0,0"
+                                        Background="#4EA4DD" Foreground="White" BorderThickness="0" Cursor="Hand"
+                                        Command="{Binding SendCommentCommand}" />
+                            </Grid>
                         </StackPanel>
                     </Grid>
                 </Border>

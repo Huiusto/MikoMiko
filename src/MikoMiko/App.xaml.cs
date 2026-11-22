@@ -2,6 +2,7 @@ using MikoMiko.Localization;
 using MikoMiko.Services;
 using MikoMiko.ViewModels;
 using System.IO;
+using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -11,6 +12,9 @@ namespace MikoMiko;
 
 public partial class App : Application
 {
+    private static Mutex? _instanceMutex;
+    private static EventWaitHandle? _activateEvent;
+
     public static SettingsService SettingsService { get; private set; } = null!;
     public static ContentService ContentService { get; private set; } = null!;
     public static ShellViewModel Shell { get; private set; } = null!;
@@ -18,6 +22,29 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // 单实例：同一台电脑只允许一个 MikoMiko 进程，避免两个进程同时写 settings.json /
+        // 登录态 / 弹幕库，造成数据互相覆盖。再次启动时把已有窗口唤到前台并退出。
+        _instanceMutex = new Mutex(true, @"Local\MikoMiko.SingleInstance", out var isFirst);
+        if (!isFirst)
+        {
+            try
+            {
+                _activateEvent = EventWaitHandle.OpenExisting(@"Local\MikoMiko.Activate");
+                _activateEvent.Set();
+            }
+            catch
+            {
+                // 已有实例还没建好事件时忽略
+            }
+
+            Shutdown();
+            Environment.Exit(0);
+            return;
+        }
+
+        _activateEvent = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\MikoMiko.Activate");
+        StartActivationListener();
 
         DispatcherUnhandledException += (_, args) =>
         {
@@ -52,6 +79,40 @@ public partial class App : Application
 #endif
     }
 
+    // ---------------------------------------------------------------- 单实例唤醒
+
+    private void StartActivationListener()
+    {
+        var thread = new Thread(() =>
+        {
+            while (true)
+            {
+                try
+                {
+                    if (!_activateEvent!.WaitOne()) continue;
+                }
+                catch
+                {
+                    return;
+                }
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    var window = MainWindow;
+                    if (window is null) return;
+                    if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+                    window.Show();
+                    window.Activate();
+                    window.Topmost = true;
+                    window.Topmost = false;
+                    window.Focus();
+                }));
+            }
+        })
+        { IsBackground = true, Name = "MikoMiko-Activate" };
+        thread.Start();
+    }
+
     // ---------------------------------------------------------------- 开发期截图（--shot 页面 路径）
     private void Log(string path, string message)
     {
@@ -83,7 +144,52 @@ public partial class App : Application
                 MainWindow!.Width = 1624;
                 MainWindow.Height = 1000;
                 Log(path, "resized");
-                Shell.Navigate(page is "Reader" or "ReaderComments" or "Search" ? "Home" : page == "VideoPlay" ? "Video" : (page == "SettingsBottom" || page == "SettingsChangelog") ? "Settings" : page, pushHistory: false);
+                var navPage = page is "Reader" or "ReaderComments" or "Search" ? "Home"
+                    : page == "VideoPlay" ? "Video"
+                    : page is "SettingsBottom" or "SettingsChangelog" ? "Settings"
+                    : page == "MineQr" ? "Mine"
+                    : page == "MineProfile" ? "Mine"
+                    : page;
+                Shell.Navigate(navPage, pushHistory: false);
+                if (page == "MineQr")
+                {
+                    Shell.MineViewModel.LoginCommand.Execute(null);
+                }
+                if (page == "MineProfile")
+                {
+                    // 仅开发期截图：用示例资料检查个人主页版式，不写入设置
+                    Shell.MineViewModel.IsLoggedIn = true;
+                    Shell.MineViewModel.Profile = new Models.UserProfile
+                    {
+                        IsLoggedIn = true,
+                        Nickname = "灰岁Huiusto",
+                        Avatar = "pack://application:,,,/Assets/icon.png",
+                        Level = 6,
+                        Signature = "想吃饭…",
+                        Uid = "310621322",
+                        IpRegion = "贵州",
+                        Fans = "21",
+                        Following = "87",
+                        Likes = "1万",
+                        Views = "42",
+                    };
+                    Shell.MineViewModel.Games.Clear();
+                    Shell.MineViewModel.Games.Add(new Models.GameAccount
+                    {
+                        GameName = "原神", Uid = "176516224", Server = "天空岛", Level = "60",
+                        LevelLabel = "冒险等级", Extra = "派蒙", ExtraLabel = "角色", AccentHex = "#4EA4DD", Badge = "已绑定",
+                    });
+                    Shell.MineViewModel.Games.Add(new Models.GameAccount
+                    {
+                        GameName = "崩坏：星穹铁道", Uid = "102634712", Server = "星穹列车", Level = "70",
+                        LevelLabel = "开拓等级", Extra = "穹", ExtraLabel = "角色", AccentHex = "#8B7BE8", Badge = "已绑定",
+                    });
+                    Shell.MineViewModel.Games.Add(new Models.GameAccount
+                    {
+                        GameName = "绝区零", Uid = "26341207", Server = "新艾利都", Level = "55",
+                        LevelLabel = "绳网等级", Extra = "哲", ExtraLabel = "角色", AccentHex = "#F5B94A", Badge = "已绑定",
+                    });
+                }
                 if (page == "Search")
                 {
                     Shell.SearchText = "原神";
@@ -121,7 +227,7 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" ? 12 : page is "Search" ? 5 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" ? 12 : page is "Search" or "MineQr" ? 5 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();

@@ -1,4 +1,4 @@
-﻿; MikoMiko 0.1.2 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
+﻿; MikoMiko 0.1.4 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
 Unicode true
 SetCompressor /SOLID lzma
 
@@ -6,10 +6,10 @@ SetCompressor /SOLID lzma
 !include "FileFunc.nsh"
 
 !define APP_NAME "MikoMiko"
-!define APP_VERSION "0.1.3"
+!define APP_VERSION "0.1.4"
 !define APP_EXE "MikoMiko.exe"
 !define APP_PUBLISHER "MikoMiko Contributors"
-!define APP_URL "https://github.com/MikoMiko/MikoMiko"
+!define APP_URL "https://github.com/Huiusto/MikoMiko"
 
 Name "${APP_NAME} ${APP_VERSION}"
 OutFile "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\dist\MikoMiko-Setup-${APP_VERSION}.exe"
@@ -17,7 +17,7 @@ InstallDir "$LOCALAPPDATA\Programs\MikoMiko"
 InstallDirRegKey HKCU "Software\MikoMiko" "InstallDir"
 RequestExecutionLevel user
 
-VIProductVersion "0.1.3.0"
+VIProductVersion "0.1.4.0"
 VIAddVersionKey /LANG=2052 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=2052 "CompanyName" "${APP_PUBLISHER}"
 VIAddVersionKey /LANG=2052 "FileDescription" "${APP_NAME} 安装程序"

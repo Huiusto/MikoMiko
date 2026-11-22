@@ -71,6 +71,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private Views.VideoView? _videoPage;
 
     public SettingsViewModel SettingsViewModel => _settingsVm;
+    public MineViewModel MineViewModel => _mine;
     public HomeViewModel Home => _home;
 
     // ---------------------------------------------------------------- 导航

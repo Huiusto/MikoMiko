@@ -81,6 +81,20 @@ public partial class PostReaderView : UserControl
         VideoPauseButton.Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>正文中内嵌视频：用系统浏览器打开原视频直链播放。</summary>
+    private void InlineVideo_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: string url } || string.IsNullOrWhiteSpace(url)) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch
+        {
+            _vm.BufferText = "视频打开失败";
+        }
+    }
+
     /// <summary>开发期截图用：滚到评论区。</summary>
     public void ScrollToComments()
     {
