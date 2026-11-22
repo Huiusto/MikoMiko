@@ -1,0 +1,567 @@
+<UserControl x:Class="MikoMiko.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:MikoMiko.Controls"
+             xmlns:loc="clr-namespace:MikoMiko.Localization"
+             xmlns:conv="clr-namespace:MikoMiko.Converters"
+             FontFamily="{DynamicResource Font.Ui}">
+
+    <UserControl.Resources>
+        <conv:StringEqualsToVisibilityConverter x:Key="IsSection" />
+        <conv:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis" />
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <Style x:Key="SettingsNavButton" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="8,7">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="Bar" Grid.Column="0" Width="3" Height="14" CornerRadius="2"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                                        Background="{DynamicResource Brush.Accent}" Visibility="Collapsed" />
+                                <ContentPresenter Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.CardHover}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SectionCard" TargetType="{x:Type Border}">
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="22,20" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+
+        <Style x:Key="SectionTitle" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontSize" Value="15.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+
+        <Style x:Key="RowLabel" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontSize" Value="13.5" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="RowHint" TargetType="{x:Type TextBlock}">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextTertiary}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource Brush.WindowBg}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="186" />
+        </Grid.ColumnDefinitions>
+
+        <ScrollViewer x:Name="ScrollHost" Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Padding="0,0,4,0">
+            <StackPanel x:Name="SectionsPanel" Margin="26,18,24,30">
+
+                <!-- 账号头部 -->
+                <Border Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="20,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Width="48" Height="48" CornerRadius="24" ClipToBounds="True"
+                                Background="{DynamicResource Brush.Card}">
+                            <Image controls:AsyncImage.Url="{Binding AccountAvatar}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding AccountName}" FontSize="16" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding AccountUid}" FontSize="12" Margin="0,4,0,0"
+                                       Foreground="{DynamicResource Brush.TextTertiary}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="{Binding [Mine.Bind], Source={x:Static loc:Loc.Instance}}"
+                                    Style="{StaticResource GhostButton}" Height="32" Padding="14,0"
+                                    Command="{Binding SwitchAccountCommand}" />
+                            <Button Content="{Binding [Mine.Logout], Source={x:Static loc:Loc.Instance}}"
+                                    Style="{StaticResource LinkButton}" Margin="14,0,0,0"
+                                    Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}"
+                                    Command="{Binding LogoutCommand}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- 常规设置 -->
+                <Border Style="{StaticResource SectionCard}" Margin="0,14,0,14" Tag="General">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.General], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding [S.ColorMode], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowLabel}" />
+                            <TextBlock Text="{Binding [S.ColorModeHint], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowHint}" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding ThemeOptions}" Margin="0,0,0,8">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
+                                            Command="{Binding DataContext.SelectThemeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,10">
+                            <TextBlock Text="{Binding [S.AccentColor], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowLabel}" />
+                            <TextBlock Text="{Binding [S.AccentHint], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowHint}" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding AccentOptions}" Margin="0,0,0,8">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Style="{StaticResource ChipButton}"
+                                            Command="{Binding DataContext.SelectAccentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="11" Height="11" Fill="{Binding Swatch}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Label}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,10">
+                            <TextBlock Text="{Binding [S.Font], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowLabel}" />
+                            <TextBlock Text="{Binding [S.FontHint], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowHint}" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding FontOptions}" Margin="0,0,0,8">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
+                                            Command="{Binding DataContext.SelectFontCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,10">
+                            <TextBlock Text="{Binding [S.Language], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowLabel}" />
+                            <TextBlock Text="{Binding [S.LanguageHint], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowHint}" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding LanguageOptions}" Margin="0,0,0,8">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
+                                            Command="{Binding DataContext.SelectLanguageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="{Binding [S.Startup], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowLabel}" Margin="0,14,0,10" />
+                        <CheckBox Content="{Binding [S.AutoStart], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoStart}" />
+                        <CheckBox Content="{Binding [S.StartHome], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.StartOnHome}" />
+                        <CheckBox Content="{Binding [S.RememberPage], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.RememberLastPage}" />
+
+                        <TextBlock Text="{Binding [S.CloseAction], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowLabel}" Margin="0,14,0,10" />
+                        <ItemsControl ItemsSource="{Binding CloseOptions}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
+                                            Command="{Binding DataContext.SelectCloseActionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 播放设置 -->
+                <Border Style="{StaticResource SectionCard}" Tag="Playback">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.Playback], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+
+                        <TextBlock Text="{Binding [S.Quality], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowLabel}" Margin="0,0,0,10" />
+                        <ItemsControl ItemsSource="{Binding QualityOptions}" Margin="0,0,0,10">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
+                                            Command="{Binding DataContext.SelectQualityCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <CheckBox Content="{Binding [S.AutoPlay], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoPlay}" />
+                        <CheckBox Content="{Binding [S.DanmakuOn], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.ShowDanmaku}" />
+                        <CheckBox Content="{Binding [S.MuteOn], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.Mute}" />
+                        <TextBlock Text="{Binding [S.PlaybackHint], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowHint}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 缓存管理 -->
+                <Border Style="{StaticResource SectionCard}" Tag="Cache">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.Cache], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding [S.CacheSize], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowLabel}" />
+                            <TextBlock Text="{Binding CacheSize}" FontSize="13.5" FontWeight="SemiBold"
+                                       VerticalAlignment="Center" Margin="6,0,0,0" />
+                            <Button Content="{Binding [Common.Refresh], Source={x:Static loc:Loc.Instance}}"
+                                    Style="{StaticResource LinkButton}" Margin="14,0,0,0"
+                                    Command="{Binding RefreshCacheSizeCommand}" />
+                        </StackPanel>
+
+                        <Button Content="{Binding [S.CacheClear], Source={x:Static loc:Loc.Instance}}"
+                                Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
+                                HorizontalAlignment="Left" Margin="0,16,0,0"
+                                Command="{Binding ClearCacheCommand}" />
+                        <TextBlock Text="运行期间每 5 分钟自动清理一次过期缓存文件。" Style="{StaticResource RowHint}"
+                                   Margin="0,10,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 窗口设置 -->
+                <Border Style="{StaticResource SectionCard}" Tag="Window">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.Window], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+
+                        <TextBlock Text="{Binding [S.WindowSize], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowLabel}" Margin="0,0,0,10" />
+                        <ItemsControl ItemsSource="{Binding WindowSizeOptions}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
+                                            Command="{Binding DataContext.SelectWindowSizeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <CheckBox Content="{Binding [S.Rounded], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" Margin="0,8,0,4"
+                                  IsChecked="{Binding Settings.RoundedWindow}" />
+                        <TextBlock Text="{Binding [S.WindowHint], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowHint}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 快捷键 -->
+                <Border Style="{StaticResource SectionCard}" Tag="Shortcuts">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.Shortcuts], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+
+                        <CheckBox Content="{Binding [S.ShortcutEnable], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.EnableGlobalHotkey}" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <TextBlock Text="{Binding [S.ShortcutHint], Source={x:Static loc:Loc.Instance}}"
+                                       Style="{StaticResource RowLabel}" />
+                            <TextBox Text="{Binding Settings.Hotkey, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource InputBox}" Width="180" Height="34" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding [S.ShortcutToggle], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowHint}" Margin="0,10,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 通用设置 -->
+                <Border Style="{StaticResource SectionCard}" Tag="Common">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.Common], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+                        <CheckBox Content="{Binding [S.CheckUpdateStart], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.CheckUpdateOnStartup}" />
+                        <TextBlock Text="{Binding [S.AppDesc], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0" MaxWidth="620" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 应用维护 -->
+                <Border Style="{StaticResource SectionCard}" Tag="Maintain">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.Maintain], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="{Binding [S.CheckUpdate], Source={x:Static loc:Loc.Instance}}"
+                                    Style="{StaticResource AccentButton}" Height="34" Padding="16,0"
+                                    Command="{Binding CheckUpdateCommand}" />
+                            <Button Content="{Binding [S.Uninstall], Source={x:Static loc:Loc.Instance}}"
+                                    Style="{StaticResource GhostButton}" Height="34" Padding="16,0" Margin="10,0,0,0"
+                                    Command="{Binding UninstallCommand}" />
+                            <TextBlock Text="{Binding UpdateStatus}" Style="{StaticResource RowHint}" Margin="14,0,0,0"
+                                       Visibility="{Binding UpdateStatus, Converter={StaticResource NotEmptyToVis}}" />
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding [S.MaintainHint], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource RowHint}" Margin="0,12,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 应用信息 -->
+                <Border Style="{StaticResource SectionCard}" Tag="AppInfo">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.AppInfo], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="以下是本应用的版本与数据存储信息。"
+                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   Margin="0,0,0,16" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="86" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="名称" Style="{StaticResource RowHint}" Margin="0,0,0,11" />
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="MikoMiko（米游社 PC 多功能桌面客户端）"
+                                       FontSize="12.5" Margin="0,0,0,11" />
+
+                            <TextBlock Grid.Row="1" Text="版本" Style="{StaticResource RowHint}" Margin="0,0,0,11" />
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding VersionText}" FontSize="12.5" Margin="0,0,0,11" />
+
+                            <TextBlock Grid.Row="2" Text="框架" Style="{StaticResource RowHint}" Margin="0,0,0,11" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding RuntimeText}" FontSize="12.5" Margin="0,0,0,11" />
+
+                            <TextBlock Grid.Row="3" Text="数据目录" Style="{StaticResource RowHint}" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding AppDataDirectory}" FontSize="12.5"
+                                       TextWrapping="Wrap" />
+                        </Grid>
+
+                        <TextBlock Text="应用的所有数据（设置、账号登录态、视频缓存、图片缓存等）都保存在此文件夹。更改数据目录后需重启 MikoMiko 生效，原有数据不会自动迁移。"
+                                   FontSize="11.8" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left" Margin="0,14,0,0" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                            <Button Content="打开数据目录" Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
+                                    Command="{Binding OpenDataDirectoryCommand}" />
+                            <Button Content="更改数据目录" Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
+                                    Margin="10,0,0,0" Command="{Binding ChangeDataDirectoryCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 关于 -->
+                <Border Style="{StaticResource SectionCard}" Tag="About">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.About], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="pack://application:,,,/Assets/icon.png" Width="64" Height="64" />
+                            <StackPanel Margin="16,2,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="MikoMiko" FontSize="17" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding [About.Slogan], Source={x:Static loc:Loc.Instance}}"
+                                           FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding [About.Desc], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" Margin="0,14,0,0" MaxWidth="620" HorizontalAlignment="Left" />
+
+                        <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
+                                Style="{StaticResource SoftButton}" Height="32" HorizontalAlignment="Left"
+                                Margin="0,14,0,0" Command="{Binding OpenRepositoryCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 开源说明 -->
+                <Border Style="{StaticResource SectionCard}" Tag="OpenSource">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.OpenSource], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="{Binding [OpenSource.Desc], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left" />
+
+                        <StackPanel Margin="0,14,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="TeyvatGuide" FontSize="13" FontWeight="SemiBold" Width="130" />
+                                <TextBlock Text="BTMuli / Avalonia 米游社客户端（架构与页面结构参考）"
+                                           FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           VerticalAlignment="Center" />
+                                <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
+                                        Style="{StaticResource LinkButton}" Margin="12,0,0,0"
+                                        Command="{Binding OpenUrlCommand}"
+                                        CommandParameter="https://github.com/BTMuli/TeyvatGuide" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="Starward" FontSize="13" FontWeight="SemiBold" Width="130" />
+                                <TextBlock Text="Scighost / 米哈游游戏启动器（账号与游戏数据展示参考）"
+                                           FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           VerticalAlignment="Center" />
+                                <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
+                                        Style="{StaticResource LinkButton}" Margin="12,0,0,0"
+                                        Command="{Binding OpenUrlCommand}"
+                                        CommandParameter="https://github.com/Scighost/Starward" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="CommunityToolkit.Mvvm" FontSize="13" FontWeight="SemiBold" Width="130" />
+                                <TextBlock Text="MIT / MVVM 基础设施" FontSize="12"
+                                           Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
+                                <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
+                                        Style="{StaticResource LinkButton}" Margin="12,0,0,0"
+                                        Command="{Binding OpenUrlCommand}"
+                                        CommandParameter="https://github.com/CommunityToolkit/dotnet" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 免责说明 -->
+                <Border Style="{StaticResource SectionCard}" Tag="Disclaimer">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [S.Disclaimer], Source={x:Static loc:Loc.Instance}}"
+                                   Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="{Binding [Disclaimer.Desc], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" LineHeight="20" MaxWidth="620" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 更新日志（抽屉式） -->
+                <Border Style="{StaticResource SectionCard}" Tag="Changelog">
+                    <StackPanel>
+                        <Button Command="{Binding ToggleChangelogCommand}" Background="Transparent"
+                                BorderThickness="0" Cursor="Hand" HorizontalContentAlignment="Stretch"
+                                Focusable="False" Padding="0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding [S.Changelog], Source={x:Static loc:Loc.Instance}}"
+                                               FontSize="15.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="  (｡･ω･｡)ﾉ♡" FontSize="12"
+                                               Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="展开 / 收起" FontSize="11.5"
+                                           Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Button>
+
+                        <Border Margin="0,14,0,0" Visibility="{Binding IsChangelogOpen, Converter={StaticResource BoolToVis}}">
+                            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
+                                <TextBlock Text="{Binding ChangelogText}" FontSize="12.5"
+                                           Foreground="{DynamicResource Brush.TextSecondary}"
+                                           TextWrapping="Wrap" LineHeight="23" MaxWidth="640"
+                                           HorizontalAlignment="Left" />
+                            </ScrollViewer>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 右侧目录：点击跳到对应设置位置 -->
+        <Border Grid.Column="1" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1,0,0,0"
+                Background="{DynamicResource Brush.NavBg}" Padding="12,22,12,16">
+            <StackPanel>
+                <TextBlock Text="设置目录" FontSize="12" FontWeight="SemiBold"
+                           Foreground="{DynamicResource Brush.TextTertiary}" Margin="6,0,0,12" />
+                <ItemsControl ItemsSource="{Binding Sections}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource SettingsNavButton}" Content="{Binding Label}"
+                                    Tag="{Binding Key}" Click="Section_Click" Margin="0,1,0,0" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

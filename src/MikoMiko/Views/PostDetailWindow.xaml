@@ -1,0 +1,141 @@
+<Window x:Class="MikoMiko.Views.PostDetailWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:MikoMiko.Controls"
+        xmlns:loc="clr-namespace:MikoMiko.Localization"
+        xmlns:conv="clr-namespace:MikoMiko.Converters"
+        Title="MikoMiko"
+        Width="900" Height="740"
+        MinWidth="640" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        Background="{DynamicResource Brush.WindowBg}"
+        FontFamily="{DynamicResource Font.Ui}">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis" />
+    </Window.Resources>
+
+    <Border Background="{DynamicResource Brush.WindowBg}" BorderBrush="{DynamicResource Brush.Border}"
+            BorderThickness="1" CornerRadius="10">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="46" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 标题栏 -->
+            <Border Grid.Row="0" Background="{DynamicResource Brush.Surface}" CornerRadius="10,10,0,0"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1"
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" Margin="18,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding [Post.Detail], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Detail.ForumName}" FontSize="12" Margin="10,0,0,0"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button Style="{StaticResource CaptionButton}" HorizontalAlignment="Right"
+                            Margin="0,0,8,0" Click="Close_Click" Content="✕" FontSize="12" />
+                </Grid>
+            </Border>
+
+            <!-- 正文 -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Padding="0,0,4,0">
+                <StackPanel Margin="34,24,30,20" MaxWidth="760" HorizontalAlignment="Left">
+
+                    <Grid Height="240" Margin="0,0,0,20"
+                          Visibility="{Binding Detail.HasCover, Converter={StaticResource BoolToVis}}">
+                        <Border CornerRadius="10" ClipToBounds="True" Background="{DynamicResource Brush.Card}">
+                            <Image controls:AsyncImage.Url="{Binding Detail.Cover}" Stretch="UniformToFill" />
+                        </Border>
+                        <Border Height="34" VerticalAlignment="Bottom" Background="{DynamicResource Brush.CoverMask}" />
+                        <TextBlock Text="{Binding Detail.DurationText}" Foreground="White" FontSize="12"
+                                   HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,14,8" />
+                    </Grid>
+
+                    <TextBlock Text="{Binding Detail.Title}" FontSize="22" FontWeight="SemiBold"
+                               TextWrapping="Wrap" LineHeight="32" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <Border Width="34" Height="34" CornerRadius="17" ClipToBounds="True"
+                                Background="{DynamicResource Brush.Card}">
+                            <Image controls:AsyncImage.Url="{Binding Detail.AuthorAvatar}" Stretch="UniformToFill" />
+                        </Border>
+                        <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Detail.Author}" FontSize="13" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Detail.TimeText}" FontSize="11.5" Margin="0,3,0,0"
+                                       Foreground="{DynamicResource Brush.TextTertiary}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="24,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Detail.ViewText}" FontSize="12"
+                                       Foreground="{DynamicResource Brush.TextTertiary}" />
+                            <TextBlock Text="{Binding Detail.ReplyText}" FontSize="12" Margin="12,0,0,0"
+                                       Foreground="{DynamicResource Brush.TextTertiary}" />
+                            <TextBlock Text="{Binding Detail.LikeText}" FontSize="12" Margin="12,0,0,0"
+                                       Foreground="{DynamicResource Brush.TextTertiary}" />
+                        </StackPanel>
+
+                        <Border Background="{DynamicResource Brush.AccentSoft}" CornerRadius="4" Padding="8,3"
+                                Margin="24,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding Detail.HasTag, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding Detail.TagText}" FontSize="11"
+                                       Foreground="{DynamicResource Brush.Accent}" />
+                        </Border>
+                    </StackPanel>
+
+                    <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,20,0,18" />
+
+                    <TextBlock Text="{Binding Detail.Body}" FontSize="14" LineHeight="26"
+                               TextWrapping="Wrap" Foreground="{DynamicResource Brush.TextPrimary}">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Detail.Body}" Value="">
+                                        <Setter Property="Text" Value="正文内容需要联网加载，当前展示的是本地缓存摘要。" />
+                                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextTertiary}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <ItemsControl ItemsSource="{Binding Detail.Images}" Margin="0,20,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="8" ClipToBounds="True" Margin="0,0,0,10">
+                                    <Image controls:AsyncImage.Url="{Binding}" Stretch="Uniform" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="{Binding [Common.Loading], Source={x:Static loc:Loc.Instance}}"
+                               FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,12,0,0"
+                               Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- 底部操作 -->
+            <Border Grid.Row="2" Background="{DynamicResource Brush.Surface}" CornerRadius="0,0,10,10"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,1,0,0" Padding="20,12">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
+                            Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
+                            Command="{Binding OpenInBrowserCommand}" />
+                    <Button Content="{Binding [Common.Close], Source={x:Static loc:Loc.Instance}}"
+                            Style="{StaticResource AccentButton}" Height="34" Padding="18,0" Margin="10,0,0,0"
+                            Click="Close_Click" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

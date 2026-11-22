@@ -1,0 +1,49 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- MikoMiko · Dark palette -->
+    <SolidColorBrush x:Key="Brush.WindowBg" Color="#15171A" />
+    <SolidColorBrush x:Key="Brush.NavBg" Color="#191B1F" />
+    <SolidColorBrush x:Key="Brush.Surface" Color="#1F2227" />
+    <SolidColorBrush x:Key="Brush.Card" Color="#1B1E22" />
+    <SolidColorBrush x:Key="Brush.CardHover" Color="#232730" />
+    <SolidColorBrush x:Key="Brush.Border" Color="#2C3037" />
+    <SolidColorBrush x:Key="Brush.BorderSoft" Color="#24272D" />
+
+    <SolidColorBrush x:Key="Brush.TextPrimary" Color="#ECEEF2" />
+    <SolidColorBrush x:Key="Brush.TextSecondary" Color="#A7AEBA" />
+    <SolidColorBrush x:Key="Brush.TextTertiary" Color="#737B87" />
+
+    <SolidColorBrush x:Key="Brush.Accent" Color="#5FB4E8" />
+    <SolidColorBrush x:Key="Brush.AccentHover" Color="#7CC4EF" />
+    <SolidColorBrush x:Key="Brush.AccentSoft" Color="#1E3343" />
+    <SolidColorBrush x:Key="Brush.AccentOverlay" Color="#405FB4E8" />
+
+    <SolidColorBrush x:Key="Brush.ControlBg" Color="#262A31" />
+    <SolidColorBrush x:Key="Brush.ControlBorder" Color="#363B44" />
+    <SolidColorBrush x:Key="Brush.SearchBg" Color="#25282E" />
+    <SolidColorBrush x:Key="Brush.HeaderHover" Color="#25282E" />
+    <SolidColorBrush x:Key="Brush.CloseHover" Color="#E04B4B" />
+
+    <SolidColorBrush x:Key="Brush.PlayerBg" Color="#0A0C0E" />
+    <SolidColorBrush x:Key="Brush.PlayerOverlay" Color="#CC000000" />
+    <SolidColorBrush x:Key="Brush.ScrollThumb" Color="#3C424B" />
+
+    <SolidColorBrush x:Key="Brush.TaxOrange" Color="#FF9764" />
+    <SolidColorBrush x:Key="Brush.TagOrange" Color="#FF9764" />
+    <SolidColorBrush x:Key="Brush.TagOrangeBg" Color="#3A2A22" />
+    <SolidColorBrush x:Key="Brush.TagBlue" Color="#4FC3F7" />
+    <SolidColorBrush x:Key="Brush.TagBlueBg" Color="#1E2E38" />
+    <SolidColorBrush x:Key="Brush.Danger" Color="#FF6B70" />
+    <SolidColorBrush x:Key="Brush.Success" Color="#4ED18A" />
+
+    <SolidColorBrush x:Key="Brush.Shade10" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="Brush.Shade40" Color="#66000000" />
+    <SolidColorBrush x:Key="Brush.Shade60" Color="#99000000" />
+
+    <LinearGradientBrush x:Key="Brush.CoverMask" StartPoint="0.5,0.35" EndPoint="0.5,1">
+        <GradientStop Color="#00000000" Offset="0" />
+        <GradientStop Color="#A6000000" Offset="1" />
+    </LinearGradientBrush>
+
+</ResourceDictionary>
