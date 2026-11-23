@@ -81,26 +81,12 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="26,22,26,34">
-                <Border CornerRadius="14" ClipToBounds="True" Background="{DynamicResource Brush.Card}">
-                    <Grid Height="140">
-                        <Border>
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                    <GradientStop Color="#FF4EA4DD" Offset="0" />
-                                    <GradientStop Color="#FF8FC9E8" Offset="0.55" />
-                                    <GradientStop Color="#FFF4E8D8" Offset="1" />
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                        <Border VerticalAlignment="Bottom" Height="120">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                    <GradientStop Color="#00000000" Offset="0" />
-                                    <GradientStop Color="#99000000" Offset="1" />
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                    </Grid>
+                <Border CornerRadius="14" ClipToBounds="True">
+                    <Border.Background>
+                        <ImageBrush ImageSource="{Binding Banner}" Stretch="UniformToFill"
+                                    AlignmentX="Center" AlignmentY="Center" />
+                    </Border.Background>
+                    <Grid Height="220" />
                 </Border>
 
                 <Grid Margin="18,12,18,0">

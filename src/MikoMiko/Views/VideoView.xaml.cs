@@ -131,7 +131,12 @@ public partial class VideoView : UserControl
         while (source is not null)
         {
             if (source is T match) return match;
-            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+            if (source is System.Windows.Media.Visual || source is System.Windows.Media.Media3D.Visual3D)
+                source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+            else if (source is System.Windows.FrameworkContentElement content)
+                source = content.Parent;
+            else
+                source = null;
         }
 
         return null;

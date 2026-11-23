@@ -258,10 +258,40 @@
                                     </Grid>
                                 </Button>
                                 <Slider x:Name="VideoProgress" Grid.Column="1" Minimum="0" Maximum="1"
-                                        VerticalAlignment="Center" Margin="6,0"
+                                        Height="18" VerticalAlignment="Center" Margin="6,0" Background="Transparent"
+                                        Cursor="Hand" Focusable="False" IsMoveToPointEnabled="True"
                                         PreviewMouseLeftButtonDown="VideoProgress_DragStart"
                                         PreviewMouseLeftButtonUp="VideoProgress_DragEnd"
-                                        ValueChanged="VideoProgress_ValueChanged" />
+                                        ValueChanged="VideoProgress_ValueChanged">
+                                    <Slider.Template>
+                                        <ControlTemplate TargetType="{x:Type Slider}">
+                                            <Grid Background="Transparent">
+                                                <Track x:Name="PART_Track">
+                                                    <Track.DecreaseRepeatButton>
+                                                        <RepeatButton Command="Slider.DecreaseLarge" Background="Transparent"
+                                                                      BorderThickness="0" Focusable="False" />
+                                                    </Track.DecreaseRepeatButton>
+                                                    <Track.IncreaseRepeatButton>
+                                                        <RepeatButton Command="Slider.IncreaseLarge" Background="Transparent"
+                                                                      BorderThickness="0" Focusable="False" />
+                                                    </Track.IncreaseRepeatButton>
+                                                    <Track.Thumb>
+                                                        <Thumb Width="12" Height="16" Cursor="Hand">
+                                                            <Thumb.Template>
+                                                                <ControlTemplate TargetType="{x:Type Thumb}">
+                                                                    <Grid Background="Transparent">
+                                                                        <Ellipse Width="10" Height="10" Fill="#FFFFFF"
+                                                                                 Stroke="#4EA4DD" StrokeThickness="1" />
+                                                                    </Grid>
+                                                                </ControlTemplate>
+                                                            </Thumb.Template>
+                                                        </Thumb>
+                                                    </Track.Thumb>
+                                                </Track>
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Slider.Template>
+                                </Slider>
                                 <TextBlock x:Name="VideoTime" Grid.Column="2" Text="00:00 / 00:00"
                                            Foreground="#D9FFFFFF" FontSize="10.5" VerticalAlignment="Center"
                                            Margin="8,0" />
@@ -517,9 +547,8 @@
                                                         </StackPanel>
                                                         <TextBlock FontSize="11.5" LineHeight="18" TextWrapping="Wrap" Margin="29,5,0,0"
                                                                    Foreground="{DynamicResource Brush.TextTertiary}"
-                                                                   Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}">
-                                                            <Run Text="回复 @" /><Run Text="{Binding ReplyToName, Mode=OneWay}" /><Run Text="：" />
-                                                        </TextBlock>
+                                                                   Text="{Binding ReplyToName, Mode=OneWay, StringFormat='回复 @{0}：'}"
+                                                                   Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}" />
                                                         <TextBlock Text="{Binding Content}" FontSize="12" LineHeight="19"
                                                                    TextWrapping="Wrap" Margin="29,2,0,0" />
 

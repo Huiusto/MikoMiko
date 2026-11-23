@@ -211,8 +211,8 @@
                             VerticalAlignment="Center" Background="#9A9A9A" CornerRadius="1.5" />
                     <Border x:Name="PlayedBar" Height="3" Width="0" HorizontalAlignment="Left"
                             VerticalAlignment="Center" Background="#4EA4DD" CornerRadius="1.5" />
-                    <Slider x:Name="ProgressSlider" Height="14" Minimum="0" Maximum="1" Background="Transparent"
-                            Cursor="Arrow" IsMoveToPointEnabled="True" Opacity="0" Focusable="False"
+                    <Slider x:Name="ProgressSlider" Height="16" Minimum="0" Maximum="1" Background="Transparent"
+                            Cursor="Hand" IsMoveToPointEnabled="True" Focusable="False"
                             PreviewMouseLeftButtonDown="Progress_DragStart"
                             PreviewMouseLeftButtonUp="Progress_DragEnd"
                             LostMouseCapture="Progress_LostMouseCapture"
@@ -230,10 +230,13 @@
                                                           BorderThickness="0" Focusable="False" />
                                         </Track.IncreaseRepeatButton>
                                         <Track.Thumb>
-                                            <Thumb Width="10" Height="16" Cursor="Arrow" Opacity="0">
+                                            <Thumb Width="12" Height="16" Cursor="Hand">
                                                 <Thumb.Template>
                                                     <ControlTemplate TargetType="{x:Type Thumb}">
-                                                        <Border Background="Transparent" />
+                                                        <Grid Background="Transparent">
+                                                            <Ellipse Width="10" Height="10" Fill="#FFFFFF"
+                                                                     Stroke="#4EA4DD" StrokeThickness="1" />
+                                                        </Grid>
                                                     </ControlTemplate>
                                                 </Thumb.Template>
                                             </Thumb>
@@ -539,9 +542,8 @@
                                                                                FontSize="9.5" Margin="7,1,0,0" />
                                                                 </StackPanel>
                                                                 <TextBlock FontSize="10.5" Foreground="#99FFFFFF" Margin="0,3,0,0"
-                                                                           Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}">
-                                                                    <Run Text="回复 @" /><Run Text="{Binding ReplyToName, Mode=OneWay}" /><Run Text="：" />
-                                                                </TextBlock>
+                                                                           Text="{Binding ReplyToName, Mode=OneWay, StringFormat='回复 @{0}：'}"
+                                                                           Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}" />
                                                                 <TextBlock Text="{Binding Content}" Foreground="#DDFFFFFF"
                                                                            FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
                                                                 <ItemsControl ItemsSource="{Binding Images}" Margin="0,4,0,0"

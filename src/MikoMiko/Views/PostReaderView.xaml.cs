@@ -129,7 +129,14 @@ public partial class PostReaderView : UserControl
         while (source is not null)
         {
             if (source is T match) return match;
-            source = VisualTreeHelper.GetParent(source);
+            // 点击可能落在 TextBlock 的 Run（FrameworkContentElement）上，它不是 Visual，
+            // 直接交给 VisualTreeHelper 会抛 “Run 不是 Visual 或 Visual3D”。
+            if (source is System.Windows.Media.Visual || source is System.Windows.Media.Media3D.Visual3D)
+                source = VisualTreeHelper.GetParent(source);
+            else if (source is System.Windows.FrameworkContentElement content)
+                source = content.Parent;
+            else
+                source = null;
         }
         return null;
     }

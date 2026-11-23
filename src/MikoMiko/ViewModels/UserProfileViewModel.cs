@@ -31,6 +31,7 @@ public sealed partial class UserProfileViewModel : ObservableObject
     }
 
     public string Uid { get; }
+    public string Banner { get; } = "pack://application:,,,/Assets/Profile/banner.png";
     public Action? CloseRequested { get; set; }
 
     public ObservableCollection<ChoiceOption> Tabs { get; }

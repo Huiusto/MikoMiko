@@ -34,6 +34,7 @@
     <Resource Include="Assets\logo_transparent.png" />
     <Resource Include="Assets\Nav\*.png" />
     <Resource Include="Assets\Games\*.png" />
+    <Resource Include="Assets\Profile\*.png" />
     <Resource Include="Assets\Demo\*.jpg" />
     <Resource Include="Assets\Demo\*.png" />
   </ItemGroup>
