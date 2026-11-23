@@ -14,6 +14,8 @@ public sealed class MomentItem
     public string ReplyText { get; set; } = string.Empty;
     public bool IsOfficial { get; set; }
     public bool IsFollowing { get; set; }
+    public bool IsLiked { get; set; }
+    public bool IsFavorited { get; set; }
     public bool IsVideo { get; set; }
     public string VideoCover { get; set; } = string.Empty;
     public string DurationText { get; set; } = string.Empty;

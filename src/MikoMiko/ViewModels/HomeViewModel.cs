@@ -21,6 +21,8 @@ public sealed partial class HomeViewModel : ObservableObject
     private bool _forumHasMore;
     private bool _suppressFilterLoad;
     private int _forumRequest;
+    private List<FeedItem> _searchResults = new();
+    private List<SearchUser> _searchUserResults = new();
 
     public HomeViewModel(ContentService content, Action<FeedItem> openItem, Action<SearchUser>? openUser = null)
     {
@@ -36,12 +38,24 @@ public sealed partial class HomeViewModel : ObservableObject
         };
         SortOptions[0].IsSelected = true;
         SelectedSort = SortOptions[0];
+
+        SearchTabs = new ObservableCollection<ChoiceOption>
+        {
+            new("All", "综合") { IsSelected = true },
+            new("Guide", "攻略"),
+            new("Video", "视频"),
+            new("Wiki", "百科"),
+            new("Image", "图片"),
+            new("User", "用户"),
+            new("Topic", "话题"),
+        };
     }
 
     public ObservableCollection<FeedItem> Items { get; } = new();
     public ObservableCollection<ForumSection> Sections { get; } = new();
     public ObservableCollection<ForumBoard> Boards { get; } = new();
     public ObservableCollection<ChoiceOption> SortOptions { get; }
+    public ObservableCollection<ChoiceOption> SearchTabs { get; }
     public ObservableCollection<SearchUser> SearchUsers { get; } = new();
 
     [ObservableProperty] private bool _isLoading;
@@ -56,6 +70,7 @@ public sealed partial class HomeViewModel : ObservableObject
     [ObservableProperty] private bool _isOfficialTab;
     [ObservableProperty] private bool _isPostsTab;
     [ObservableProperty] private string _searchKeyword = string.Empty;
+    [ObservableProperty] private string _searchTab = "All";
 
     [ObservableProperty] private ForumSection? _selectedSection;
     [ObservableProperty] private ForumBoard? _selectedBoard;
@@ -64,8 +79,18 @@ public sealed partial class HomeViewModel : ObservableObject
 
     public bool IsRecommendTab => !IsPostsTab;
     public bool HasSearchUsers => SearchUsers.Count > 0;
+    public bool ShowSearchUsers => IsSearchMode && SearchUsers.Count > 0;
+    public bool ShowSearchContent => IsSearchMode && SearchTab != "User";
+    public bool ShowFeedGrid => !(IsSearchMode && SearchTab == "User");
 
     partial void OnIsPostsTabChanged(bool value) => OnPropertyChanged(nameof(IsRecommendTab));
+
+    partial void OnSearchTabChanged(string value)
+    {
+        ApplySearchTab();
+        OnPropertyChanged(nameof(ShowSearchContent));
+        OnPropertyChanged(nameof(ShowFeedGrid));
+    }
 
     // ---------------------------------------------------------------- 推荐流
 
@@ -261,17 +286,16 @@ public sealed partial class HomeViewModel : ObservableObject
             var resultsTask = _content.SearchPostsAsync(value, 30);
             await Task.WhenAll(usersTask, resultsTask);
 
+            _searchUserResults = usersTask.Result.ToList();
+            _searchResults = resultsTask.Result.ToList();
             SearchUsers.Clear();
-            foreach (var user in usersTask.Result) SearchUsers.Add(user);
+            foreach (var user in _searchUserResults) SearchUsers.Add(user);
             OnPropertyChanged(nameof(HasSearchUsers));
+            OnPropertyChanged(nameof(ShowSearchUsers));
 
-            Items.Clear();
-            foreach (var item in resultsTask.Result) Items.Add(item);
-            IsEmpty = Items.Count == 0;
-            var userPart = SearchUsers.Count > 0 ? $"用户 {SearchUsers.Count} 位 · " : string.Empty;
-            StatusText = Items.Count == 0 && SearchUsers.Count == 0
-                ? "没有找到相关用户或内容"
-                : $"{userPart}内容 {Items.Count} 条";
+            SearchTab = "All";
+            foreach (var tab in SearchTabs) tab.IsSelected = tab.Key == "All";
+            ApplySearchTab();
             HasMore = false;
         }
         catch
@@ -288,6 +312,42 @@ public sealed partial class HomeViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void SelectSearchTab(ChoiceOption? tab)
+    {
+        if (tab is null) return;
+        foreach (var item in SearchTabs) item.IsSelected = item.Key == tab.Key;
+        SearchTab = tab.Key;
+    }
+
+    /// <summary>搜索页分类：综合显示用户+内容，视频/图片按类型过滤，用户只显示用户。</summary>
+    private void ApplySearchTab()
+    {
+        var list = _searchResults;
+        if (SearchTab == "Video") list = list.Where(i => i.IsVideo).ToList();
+        else if (SearchTab == "Image")
+            list = list.Where(i => i.Images.Count > 0 || !string.IsNullOrEmpty(i.Cover)).ToList();
+        else if (SearchTab == "User") list = new List<FeedItem>();
+
+        Items.Clear();
+        foreach (var item in list) Items.Add(item);
+        var showUsers = SearchTab is "All" or "User" && SearchUsers.Count > 0;
+        IsEmpty = SearchTab == "User" ? SearchUsers.Count == 0 : Items.Count == 0;
+        if (!showUsers) SearchUsers.Clear();
+        else
+        {
+            SearchUsers.Clear();
+            foreach (var user in _searchUserResults) SearchUsers.Add(user);
+        }
+        OnPropertyChanged(nameof(HasSearchUsers));
+        OnPropertyChanged(nameof(ShowSearchUsers));
+        OnPropertyChanged(nameof(ShowSearchContent));
+        OnPropertyChanged(nameof(ShowFeedGrid));
+        StatusText = SearchTab == "User"
+            ? $"用户 {_searchUserResults.Count} 位"
+            : $"内容 {Items.Count} 条" + (showUsers ? $" · 用户 {_searchUserResults.Count} 位" : string.Empty);
+    }
+
     /// <summary>清空搜索，回到原来的帖子流。</summary>
     public void ExitSearch()
     {
@@ -295,7 +355,12 @@ public sealed partial class HomeViewModel : ObservableObject
         IsSearchMode = false;
         SearchKeyword = string.Empty;
         SearchUsers.Clear();
+        _searchUserResults.Clear();
+        _searchResults.Clear();
         OnPropertyChanged(nameof(HasSearchUsers));
+        OnPropertyChanged(nameof(ShowSearchUsers));
+        OnPropertyChanged(nameof(ShowSearchContent));
+        OnPropertyChanged(nameof(ShowFeedGrid));
         Items.Clear();
         foreach (var item in _feed) Items.Add(item);
         IsEmpty = Items.Count == 0;

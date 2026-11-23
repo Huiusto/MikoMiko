@@ -131,7 +131,7 @@
                                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                      VerticalAlignment="Center" Margin="0,0,4,0"
                                      KeyDown="SearchInput_KeyDown" />
-                            <TextBlock Text="{Binding [Header.Search], Source={x:Static loc:Loc.Instance}}"
+                            <TextBlock Text="{Binding SearchPlaceholder}"
                                        Foreground="{DynamicResource Brush.TextTertiary}" FontSize="12.5"
                                        VerticalAlignment="Center" IsHitTestVisible="False">
                                 <TextBlock.Style>

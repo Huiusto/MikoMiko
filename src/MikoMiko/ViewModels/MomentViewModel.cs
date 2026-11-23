@@ -72,6 +72,31 @@ public sealed partial class MomentViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ToggleLikeAsync(MomentItem? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.PostId)) return;
+        var target = !item.IsLiked;
+        if (!await _content.Api.LikePostAsync(item.PostId)) return;
+        item.IsLiked = target;
+        item.LikeText = BumpCount(item.LikeText, target);
+    }
+
+    [RelayCommand]
+    private async Task ToggleFavoriteAsync(MomentItem? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.PostId)) return;
+        if (!await _content.Api.FavoritePostAsync(item.PostId)) return;
+        item.IsFavorited = !item.IsFavorited;
+    }
+
+    private static string BumpCount(string text, bool up)
+    {
+        var number = double.TryParse((text ?? string.Empty).Trim(), out var n) ? n : 0;
+        number = Math.Max(0, number + (up ? 1 : -1));
+        return number <= 0 ? string.Empty : ((long)number).ToString();
+    }
+
+    [RelayCommand]
     private void ToggleOnlyFollowing()
     {
         OnlyFollowing = !OnlyFollowing;

@@ -70,13 +70,18 @@
                     </Border>
                     <StackPanel Grid.Column="1" Margin="14,28,0,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding Nickname}" FontSize="19" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Nickname}" FontSize="19" FontWeight="SemiBold"
+                                       Foreground="White">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect Color="#1B3A4B" BlurRadius="7" ShadowDepth="0" Opacity="0.75" />
+                                </TextBlock.Effect>
+                            </TextBlock>
                             <Border Background="#EAF6FD" CornerRadius="4" Padding="5,1" Margin="7,2,0,0"
                                     VerticalAlignment="Center" Visibility="{Binding LevelText, Converter={StaticResource NotEmptyToVis}}">
                                 <TextBlock Text="{Binding LevelText}" FontSize="10.5" Foreground="#2B8CC4" />
                             </Border>
                         </StackPanel>
-                        <TextBlock Text="{Binding IpRegion}" FontSize="11.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                        <TextBlock Text="{Binding IpRegion}" FontSize="11.5" Foreground="#F2FBFF" Opacity="0.85"
                                    Margin="0,4,0,0" />
                     </StackPanel>
                     <Button Grid.Column="2" Content="{Binding FollowText}" Style="{StaticResource AccentButton}"

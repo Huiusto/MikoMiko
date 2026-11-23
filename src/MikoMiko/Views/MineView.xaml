@@ -263,16 +263,27 @@
                                         HorizontalContentAlignment="Stretch"
                                         Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <ContentPresenter />
+                                        </ControlTemplate>
+                                    </Button.Template>
                                 <Border Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="18,16"
                                         Margin="0,0,12,12">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="5" />
+                                            <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Border Grid.Column="0" Width="5" CornerRadius="3" Background="{Binding Accent}" />
-                                        <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                                        <Border Grid.Column="1" Width="42" Height="42" CornerRadius="9" Margin="12,0,0,0"
+                                                Background="{DynamicResource Brush.Card}" VerticalAlignment="Top"
+                                                ClipToBounds="True">
+                                            <Image Source="{Binding Logo}" Stretch="UniformToFill" />
+                                        </Border>
+                                        <StackPanel Grid.Column="2" Margin="14,0,0,0">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding GameName}" FontSize="14.5" FontWeight="SemiBold" />
                                                 <Border Background="{DynamicResource Brush.Card}" CornerRadius="4" Padding="6,1"
@@ -280,13 +291,33 @@
                                                     <TextBlock Text="{Binding Badge}" FontSize="10"
                                                                Foreground="{DynamicResource Brush.TextTertiary}" />
                                                 </Border>
+                                                <TextBlock Text="{Binding RoleName}" FontSize="10.5" Margin="8,0,0,0"
+                                                           Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
                                             </StackPanel>
                                             <TextBlock Text="{Binding Uid, StringFormat=UID {0}}" FontSize="11.5"
-                                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,6,0,0" />
-                                            <TextBlock Text="{Binding Extra}" FontSize="12" Margin="0,4,0,0"
-                                                       Foreground="{DynamicResource Brush.TextSecondary}" />
+                                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,5,0,0" />
+                                            <ItemsControl ItemsSource="{Binding Stats}" Margin="0,9,0,0"
+                                                          Visibility="{Binding HasStats, Converter={StaticResource BoolToVis}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{DynamicResource Brush.Card}" CornerRadius="7"
+                                                                Padding="8,6" Margin="0,0,6,6">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Value}" FontSize="13.5" FontWeight="SemiBold" />
+                                                                <TextBlock Text="{Binding Label}" FontSize="9.5"
+                                                                           Foreground="{DynamicResource Brush.TextTertiary}"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Top" HorizontalAlignment="Right"
+                                                    Margin="10,0,0,0">
                                             <TextBlock Text="{Binding Level}" FontSize="25" FontWeight="Bold"
                                                        HorizontalAlignment="Right" />
                                             <TextBlock Text="{Binding LevelLabel}" FontSize="10.5"
@@ -311,7 +342,40 @@
                     </Border>
 
                     <!-- 我的发布 -->
-                    <StackPanel Orientation="Horizontal" Margin="4,20,0,12">
+                    <!-- 四个内容入口合并为一栏按钮，只显示当前选择 -->
+                    <ItemsControl ItemsSource="{Binding MineTabs}" Margin="4,20,0,10">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Margin="0,0,8,0" Padding="18,8" Cursor="Hand" BorderThickness="0"
+                                        Background="Transparent"
+                                        Command="{Binding DataContext.SelectMineTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border x:Name="Bd" CornerRadius="16"
+                                                    Background="{DynamicResource Brush.Surface}"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <TextBlock x:Name="Txt" Text="{Binding Label}" FontSize="12.5"
+                                                           Foreground="{DynamicResource Brush.TextSecondary}" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.Accent}" />
+                                                    <Setter TargetName="Txt" Property="Foreground" Value="White" />
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Visibility="{Binding ShowPostsTab, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="4,6,0,12">
                         <TextBlock Text="我的发布" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock Text="你自己发布过的内容" FontSize="12"
                                    Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,2,0,0"
@@ -346,9 +410,11 @@
                     <TextBlock Text="还没有发布过内容" Foreground="{DynamicResource Brush.TextTertiary}"
                                FontSize="12.5" Margin="4,0,0,0"
                                Visibility="{Binding HasNoMyPosts, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
 
                     <!-- 我的评论 -->
-                    <StackPanel Orientation="Horizontal" Margin="4,14,0,12">
+                    <StackPanel Visibility="{Binding ShowRepliesTab, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="4,6,0,12">
                         <TextBlock Text="我的评论" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock Text="你自己发布过的评论" FontSize="12"
                                    Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,2,0,0"
@@ -382,9 +448,11 @@
                     <TextBlock Text="还没有发布过评论" Foreground="{DynamicResource Brush.TextTertiary}"
                                FontSize="12.5" Margin="4,0,0,0"
                                Visibility="{Binding HasNoReplies, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
 
                     <!-- 我的合集 -->
-                    <StackPanel Orientation="Horizontal" Margin="4,14,0,12">
+                    <StackPanel Visibility="{Binding ShowCollectionsTab, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="4,6,0,12">
                         <TextBlock Text="我的合集" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock Text="你自己创建过的合集" FontSize="12"
                                    Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,2,0,0"
@@ -415,9 +483,11 @@
                     <TextBlock Text="还没有创建过合集" Foreground="{DynamicResource Brush.TextTertiary}"
                                FontSize="12.5" Margin="4,0,0,0"
                                Visibility="{Binding HasNoCollections, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
 
                     <!-- 我的收藏 -->
-                    <StackPanel Orientation="Horizontal" Margin="4,20,0,12">
+                    <StackPanel Visibility="{Binding ShowFavoritesTab, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal" Margin="4,6,0,12">
                         <TextBlock Text="我的收藏" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock Text="收藏的帖子会显示在这里" FontSize="12"
                                    Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,2,0,0"
@@ -456,6 +526,7 @@
                     <TextBlock Text="还没有收藏的帖子" Foreground="{DynamicResource Brush.TextTertiary}"
                                FontSize="12.5" Margin="4,0,0,0"
                                Visibility="{Binding HasNoFavorites, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>

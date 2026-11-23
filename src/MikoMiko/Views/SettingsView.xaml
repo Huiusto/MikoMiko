@@ -108,9 +108,9 @@
                                        Foreground="{DynamicResource Brush.TextTertiary}" />
                         </StackPanel>
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Content="{Binding [Mine.Bind], Source={x:Static loc:Loc.Instance}}"
+                            <Button Content="{Binding AccountActionText}"
                                     Style="{StaticResource GhostButton}" Height="32" Padding="14,0"
-                                    Command="{Binding SwitchAccountCommand}" />
+                                    Command="{Binding AccountActionCommand}" />
                             <Button Content="{Binding [Mine.Logout], Source={x:Static loc:Loc.Instance}}"
                                     Style="{StaticResource LinkButton}" Margin="14,0,0,0"
                                     Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}"
@@ -118,6 +118,15 @@
                         </StackPanel>
                     </Grid>
                 </Border>
+
+                <!-- 0.1.9：项目主页在系统浏览器打开，开发者首页留在软件内打开 -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                    <Button Content="访问项目主页（GitHub）" Style="{StaticResource SoftButton}" Height="34"
+                            Padding="16,0" Command="{Binding OpenProjectPageCommand}" />
+                    <Button Content="开发者首页（支持、讨论、问题反馈）" Style="{StaticResource GhostButton}"
+                            Height="34" Padding="16,0" Margin="10,0,0,0"
+                            Command="{Binding OpenDeveloperHomeCommand}" />
+                </StackPanel>
 
                 <Grid x:Name="SectionsPanel">
                     <Grid.ColumnDefinitions>
@@ -269,47 +278,14 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 播放选项 -->
-                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Height="320"
-                        Style="{StaticResource SectionCard}" Tag="Playback">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [S.Playback], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource SectionTitle}" />
-
-                        <TextBlock Text="{Binding [S.Quality], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource RowLabel}" Margin="0,0,0,10" />
-                        <ItemsControl ItemsSource="{Binding QualityOptions}" Margin="0,0,0,10">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
-                                            Command="{Binding DataContext.SelectQualityCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <CheckBox Content="{Binding [S.AutoPlay], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoPlay}" />
-                        <CheckBox Content="{Binding [S.DanmakuOn], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.ShowDanmaku}" />
-                        <CheckBox Content="{Binding [S.MuteOn], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.Mute}" />
-                        <TextBlock Text="{Binding [S.PlaybackHint], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource RowHint}" Margin="0,6,0,0" />
-                    </StackPanel>
-                </Border>
-
                 <!-- 缓存管理 -->
-                <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Height="320"
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Height="320"
                         Style="{StaticResource SectionCard}" Tag="Cache">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Cache], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="缓存与下载" FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
+                                   Margin="0,-10,0,12" />
 
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding [S.CacheSize], Source={x:Static loc:Loc.Instance}}"
@@ -327,6 +303,17 @@
                                 Command="{Binding ClearCacheCommand}" />
                         <TextBlock Text="运行期间每 5 分钟自动清理一次过期缓存文件。" Style="{StaticResource RowHint}"
                                    Margin="0,10,0,0" />
+
+                        <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,16,0,14" />
+                        <TextBlock Text="下载位置" Style="{StaticResource RowLabel}" />
+                        <TextBlock Text="{Binding DownloadDirectory}" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,6,0,0" />
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                            <Button Content="更改下载位置" Style="{StaticResource GhostButton}" Height="32" Padding="14,0"
+                                    Command="{Binding ChangeDownloadDirectoryCommand}" />
+                            <Button Content="打开下载位置" Style="{StaticResource LinkButton}" Margin="12,0,0,0"
+                                    Command="{Binding OpenDownloadDirectoryCommand}" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
@@ -337,25 +324,8 @@
                         <TextBlock Text="{Binding [S.Window], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
 
-                        <TextBlock Text="{Binding [S.WindowSize], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource RowLabel}" Margin="0,0,0,10" />
-                        <ItemsControl ItemsSource="{Binding WindowSizeOptions}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
-                                            Command="{Binding DataContext.SelectWindowSizeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
                         <CheckBox Content="{Binding [S.Rounded], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" Margin="0,8,0,4"
+                                  Style="{StaticResource MikoCheckBox}" Margin="0,0,0,4"
                                   IsChecked="{Binding Settings.RoundedWindow}" />
                         <TextBlock Text="{Binding [S.WindowHint], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource RowHint}" Margin="0,4,0,0" />
@@ -377,7 +347,7 @@
                 </Border>
 
                 <!-- 应用维护 -->
-                <Border Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="2" Height="320"
+                <Border Grid.Row="2" Grid.Column="3" Grid.ColumnSpan="3" Height="320"
                         Style="{StaticResource SectionCard}" Tag="Maintain">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Maintain], Source={x:Static loc:Loc.Instance}}"
@@ -471,19 +441,6 @@
                         <TextBlock Text="{Binding [About.Desc], Source={x:Static loc:Loc.Instance}}"
                                    FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
                                    TextWrapping="Wrap" Margin="0,14,0,0" MaxWidth="620" HorizontalAlignment="Left" />
-
-                        <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
-                                Style="{StaticResource SoftButton}" Height="32" HorizontalAlignment="Left"
-                                Margin="0,14,0,0" Command="{Binding OpenRepositoryCommand}" />
-
-                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                            <Button Content="访问项目主页" Style="{StaticResource GhostButton}" Height="32"
-                                    Padding="14,0" Command="{Binding OpenUrlCommand}"
-                                    CommandParameter="https://github.com/Huiusto/MikoMiko" />
-                            <Button Content="开发者首页" Style="{StaticResource GhostButton}" Height="32"
-                                    Padding="14,0" Margin="10,0,0,0" Command="{Binding OpenUrlCommand}"
-                                    CommandParameter="https://www.miyoushe.com/planet/accountCenter/postList?id=310621322" />
-                        </StackPanel>
                     </StackPanel>
                 </Border>
 

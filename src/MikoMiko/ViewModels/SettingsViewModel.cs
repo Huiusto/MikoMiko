@@ -24,7 +24,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         Sections = new ObservableCollection<ChoiceOption>
         {
             new("General", Loc.Instance["S.General"]),
-            new("Playback", Loc.Instance["S.Playback"]),
             new("Cache", Loc.Instance["S.Cache"]),
             new("Window", Loc.Instance["S.Window"]),
             new("Common", Loc.Instance["S.Common"]),
@@ -98,6 +97,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public string AccountUid => IsLoggedIn ? "已绑定米游社账号" : "扫码登录后同步米游社账号信息";
 
+    public string AccountActionText => IsLoggedIn ? "前往我的主页" : Loc.Instance["Mine.Bind"];
+
+    public string DownloadDirectory => string.IsNullOrWhiteSpace(Settings.DownloadPath)
+        ? AppInfo.DefaultDownloadDirectory
+        : Settings.DownloadPath;
+
     /// <summary>账号资料在「我的」页登录后会变化，每次进入设置都重新读取。</summary>
     public void RefreshAccount()
     {
@@ -105,6 +110,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(AccountName));
         OnPropertyChanged(nameof(AccountAvatar));
         OnPropertyChanged(nameof(AccountUid));
+        OnPropertyChanged(nameof(AccountActionText));
     }
 
     /// <summary>供右侧目录点击时同步选中态。</summary>
@@ -220,6 +226,63 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void AccountAction()
+    {
+        if (IsLoggedIn) App.Shell.Navigate("Mine");
+        else SwitchAccount();
+    }
+
+    [RelayCommand]
+    private void OpenProjectPage()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(AppInfo.RepositoryUrl) { UseShellExecute = true });
+        }
+        catch
+        {
+            Toast = Loc.Instance["Common.Fail"];
+        }
+    }
+
+    /// <summary>开发者首页在软件内浏览器打开，不跳系统浏览器。</summary>
+    [RelayCommand]
+    private void OpenDeveloperHome()
+    {
+        App.Shell.OpenLink("https://www.miyoushe.com/planet/accountCenter/postList?id=310621322");
+    }
+
+    [RelayCommand]
+    private void ChangeDownloadDirectory()
+    {
+        var current = DownloadDirectory;
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "选择图片与视频的下载位置",
+            InitialDirectory = Directory.Exists(current) ? current : AppInfo.DefaultDownloadDirectory,
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        Settings.DownloadPath = dialog.FolderName;
+        OnPropertyChanged(nameof(DownloadDirectory));
+        Toast = "已更新下载位置";
+    }
+
+    [RelayCommand]
+    private void OpenDownloadDirectory()
+    {
+        try
+        {
+            Directory.CreateDirectory(DownloadDirectory);
+            Process.Start(new ProcessStartInfo("explorer.exe", DownloadDirectory) { UseShellExecute = true });
+        }
+        catch
+        {
+            Toast = Loc.Instance["Common.Fail"];
+        }
+    }
+
+    [RelayCommand]
     private void Logout()
     {
         Settings.Cookie = string.Empty;
@@ -230,6 +293,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(AccountName));
         OnPropertyChanged(nameof(AccountAvatar));
         OnPropertyChanged(nameof(AccountUid));
+        OnPropertyChanged(nameof(AccountActionText));
         Toast = Loc.Instance["Mine.Unbind"];
         RefreshAccount();
     }

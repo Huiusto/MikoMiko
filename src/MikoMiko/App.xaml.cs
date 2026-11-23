@@ -245,7 +245,7 @@ public partial class App : Application
                         }
                         else if (page == "SettingsGroups")
                         {
-                            settingsView.ScrollToSection("Playback");
+                            settingsView.ScrollToSection("Cache");
                         }
                         else
                         {
@@ -275,7 +275,7 @@ public partial class App : Application
                         if (view is not null)
                         {
                             if (page == "SettingsChangelog") Shell.SettingsViewModel.IsChangelogOpen = true;
-                            view.ScrollToSection(page == "SettingsGroups" ? "Playback" : page == "SettingsChangelog" ? "Changelog" : "AppInfo");
+                            view.ScrollToSection(page == "SettingsGroups" ? "Cache" : page == "SettingsChangelog" ? "Changelog" : "AppInfo");
                             MainWindow!.UpdateLayout();
                         }
                     }

@@ -5,6 +5,7 @@ using MikoMiko.Models;
 using MikoMiko.Services;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using System.Windows.Threading;
 
 namespace MikoMiko.ViewModels;
 
@@ -27,6 +28,16 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly Dictionary<string, object> _views = new();
     private readonly Stack<string> _history = new();
     private string _currentKey = string.Empty;
+    private readonly DispatcherTimer _placeholderTimer;
+    private static readonly string[] SearchPlaceholders =
+    {
+        "搜索你感兴趣的内容", "搜一搜", "MikoMiko", "崩坏学园2", "崩坏3", "未定事件簿", "原神",
+        "崩坏：星穹铁道", "绝区零", "星布谷地", "崩坏：因缘精灵", "Varsapura", "源初之结",
+        "FlyMe2theMoon", "崩坏学园1", "林离", "鹿鸣", "陆离", "米游社", "人工桌面", "AnuNeko",
+        "Whispers from the Star",
+    };
+
+    [ObservableProperty] private string _searchPlaceholder = "搜索你感兴趣的内容";
 
     public ShellViewModel(SettingsService settingsService, ContentService content)
     {
@@ -37,11 +48,16 @@ public sealed partial class ShellViewModel : ObservableObject
         Controls.LinkTextBlock.LinkRequested = OpenLink;
 
         _home = new HomeViewModel(content, OpenItem, user => OpenUserProfile(user.Uid));
-        _video = new VideoViewModel(content, OpenUserProfile);
+        _video = new VideoViewModel(content, OpenUserProfile, _settings);
         _moment = new MomentViewModel(content, OpenMoment);
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
         _settingsVm.LanguageChanged = RefreshLocalization;
+
+        SearchPlaceholder = PickSearchPlaceholder();
+        _placeholderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+        _placeholderTimer.Tick += (_, _) => SearchPlaceholder = PickSearchPlaceholder();
+        _placeholderTimer.Start();
 
         Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
@@ -83,6 +99,14 @@ public sealed partial class ShellViewModel : ObservableObject
     public SettingsViewModel SettingsViewModel => _settingsVm;
     public MineViewModel MineViewModel => _mine;
     public HomeViewModel Home => _home;
+
+    private string PickSearchPlaceholder()
+    {
+        var index = Random.Shared.Next(SearchPlaceholders.Length);
+        if (SearchPlaceholders[index] == SearchPlaceholder)
+            index = (index + 1) % SearchPlaceholders.Length;
+        return SearchPlaceholders[index];
+    }
 
     // ---------------------------------------------------------------- 导航
 

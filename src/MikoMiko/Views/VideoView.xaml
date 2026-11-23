@@ -73,6 +73,16 @@
                         </Button>
                         <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
+                                <Border Background="{Binding Selected.BadgeBackground}" CornerRadius="4"
+                                        Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Selected.BadgeText}" Foreground="{Binding Selected.BadgeForeground}"
+                                               FontSize="9.5" FontWeight="SemiBold" />
+                                </Border>
+                                <Border Background="#E23A3A" CornerRadius="4" Padding="5,1" Margin="0,0,6,0"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding Selected.ShowCertBadge, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="V" Foreground="White" FontSize="9.5" FontWeight="SemiBold" />
+                                </Border>
                                 <Button Style="{StaticResource LinkButton}" Padding="0" Command="{Binding OpenAuthorCommand}" Cursor="Hand">
                                     <TextBlock Text="{Binding Selected.Author}" Foreground="White" FontSize="14"
                                                FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -172,6 +182,14 @@
                         IsHitTestVisible="False" ClipToBounds="True"
                         Visibility="{Binding ShowDanmaku, Converter={StaticResource BoolToVis}}" />
 
+                <!-- 右上角三点：画质与下载 -->
+                <Button Style="{StaticResource PlayerBarButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="0,14,16,0" Width="32" Height="28" Padding="0"
+                        Command="{Binding ToggleKebabCommand}" ToolTip="画质与下载">
+                    <TextBlock Text="⋮" Foreground="White" FontSize="20" FontWeight="SemiBold"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Button>
+
                 <!-- 返回封面（播放时显示） -->
                 <Button x:Name="ReturnCoverButton" HorizontalAlignment="Left" VerticalAlignment="Top"
                         Margin="16" Style="{StaticResource PlayerBarButton}" Padding="10,5"
@@ -249,7 +267,7 @@
                                 <TextBox x:Name="DanmakuInput" Background="Transparent" BorderThickness="0"
                                          Foreground="White" CaretBrush="White" VerticalContentAlignment="Center"
                                          FontSize="12" Padding="12,0" />
-                                <TextBlock Text="{Binding [Video.DanmakuHint], Source={x:Static loc:Loc.Instance}}"
+                                <TextBlock Text="{Binding DanmakuPlaceholder}"
                                            Foreground="#80FFFFFF" FontSize="12" VerticalAlignment="Center"
                                            Margin="12,0,0,0" IsHitTestVisible="False">
                                     <TextBlock.Style>
@@ -273,10 +291,6 @@
                                 Click="SendDanmaku_Click" />
 
                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
-                                    Command="{Binding ToggleQualityCommand}">
-                                <TextBlock Text="{Binding QualityText}" Foreground="#E8FFFFFF" FontSize="12" />
-                            </Button>
                             <Button x:Name="SpeedButton" Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
                                     Command="{Binding ToggleSpeedCommand}">
                                 <TextBlock Text="{Binding SpeedText}" Foreground="#E8FFFFFF" FontSize="12" />
@@ -313,9 +327,9 @@
                     </Grid>
                 </Border>
 
-                <!-- 画质抽屉（右下角从播放栏上方展开） -->
-                <Border Width="140" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                        Margin="0,0,150,58" Background="#F2181820" CornerRadius="10" Padding="6"
+                <!-- 画质与下载抽屉（右上角三点展开） -->
+                <Border Width="176" HorizontalAlignment="Right" VerticalAlignment="Top"
+                        Margin="0,50,16,0" Background="#F2181820" CornerRadius="10" Padding="6"
                         Visibility="{Binding IsQualityOpen, Converter={StaticResource BoolToVis}}">
                     <StackPanel>
                         <TextBlock Text="清晰度" Foreground="#80FFFFFF" FontSize="10.5" Margin="8,4,0,6" />
@@ -343,10 +357,33 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <Border Height="1" Background="#33FFFFFF" Margin="8,6,8,5" />
+                        <Button Height="32" Padding="10,0" Cursor="Hand" Background="Transparent" BorderThickness="0"
+                                HorizontalContentAlignment="Stretch" Command="{Binding DownloadVideoCommand}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="{x:Type Button}">
+                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="10,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M0 9 V12 H13 V9 M6.5 0 V8 M3 5 L6.5 8.5 L10 5"
+                                                  Stroke="#FFFFFFFF" StrokeThickness="1.2" Width="13" Height="12"
+                                                  Stretch="Uniform" VerticalAlignment="Center" />
+                                            <TextBlock Text="下载视频" Foreground="White" FontSize="12" Margin="7,0,0,0"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#334EA4DD" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                        <TextBlock Text="{Binding DownloadText}" Foreground="#B3FFFFFF" FontSize="10.5"
+                                   TextWrapping="Wrap" Margin="10,6,10,4" MaxWidth="150"
+                                   Visibility="{Binding DownloadText, Converter={StaticResource NotEmptyToVis}}" />
                     </StackPanel>
                 </Border>
-
-                <!-- 倍速抽屉 -->
                 <Border Width="140" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                         Margin="0,0,90,58" Background="#F2181820" CornerRadius="10" Padding="6"
                         Visibility="{Binding IsSpeedOpen, Converter={StaticResource BoolToVis}}">
@@ -408,7 +445,7 @@
                                                 </Border>
                                                 <StackPanel Margin="8,0,0,0">
                                                     <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Author}" Foreground="#FF9AC8" FontSize="11.5"
+                                                        <TextBlock Text="{Binding Author}" Foreground="#4EA4DD" FontSize="11.5"
                                                                    FontWeight="SemiBold" VerticalAlignment="Center" />
                                                         <Border Background="#334EA4DD" CornerRadius="3" Padding="4,0"
                                                                 Margin="6,0,0,0" VerticalAlignment="Center">
@@ -420,6 +457,22 @@
                                                     </StackPanel>
                                                     <TextBlock Text="{Binding Content}" Foreground="#EEFFFFFF" FontSize="12.5"
                                                                TextWrapping="Wrap" Margin="0,4,0,0" />
+                                                    <ItemsControl ItemsSource="{Binding Images}" Margin="0,6,0,0"
+                                                                  Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Border CornerRadius="6" ClipToBounds="True" Margin="0,0,6,6"
+                                                                        MaxWidth="120" MaxHeight="90" Background="#22FFFFFF">
+                                                                    <Image controls:AsyncImage.Url="{Binding}" Stretch="Uniform" />
+                                                                </Border>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
                                                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                                         <Button Style="{StaticResource LinkButton}" Height="18" Padding="0"
                                                                 Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -472,7 +525,7 @@
                                                                 Padding="8,0,0,0" Margin="0,0,0,7">
                                                             <StackPanel>
                                                                 <StackPanel Orientation="Horizontal">
-                                                                    <TextBlock Text="{Binding Author}" Foreground="#FF9AC8"
+                                                                    <TextBlock Text="{Binding Author}" Foreground="#4EA4DD"
                                                                                FontSize="11" FontWeight="SemiBold" />
                                                                     <TextBlock Text="{Binding TimeText}" Foreground="#66FFFFFF"
                                                                                FontSize="9.5" Margin="7,1,0,0" />
@@ -483,6 +536,20 @@
                                                                 </TextBlock>
                                                                 <TextBlock Text="{Binding Content}" Foreground="#DDFFFFFF"
                                                                            FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                                                <ItemsControl ItemsSource="{Binding Images}" Margin="0,4,0,0"
+                                                                              Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate>
+                                                                            <Border CornerRadius="5" ClipToBounds="True" Margin="0,0,5,5"
+                                                                                    MaxWidth="92" MaxHeight="70" Background="#22FFFFFF">
+                                                                                <Image controls:AsyncImage.Url="{Binding}" Stretch="Uniform" />
+                                                                            </Border>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
                                                                 <Button Content="回复" Style="{StaticResource LinkButton}" Height="18"
                                                                         Padding="0" Margin="0,4,0,0" FontSize="10" Foreground="#99FFFFFF"
                                                                         HorizontalAlignment="Left"

@@ -1,3 +1,4 @@
+using MikoMiko.Services;
 using MikoMiko.ViewModels;
 using System.ComponentModel;
 using System.Windows;
@@ -12,9 +13,14 @@ public partial class PostReaderView : UserControl
 {
     private readonly PostReaderViewModel _vm;
     private readonly DispatcherTimer _inlineTimer;
+    private readonly DispatcherTimer _videoTimer;
     private bool _localApplied;
     private bool _updatingInlineSlider;
     private bool _draggingInline;
+    private bool _draggingVideo;
+    private bool _updatingVideoSlider;
+    private string _lightboxUrl = string.Empty;
+    private int _lightboxIndex;
     private bool _lightboxPanning;
     private Point _lightboxLastPoint;
 
@@ -26,8 +32,15 @@ public partial class PostReaderView : UserControl
 
         _inlineTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _inlineTimer.Tick += (_, _) => UpdateInlineProgress();
+        _videoTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _videoTimer.Tick += (_, _) => UpdateVideoProgress();
 
-        Media.MediaOpened += (_, _) => { };
+        Media.MediaOpened += (_, _) =>
+        {
+            if (!Media.NaturalDuration.HasTimeSpan) return;
+            VideoProgress.Maximum = Media.NaturalDuration.TimeSpan.TotalSeconds;
+            VideoTime.Text = $"00:00 / {Format(Media.NaturalDuration.TimeSpan)}";
+        };
         Media.MediaEnded += (_, _) => ShowCover();
         Media.MediaFailed += (_, _) =>
         {
@@ -45,6 +58,7 @@ public partial class PostReaderView : UserControl
             Media.Pause();
             Media.Source = null;
             _inlineTimer.Stop();
+            _videoTimer.Stop();
             InlineMedia.Pause();
             InlineMedia.Source = null;
         };
@@ -78,7 +92,10 @@ public partial class PostReaderView : UserControl
         ApplyLocal();
         Media.Play();
         VideoCover.Visibility = Visibility.Collapsed;
-        VideoPauseButton.Visibility = Visibility.Visible;
+        VideoPauseButton.Visibility = Visibility.Collapsed;
+        VideoControls.Visibility = Visibility.Visible;
+        VideoToggleButton.Content = "❚❚";
+        _videoTimer.Start();
     }
 
     private void VideoPause_Click(object sender, RoutedEventArgs e)
@@ -87,11 +104,80 @@ public partial class PostReaderView : UserControl
         ShowCover();
     }
 
+    private void VideoToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (VideoCover.Visibility == Visibility.Visible ||
+            Media.NaturalDuration.HasTimeSpan && Media.Position >= Media.NaturalDuration.TimeSpan)
+        {
+            VideoPlay_Click(sender, e);
+            return;
+        }
+        if (_videoTimer.IsEnabled)
+        {
+            Media.Pause();
+            _videoTimer.Stop();
+            VideoToggleButton.Content = "▶";
+        }
+        else
+        {
+            Media.Play();
+            _videoTimer.Start();
+            VideoToggleButton.Content = "❚❚";
+        }
+    }
+
+    private void UpdateVideoProgress()
+    {
+        if (_draggingVideo || !Media.NaturalDuration.HasTimeSpan) return;
+        _updatingVideoSlider = true;
+        var total = Media.NaturalDuration.TimeSpan.TotalSeconds;
+        VideoProgress.Maximum = Math.Max(0.01, total);
+        VideoProgress.Value = Math.Clamp(Media.Position.TotalSeconds, 0, total);
+        VideoTime.Text = $"{Format(Media.Position)} / {Format(Media.NaturalDuration.TimeSpan)}";
+        _updatingVideoSlider = false;
+    }
+
+    private void VideoProgress_DragStart(object sender, MouseButtonEventArgs e) => _draggingVideo = true;
+
+    private void VideoProgress_DragEnd(object sender, MouseButtonEventArgs e)
+    {
+        _draggingVideo = false;
+        TrySeekVideo();
+    }
+
+    private void VideoProgress_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_updatingVideoSlider) return;
+        if (_draggingVideo || Mouse.LeftButton == MouseButtonState.Released) TrySeekVideo();
+    }
+
+    private void TrySeekVideo()
+    {
+        if (!Media.NaturalDuration.HasTimeSpan) return;
+        Media.Position = TimeSpan.FromSeconds(Math.Clamp(VideoProgress.Value, 0,
+            Media.NaturalDuration.TimeSpan.TotalSeconds));
+    }
+
+    private async void VideoDownload_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = await _vm.DownloadVideoAsync();
+            _vm.BufferText = "已保存到：" + path;
+        }
+        catch (Exception ex)
+        {
+            _vm.BufferText = "下载失败：" + ex.Message;
+        }
+    }
+
     private void ShowCover()
     {
         Media.Pause();
         VideoCover.Visibility = Visibility.Visible;
         VideoPauseButton.Visibility = Visibility.Collapsed;
+        VideoControls.Visibility = Visibility.Collapsed;
+        _videoTimer.Stop();
     }
 
     /// <summary>正文内嵌视频：在软件内播放，带可拖动进度条。</summary>
@@ -178,11 +264,53 @@ public partial class PostReaderView : UserControl
     private void InlineImage_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is not Border { Tag: string url } || string.IsNullOrWhiteSpace(url)) return;
+        _lightboxIndex = _vm.Images.IndexOf(url);
+        ShowLightboxImage(url);
+        ImageLightbox.Visibility = Visibility.Visible;
+        e.Handled = true;
+    }
+
+    private void ShowLightboxImage(string url)
+    {
+        _lightboxUrl = url;
         LightboxImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(url, UriKind.Absolute));
         LightboxScale.ScaleX = LightboxScale.ScaleY = 1;
         LightboxTranslate.X = LightboxTranslate.Y = 0;
-        ImageLightbox.Visibility = Visibility.Visible;
-        e.Handled = true;
+        LightboxStatus.Text = string.Empty;
+        var count = _vm.Images.Count;
+        LightboxCounter.Text = count > 1 ? $"{_lightboxIndex + 1} / {count}" : string.Empty;
+        LightboxPrevButton.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        LightboxNextButton.Visibility = count > 1 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void LightboxPrev_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.Images.Count == 0) return;
+        _lightboxIndex = (_lightboxIndex - 1 + _vm.Images.Count) % _vm.Images.Count;
+        ShowLightboxImage(_vm.Images[_lightboxIndex]);
+    }
+
+    private void LightboxNext_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.Images.Count == 0) return;
+        _lightboxIndex = (_lightboxIndex + 1) % _vm.Images.Count;
+        ShowLightboxImage(_vm.Images[_lightboxIndex]);
+    }
+
+    private async void LightboxDownload_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_lightboxUrl)) return;
+        try
+        {
+            var directory = DownloadService.ResolveDirectory(App.SettingsService.Current);
+            var path = await DownloadService.DownloadAsync(_lightboxUrl, directory, _vm.Title,
+                DownloadService.GuessImageExtension(_lightboxUrl));
+            LightboxStatus.Text = "已保存到：" + path;
+        }
+        catch (Exception ex)
+        {
+            LightboxStatus.Text = "下载失败：" + ex.Message;
+        }
     }
 
     /// <summary>灯箱左键拖动：按住图片平移，不依赖滚动条。</summary>

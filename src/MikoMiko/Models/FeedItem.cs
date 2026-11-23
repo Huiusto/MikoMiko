@@ -24,18 +24,29 @@ public sealed class FeedItem
     public bool IsOfficial { get; set; }
     public long CreatedAt { get; set; }
 
-    /// <summary>首页作者徽标：官方=金色「官」，开发者=粉色「MikoMiko」，其余=M-STAR。</summary>
-    public string BadgeText => Author == "灰岁Huiusto" ? "MikoMiko" : IsOfficial ? "官" : "M-STAR";
+    /// <summary>作者认证：1=官方，2=个人认证。</summary>
+    public int CertificationType { get; set; }
+    public string CertificationLabel { get; set; } = string.Empty;
 
-    public string BadgeBackground => Author == "灰岁Huiusto"
-        ? "#FFE3F0"
+    /// <summary>开发者账号（灰岁Huiusto / 通行证 310621322）显示蓝色 M。</summary>
+    public bool IsDeveloper => AuthorUid == "310621322" || Author == "灰岁Huiusto";
+
+    /// <summary>首页作者徽标：开发者=蓝色 M，官方=金色「官」，其余=M-STAR。</summary>
+    public string BadgeText => IsDeveloper ? "M" : IsOfficial ? "官" : "M-STAR";
+
+    public string BadgeBackground => IsDeveloper
+        ? "#4EA4DD"
         : IsOfficial ? "#FFF2D6" : "#E6F4FB";
 
-    public string BadgeForeground => Author == "灰岁Huiusto"
-        ? "#E7549E"
+    public string BadgeForeground => IsDeveloper
+        ? "#FFFFFF"
         : IsOfficial ? "#B8860B" : "#2B8CC4";
 
-    public bool IsWideBadge => BadgeText == "MikoMiko";
+    public bool IsWideBadge => false;
+
+    /// <summary>个人认证在 M-STAR 之后再显示一个红色「V」。</summary>
+    public bool ShowCertBadge => !IsDeveloper && !IsOfficial && CertificationType >= 2;
+    public string CertificationBadgeText => "V";
 
     /// <summary>首页卡片封面：没有配图的帖子使用默认占位图，但阅读器正文不插入该图。</summary>
     public string CardCover => string.IsNullOrWhiteSpace(Cover)

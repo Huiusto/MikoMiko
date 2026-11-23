@@ -28,8 +28,17 @@ public sealed partial class MineViewModel : ObservableObject
         _settings = settings;
         _openPost = openPost;
         Profile = BuildGuestProfile();
+        MineTabs = new ObservableCollection<ChoiceOption>
+        {
+            new("Posts", "我的发布") { IsSelected = true },
+            new("Replies", "我的评论"),
+            new("Collections", "我的合集"),
+            new("Favorites", "我的收藏"),
+        };
         LoadBackgroundSource();
     }
+
+    public ObservableCollection<ChoiceOption> MineTabs { get; }
 
     public ObservableCollection<GameAccount> Games { get; } = new();
     public ObservableCollection<FeedItem> Favorites { get; } = new();
@@ -48,6 +57,20 @@ public sealed partial class MineViewModel : ObservableObject
     [ObservableProperty] private UserProfile _profile;
     [ObservableProperty] private bool _isLoggedIn;
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private string _mineTab = "Posts";
+
+    public bool ShowPostsTab => MineTab == "Posts";
+    public bool ShowRepliesTab => MineTab == "Replies";
+    public bool ShowCollectionsTab => MineTab == "Collections";
+    public bool ShowFavoritesTab => MineTab == "Favorites";
+
+    partial void OnMineTabChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowPostsTab));
+        OnPropertyChanged(nameof(ShowRepliesTab));
+        OnPropertyChanged(nameof(ShowCollectionsTab));
+        OnPropertyChanged(nameof(ShowFavoritesTab));
+    }
     [ObservableProperty] private string _cookieInput = string.Empty;
     [ObservableProperty] private string _bindStatus = string.Empty;
     [ObservableProperty] private bool _isEditing;
@@ -563,12 +586,75 @@ public sealed partial class MineViewModel : ObservableObject
                     Extra = role.Nickname,
                     AccentHex = role.AccentHex,
                     Badge = "已绑定",
+                    Logo = LoadGameLogo(role.GameId, role.GameName),
                 });
             }
+
+            await FillGameCardsAsync();
         }
         catch
         {
             // 角色接口失败不影响主页资料
+        }
+    }
+
+    /// <summary>把所有游戏的公开战绩补到角色卡上（与游戏详情共用 getGameRecordCard）。</summary>
+    private async Task FillGameCardsAsync()
+    {
+        if (Games.Count == 0) return;
+        var accountUid = CookieValue("ltuid") is { Length: > 0 } ltuid ? ltuid : CookieValue("account_id");
+        try
+        {
+            var cards = await _login.GetRecordCardsAsync(_settings.Cookie, accountUid);
+            foreach (var game in Games)
+            {
+                var card = cards.FirstOrDefault(c => c.GameId == game.GameId && c.RoleUid == game.Uid)
+                           ?? cards.FirstOrDefault(c => c.GameId == game.GameId);
+                if (card is null) continue;
+                game.SetStats(card.Stats.Take(4)
+                    .Select(s => new GameStatItem { Label = s.Label, Value = s.Value })
+                    .ToList());
+            }
+        }
+        catch
+        {
+            // 个别游戏未公开战绩时保持空卡片
+        }
+    }
+
+    /// <summary>游戏图标：按游戏名优先匹配，避免渠道服 GameId 与官方编号不一致。</summary>
+    private static ImageSource? LoadGameLogo(int gameId, string gameName)
+    {
+        var name = gameName ?? string.Empty;
+        var file = name.Contains("原神") ? "genshin"
+            : name.Contains("星穹") || name.Contains("星铁") ? "starrail"
+            : name.Contains("绝区零") ? "zzz"
+            : name.Contains("崩坏3") || name.Contains("崩坏三") ? "honkai3"
+            : name.Contains("崩坏学园") ? "ggz"
+            : name.Contains("未定") ? "tot"
+            : gameId switch
+            {
+                2 => "genshin",
+                6 => "starrail",
+                8 => "zzz",
+                1 => "honkai3",
+                5 => "ggz",
+                4 => "tot",
+                _ => "icon",
+            };
+        try
+        {
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.UriSource = new Uri($"pack://application:,,,/Assets/{(file == "icon" ? "icon" : "Games/" + file)}.png", UriKind.Absolute);
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -601,6 +687,14 @@ public sealed partial class MineViewModel : ObservableObject
         {
             BindStatus = "「我的」内容同步失败，可点刷新重试";
         }
+    }
+
+    [RelayCommand]
+    private void SelectMineTab(ChoiceOption? tab)
+    {
+        if (tab is null) return;
+        foreach (var item in MineTabs) item.IsSelected = item.Key == tab.Key;
+        MineTab = tab.Key;
     }
 
     [RelayCommand]

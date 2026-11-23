@@ -1,3 +1,4 @@
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MikoMiko.Models;
@@ -472,6 +473,31 @@ public sealed partial class PostReaderViewModel : ObservableObject
         {
             // 忽略
         }
+    }
+
+    /// <summary>把帖子里的视频复制/下载到设置里的下载位置。</summary>
+    public async Task<string> DownloadVideoAsync()
+    {
+        var directory = DownloadService.ResolveDirectory(_settings);
+        if (!string.IsNullOrWhiteSpace(VideoLocalPath) && File.Exists(VideoLocalPath))
+        {
+            var name = MakeDownloadName(Title, ".mp4");
+            var target = Path.Combine(directory, name);
+            var index = 1;
+            while (File.Exists(target))
+                target = Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(name)} ({index++}).mp4");
+            File.Copy(VideoLocalPath, target);
+            return target;
+        }
+        if (string.IsNullOrWhiteSpace(VideoUrl)) throw new InvalidOperationException("视频地址为空");
+        return await DownloadService.DownloadAsync(VideoUrl, directory, Title, ".mp4");
+    }
+
+    private static string MakeDownloadName(string title, string extension)
+    {
+        var safe = string.IsNullOrWhiteSpace(title) ? "MikoMiko" : title;
+        foreach (var c in Path.GetInvalidFileNameChars()) safe = safe.Replace(c, '_');
+        return safe + extension;
     }
 
     [RelayCommand]

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MikoMiko.Models;
 using MikoMiko.Services;
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 
 namespace MikoMiko.ViewModels;
 
@@ -11,14 +12,29 @@ public sealed partial class VideoViewModel : ObservableObject
 {
     private readonly ContentService _content;
     private readonly Action<string>? _openUser;
+    private readonly AppSettings? _settings;
     private List<FeedItem> _all = new();
     private readonly HashSet<string> _seen = new();
+    private readonly Queue<string> _recentAuthors = new();
+    private readonly DispatcherTimer _placeholderTimer;
+    private static readonly string[] DanmakuPlaceholders =
+    {
+        "请输入文本", "MikoMiko", "弹幕输入中", "要不写条弹幕？", "111", "666", "弹幕输入在这里",
+        "好好好", "关注了", "难道说", "米哈游！", "启动！", "怎么说",
+    };
 
-    public VideoViewModel(ContentService content, Action<string>? openUser = null)
+    public VideoViewModel(ContentService content, Action<string>? openUser = null, AppSettings? settings = null)
     {
         _content = content;
         _openUser = openUser;
+        _settings = settings;
+        DanmakuPlaceholder = PickPlaceholder();
+        _placeholderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+        _placeholderTimer.Tick += (_, _) => DanmakuPlaceholder = PickPlaceholder();
+        _placeholderTimer.Start();
     }
+
+    private static string PickPlaceholder() => DanmakuPlaceholders[Random.Shared.Next(DanmakuPlaceholders.Length)];
 
     public ObservableCollection<FeedItem> Videos { get; } = new();
     public ObservableCollection<FeedItem> Related { get; } = new();
@@ -54,6 +70,9 @@ public sealed partial class VideoViewModel : ObservableObject
     [ObservableProperty] private string _replyTargetId = "0";
     [ObservableProperty] private string _replyTargetName = string.Empty;
     [ObservableProperty] private bool _hasReplyTarget;
+    [ObservableProperty] private string _danmakuPlaceholder = "请输入文本";
+    [ObservableProperty] private bool _isDownloading;
+    [ObservableProperty] private string _downloadText = string.Empty;
 
     public IReadOnlyList<string> QualityOptions { get; } = new[] { "自动", "1080P", "720P", "480P" };
     public IReadOnlyList<string> SpeedOptions { get; } = new[] { "0.5×", "0.75×", "1.0×", "1.25×", "1.5×", "2.0×" };
@@ -98,10 +117,29 @@ public sealed partial class VideoViewModel : ObservableObject
         try
         {
             _seen.Clear();
-            _all = (await _content.GetRandomVideosAsync(12, _seen)).ToList();
-            IsDemo = _content.IsDemo;
+            _recentAuthors.Clear();
+            _all.Clear();
             Videos.Clear();
-            foreach (var item in _all) Videos.Add(item);
+            var fetched = await _content.GetRandomVideosAsync(20, _seen);
+            foreach (var item in fetched)
+            {
+                if (!CanPushAuthor(item.Author)) continue;
+                _seen.Add(item.PostId);
+                _all.Add(item);
+                Videos.Add(item);
+                RememberAuthor(item.Author);
+                if (Videos.Count >= 12) break;
+            }
+            if (Videos.Count == 0)
+            {
+                // 同作者过滤过严时至少保证首批有内容
+                foreach (var item in fetched.Take(8))
+                {
+                    _all.Add(item);
+                    Videos.Add(item);
+                }
+            }
+            IsDemo = _content.IsDemo;
             if (Videos.Count > 0) Select(Videos[0]);
             StatusText = string.Empty;
         }
@@ -248,6 +286,17 @@ public sealed partial class VideoViewModel : ObservableObject
         if (comment.IsDisliked) comment.IsLiked = false;
     }
 
+    /// <summary>同一位作者在最近 5 条视频内不再出现。</summary>
+    private bool CanPushAuthor(string author)
+        => !string.IsNullOrWhiteSpace(author) && !_recentAuthors.Contains(author);
+
+    private void RememberAuthor(string author)
+    {
+        if (string.IsNullOrWhiteSpace(author)) return;
+        _recentAuthors.Enqueue(author);
+        while (_recentAuthors.Count > 5) _recentAuthors.Dequeue();
+    }
+
     private static string BumpCount(string text, bool up)
     {
         var trimmed = (text ?? string.Empty).Trim();
@@ -273,6 +322,50 @@ public sealed partial class VideoViewModel : ObservableObject
     {
         IsQualityOpen = !IsQualityOpen;
         IsSpeedOpen = false;
+    }
+
+    /// <summary>右上角三点：画质选择 + 下载视频。</summary>
+    [RelayCommand]
+    private void ToggleKebab()
+    {
+        IsQualityOpen = !IsQualityOpen;
+        IsSpeedOpen = false;
+    }
+
+    [RelayCommand]
+    private async Task DownloadVideoAsync()
+    {
+        if (Selected is null || IsDownloading) return;
+        IsQualityOpen = false;
+        IsDownloading = true;
+        DownloadText = "正在准备下载…";
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Selected.VideoUrl))
+            {
+                await RefreshSourceAsync();
+            }
+            if (string.IsNullOrWhiteSpace(Selected.VideoUrl))
+            {
+                DownloadText = "该视频没有可下载的直链";
+                return;
+            }
+
+            var directory = DownloadService.ResolveDirectory(_settings ?? new AppSettings());
+            var name = string.IsNullOrWhiteSpace(Selected.Title)
+                ? $"{Selected.Author}_{Selected.PostId}"
+                : Selected.Title;
+            var path = await DownloadService.DownloadAsync(Selected.VideoUrl, directory, name, ".mp4");
+            DownloadText = $"已保存到：{path}";
+        }
+        catch (Exception ex)
+        {
+            DownloadText = "下载失败：" + ex.Message;
+        }
+        finally
+        {
+            IsDownloading = false;
+        }
     }
 
     [RelayCommand]
@@ -385,12 +478,14 @@ public sealed partial class VideoViewModel : ObservableObject
         IsLoadingMore = true;
         try
         {
-            var more = await _content.GetRandomVideosAsync(8, _seen);
+            var more = await _content.GetRandomVideosAsync(12, _seen);
             foreach (var item in more)
             {
-                if (!_seen.Add(item.PostId)) continue;
+                if (_seen.Contains(item.PostId) || !CanPushAuthor(item.Author)) continue;
+                _seen.Add(item.PostId);
                 _all.Add(item);
                 Videos.Add(item);
+                RememberAuthor(item.Author);
             }
 
             if (Selected is not null)

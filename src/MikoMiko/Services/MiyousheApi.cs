@@ -91,17 +91,19 @@ public sealed class MiyousheApi
         try
         {
             var text = content.Trim();
-            var delta = JsonSerializer.Serialize(new
+            // 米游社的 structured_content 是 Quill delta 的 ops 数组字符串，而不是 {"ops":…} 包装对象。
+            var delta = JsonSerializer.Serialize(new object[]
             {
-                ops = new object[] { new { insert = text + "\n" } },
+                new { insert = text + "\n" },
             });
 
+            var rid = long.TryParse(replyId, out var parsedReplyId) ? parsedReplyId : 0L;
             var payload = JsonSerializer.Serialize(new
             {
                 post_id = postId,
                 content = text,
                 structured_content = delta,
-                reply_id = string.IsNullOrWhiteSpace(replyId) ? "0" : replyId,
+                reply_id = rid,
             });
 
             var url = $"{PostApi}/releaseReply";
@@ -109,7 +111,7 @@ public sealed class MiyousheApi
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json"),
             };
-            // 新版接口要求 X4 签名（ds）与客户端类型 5；旧版 2.11.1 头会导致发送成功但不同步 / 发送失败。
+            // 评论接口按米游社 App 通道签名（client_type 5 + X4Salt），避免网页盐值错配导致 invalid request。
             AddX4Headers(request, string.Empty, payload);
 
             var response = await _http.SendAsync(request, ct);
@@ -665,25 +667,33 @@ public sealed class MiyousheApi
 
     private static void CollectCommentImages(JsonElement element, CommentItem item)
     {
-        foreach (var image in Items(Obj(element, "images")))
+        var reply = Obj(element, "reply");
+        foreach (var holder in new[] { element, reply })
         {
-            var src = image.ValueKind == JsonValueKind.String ? image.GetString() : Str(image, "url");
-            if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src!)) item.Images.Add(src!);
+            if (holder is null) continue;
+            foreach (var image in Items(Obj(holder.Value, "images")))
+            {
+                var src = image.ValueKind == JsonValueKind.String ? image.GetString() : Str(image, "url");
+                if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src!)) item.Images.Add(src!);
+            }
         }
 
-        var structured = Obj(Obj(element, "reply"), "struct_content");
+        var structured = Obj(reply, "struct_content") ?? Obj(reply, "structured_content");
         var raw = structured?.ValueKind == JsonValueKind.String ? structured.Value.GetString() : null;
         if (string.IsNullOrWhiteSpace(raw)) return;
         try
         {
             using var doc = JsonDocument.Parse(raw);
-            foreach (var op in Items(doc.RootElement))
+            var root = doc.RootElement;
+            if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("ops", out var ops)) root = ops;
+            foreach (var op in Items(root))
             {
                 var insert = Obj(op, "insert");
                 if (insert is null) continue;
                 if (insert.Value.ValueKind == JsonValueKind.Object)
                 {
                     var src = Str(insert.Value, "image");
+                    if (string.IsNullOrWhiteSpace(src)) src = Str(Obj(insert.Value, "emoji"), "url");
                     if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src)) item.Images.Add(src);
                 }
             }
@@ -958,6 +968,8 @@ public sealed class MiyousheApi
         var stat = Obj(element, "stat");
         var user = Obj(element, "user");
         var vodList = Obj(element, "vod_list");
+        var cert = Obj(user, "certification");
+        var certType = (int)Num(cert, "type");
 
         var item = new FeedItem
         {
@@ -976,7 +988,9 @@ public sealed class MiyousheApi
             LikeText = FormatCount(Num(stat, "like_num")),
             TagText = TagOf(Num(stat, "like_num")),
             IsOfficial = Obj(Obj(post, "post_status"), "is_official")?.ValueKind == JsonValueKind.True
-                         || Num(Obj(user, "certification"), "type") == 1,
+                         || certType == 1,
+            CertificationType = certType,
+            CertificationLabel = Str(cert, "label"),
             IsFollowing = Obj(user, "is_following")?.ValueKind == JsonValueKind.True,
             ForumName = Str(Obj(element, "forum"), "name"),
             IsVideo = Items(vodList).Any(),
