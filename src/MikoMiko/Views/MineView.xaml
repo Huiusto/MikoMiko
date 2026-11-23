@@ -283,6 +283,9 @@
                                 <TextBlock Text="游戏角色显示" FontSize="13.5" FontWeight="SemiBold" />
                                 <TextBlock Text="勾选要展示的游戏，使用箭头调整顺序。" FontSize="11"
                                            Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,4,0,10" />
+                                <CheckBox Content="显示游戏战绩详情（点击角色卡查看）" FontSize="11.5"
+                                          Style="{StaticResource MikoCheckBox}" Margin="0,0,0,10"
+                                          IsChecked="{Binding Settings.ShowGameRecords}" />
                                 <ItemsControl ItemsSource="{Binding Games}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>

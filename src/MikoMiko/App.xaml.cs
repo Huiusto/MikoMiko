@@ -164,11 +164,11 @@ public partial class App : Application
                 MainWindow!.Width = Math.Min(1624, workArea.Width);
                 MainWindow.Height = Math.Min(1000, workArea.Height);
                 Log(path, "resized");
-                var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" or "UserProfile" ? "Home"
+                var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" or "UserProfile" or "UserGame" ? "Home"
                     : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
-                    : page is "MineProfile" or "MineGame" ? "Mine"
+                    : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
                 if (page == "Posts" && Shell.HomeTabs.Count > 1)
@@ -180,7 +180,7 @@ public partial class App : Application
                 {
                     Shell.MineViewModel.LoginCommand.Execute(null);
                 }
-                if (page is "MineProfile" or "MineGame")
+                if (page is "MineProfile" or "MineGame" or "MineSettings")
                 {
                     // 仅开发期截图：用示例资料检查个人主页版式，不写入设置
                     Shell.MineViewModel.IsLoggedIn = true;
@@ -218,6 +218,10 @@ public partial class App : Application
                     {
                         _ = Shell.MineViewModel.OpenGameCommand.ExecuteAsync(Shell.MineViewModel.Games[0]);
                     }
+                    if (page == "MineSettings")
+                    {
+                        Shell.MineViewModel.IsGameSettingsOpen = true;
+                    }
                 }
                 if (page == "Search")
                 {
@@ -227,6 +231,21 @@ public partial class App : Application
                 if (page == "UserProfile")
                 {
                     Shell.OpenUserProfile("310621322");
+                }
+                if (page == "UserGame")
+                {
+                    Shell.OpenUserProfile("310621322");
+                    var gameDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+                    gameDelay.Tick += (_, _) =>
+                    {
+                        gameDelay.Stop();
+                        if (Shell.ProfileView?.DataContext is ViewModels.UserProfileViewModel vm &&
+                            vm.Games.FirstOrDefault() is { } game)
+                        {
+                            vm.OpenGameCommand.Execute(game);
+                        }
+                    };
+                    gameDelay.Start();
                 }
                 if (page is "Reader" or "ReaderComments")
                 {
@@ -264,7 +283,7 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page == "Moment" ? 12 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" ? 10 : page == "Moment" ? 12 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();

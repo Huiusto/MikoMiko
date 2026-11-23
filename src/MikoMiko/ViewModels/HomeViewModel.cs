@@ -71,6 +71,7 @@ public sealed partial class HomeViewModel : ObservableObject
     [ObservableProperty] private bool _isPostsTab;
     [ObservableProperty] private string _searchKeyword = string.Empty;
     [ObservableProperty] private string _searchTab = "All";
+    [ObservableProperty] private bool _isSearchUsersExpanded;
 
     [ObservableProperty] private ForumSection? _selectedSection;
     [ObservableProperty] private ForumBoard? _selectedBoard;
@@ -79,11 +80,37 @@ public sealed partial class HomeViewModel : ObservableObject
 
     public bool IsRecommendTab => !IsPostsTab;
     public bool HasSearchUsers => SearchUsers.Count > 0;
-    public bool ShowSearchUsers => IsSearchMode && SearchUsers.Count > 0;
+    public bool ShowSearchUsers => IsSearchMode && !string.IsNullOrWhiteSpace(SearchKeyword) && SearchUsers.Count > 0;
     public bool ShowSearchContent => IsSearchMode && SearchTab != "User";
     public bool ShowFeedGrid => !(IsSearchMode && SearchTab == "User");
+    public bool CanExpandSearchUsers => !IsSearchUsersExpanded && _searchUserResults.Count > SearchUsers.Count;
+    public double SearchUsersMaxHeight => IsSearchUsersExpanded ? 4200 : 224;
 
     partial void OnIsPostsTabChanged(bool value) => OnPropertyChanged(nameof(IsRecommendTab));
+
+    partial void OnIsSearchUsersExpandedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanExpandSearchUsers));
+        OnPropertyChanged(nameof(SearchUsersMaxHeight));
+    }
+
+    private void FillSearchUsers(bool all)
+    {
+        SearchUsers.Clear();
+        var source = all ? _searchUserResults : _searchUserResults.Take(6);
+        foreach (var user in source) SearchUsers.Add(user);
+        OnPropertyChanged(nameof(HasSearchUsers));
+        OnPropertyChanged(nameof(ShowSearchUsers));
+        OnPropertyChanged(nameof(CanExpandSearchUsers));
+    }
+
+    /// <summary>「更多用户」：展开显示本次搜索结果里的全部相关用户。</summary>
+    [RelayCommand]
+    private void ExpandSearchUsers()
+    {
+        IsSearchUsersExpanded = true;
+        FillSearchUsers(all: true);
+    }
 
     partial void OnSearchTabChanged(string value)
     {
@@ -99,6 +126,14 @@ public sealed partial class HomeViewModel : ObservableObject
         IsLatest = latest;
         IsOfficialTab = false;
         IsSearchMode = false;
+        SearchKeyword = string.Empty;
+        IsSearchUsersExpanded = false;
+        _searchUserResults.Clear();
+        _searchResults.Clear();
+        SearchUsers.Clear();
+        OnPropertyChanged(nameof(HasSearchUsers));
+        OnPropertyChanged(nameof(ShowSearchUsers));
+        OnPropertyChanged(nameof(CanExpandSearchUsers));
         IsLoading = true;
         StatusText = Localization.Loc.Instance["Common.Loading"];
         try
@@ -274,22 +309,26 @@ public sealed partial class HomeViewModel : ObservableObject
     public async Task SearchAsync(string keyword)
     {
         var value = (keyword ?? string.Empty).Trim();
-        if (string.IsNullOrEmpty(value)) return;
+        if (string.IsNullOrEmpty(value))
+        {
+            ExitSearch();
+            return;
+        }
 
         IsSearchMode = true;
         SearchKeyword = value;
+        IsSearchUsersExpanded = false;
         IsLoading = true;
         StatusText = "正在米游社搜索用户与内容…";
         try
         {
-            var usersTask = _content.Api.SearchUsersAsync(value, 12);
+            var usersTask = _content.Api.SearchUsersAsync(value, 30);
             var resultsTask = _content.SearchPostsAsync(value, 30);
             await Task.WhenAll(usersTask, resultsTask);
 
             _searchUserResults = usersTask.Result.ToList();
             _searchResults = resultsTask.Result.ToList();
-            SearchUsers.Clear();
-            foreach (var user in _searchUserResults) SearchUsers.Add(user);
+            FillSearchUsers(all: false);
             OnPropertyChanged(nameof(HasSearchUsers));
             OnPropertyChanged(nameof(ShowSearchUsers));
 
@@ -331,13 +370,16 @@ public sealed partial class HomeViewModel : ObservableObject
 
         Items.Clear();
         foreach (var item in list) Items.Add(item);
-        var showUsers = SearchTab is "All" or "User" && SearchUsers.Count > 0;
+        var showUsers = SearchTab is "All" or "User" && _searchUserResults.Count > 0;
         IsEmpty = SearchTab == "User" ? SearchUsers.Count == 0 : Items.Count == 0;
-        if (!showUsers) SearchUsers.Clear();
-        else
+        if (!showUsers)
         {
             SearchUsers.Clear();
-            foreach (var user in _searchUserResults) SearchUsers.Add(user);
+            OnPropertyChanged(nameof(HasSearchUsers));
+        }
+        else
+        {
+            FillSearchUsers(IsSearchUsersExpanded);
         }
         OnPropertyChanged(nameof(HasSearchUsers));
         OnPropertyChanged(nameof(ShowSearchUsers));
@@ -348,12 +390,13 @@ public sealed partial class HomeViewModel : ObservableObject
             : $"内容 {Items.Count} 条" + (showUsers ? $" · 用户 {_searchUserResults.Count} 位" : string.Empty);
     }
 
-    /// <summary>清空搜索，回到原来的帖子流。</summary>
+    /// <summary>清空搜索，回到原来的帖子流。0.1.11：即使已经是非搜索态，也会清掉遗留的相关用户。</summary>
     public void ExitSearch()
     {
-        if (!IsSearchMode) return;
+        var wasSearching = IsSearchMode;
         IsSearchMode = false;
         SearchKeyword = string.Empty;
+        IsSearchUsersExpanded = false;
         SearchUsers.Clear();
         _searchUserResults.Clear();
         _searchResults.Clear();
@@ -361,6 +404,8 @@ public sealed partial class HomeViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowSearchUsers));
         OnPropertyChanged(nameof(ShowSearchContent));
         OnPropertyChanged(nameof(ShowFeedGrid));
+        OnPropertyChanged(nameof(CanExpandSearchUsers));
+        if (!wasSearching) return;
         Items.Clear();
         foreach (var item in _feed) Items.Add(item);
         IsEmpty = Items.Count == 0;

@@ -320,9 +320,8 @@ public sealed class ContentService
                 await gate.WaitAsync(ct);
                 try
                 {
-                    var items = await Api.GetUserPostsAsync(user.Uid, _settings.CommunityId, 24, ct);
-                    if (items.Count == 0 && _settings.CommunityId != 2)
-                        items = await Api.GetUserPostsAsync(user.Uid, 2, 24, ct);
+                    // 不指定 gids，取该用户在所有版块（原神、星铁、绝区零、大别野等）的最新发布。
+                    var items = await Api.GetUserPostsAsync(user.Uid, 0, 24, ct);
                     return items;
                 }
                 catch

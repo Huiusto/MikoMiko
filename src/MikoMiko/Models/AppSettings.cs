@@ -56,6 +56,7 @@ public sealed partial class AppSettings : ObservableObject
     // 「我的」页游戏角色展示：隐藏的游戏与展示顺序
     [ObservableProperty] private List<string> _hiddenGameIds = new();
     [ObservableProperty] private List<string> _gameOrder = new();
+    [ObservableProperty] private bool _showGameRecords = true;
 
     // 通用
     [ObservableProperty] private bool _checkUpdateOnStartup = true;

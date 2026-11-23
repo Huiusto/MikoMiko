@@ -364,7 +364,8 @@ public sealed class MiyousheApi
         var lastId = string.Empty;
         for (var page = 0; page < 3; page++)
         {
-            var query = $"gids=2&last_id={Uri.EscapeDataString(lastId)}&page_size=50";
+            // 0.1.11：关注关系是账号级的，不限定 gids=2，避免只在原神社区里找关注用户。
+            var query = $"last_id={Uri.EscapeDataString(lastId)}&page_size=50";
             var url = $"{UserApi}/following?{query}";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             AddX4Headers(request, query, string.Empty);
@@ -396,21 +397,37 @@ public sealed class MiyousheApi
         return users;
     }
 
-    /// <summary>某个用户发布的帖子（公开），用于动态页按关注用户聚合。</summary>
+    /// <summary>某个用户发布的帖子（公开）；gids=0 表示全部版块，并按 next_offset 翻页取全量。</summary>
     public async Task<IReadOnlyList<FeedItem>> GetUserPostsAsync(string uid, int gids, int size = 20,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(uid)) return Array.Empty<FeedItem>();
         try
         {
-            var url = $"{PostApi}/userPost?uid={Uri.EscapeDataString(uid)}&gids={gids}&size={size}";
-            var root = await GetJsonAsync(url, ct);
-            var list = Obj(Obj(root, "data"), "list");
             var items = new List<FeedItem>();
-            foreach (var element in Items(list))
+            var seen = new HashSet<string>();
+            var offset = string.Empty;
+            for (var page = 0; page < 8; page++)
             {
-                var item = ParseHomeItem(element);
-                if (item is not null) items.Add(item);
+                var url = $"{PostApi}/userPost?uid={Uri.EscapeDataString(uid)}&size={size}";
+                if (gids > 0) url += $"&gids={gids}";
+                if (!string.IsNullOrEmpty(offset)) url += $"&offset={Uri.EscapeDataString(offset)}";
+
+                var root = await GetJsonAsync(url, ct);
+                var data = Obj(root, "data");
+                foreach (var element in Items(Obj(data, "list")))
+                {
+                    var item = ParseHomeItem(element);
+                    if (item is null) continue;
+                    var key = item.PostId;
+                    if (!string.IsNullOrWhiteSpace(key) && !seen.Add(key)) continue;
+                    items.Add(item);
+                }
+
+                var next = Str(data, "next_offset");
+                if (string.IsNullOrWhiteSpace(next) || next == offset) break;
+                if (Obj(data, "is_last")?.ValueKind == JsonValueKind.True) break;
+                offset = next;
             }
 
             return items;

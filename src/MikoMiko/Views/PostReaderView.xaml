@@ -170,7 +170,9 @@
                 <Border Margin="0,16,0,0" CornerRadius="10" ClipToBounds="True"
                         Background="{DynamicResource Brush.PlayerBg}"
                         Visibility="{Binding IsVideo, Converter={StaticResource BoolToVis}}">
-                    <Grid x:Name="VideoHost" Height="440">
+                    <Grid x:Name="VideoHost" Height="440" Background="Transparent"
+                          MouseEnter="VideoHost_MouseEnter" MouseLeave="VideoHost_MouseLeave"
+                          MouseLeftButtonUp="VideoSurface_Click">
                         <MediaElement x:Name="Media" LoadedBehavior="Manual" UnloadedBehavior="Manual"
                                       ScrubbingEnabled="True" Stretch="Uniform" Volume="0.6" />
 
@@ -234,8 +236,27 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Button x:Name="VideoToggleButton" Style="{StaticResource LinkButton}" Width="28" Padding="0"
-                                        Click="VideoToggle_Click" Content="▶" Foreground="White" FontSize="12" />
+                                <Button x:Name="VideoToggleButton" Width="30" Height="30" Padding="0" Cursor="Hand"
+                                        Click="VideoToggle_Click" ToolTip="播放 / 暂停">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border x:Name="ToggleBd" CornerRadius="15" Background="#33FFFFFF">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ToggleBd" Property="Background" Value="#66FFFFFF" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <Grid Width="15" Height="16">
+                                        <Path x:Name="TogglePlayIcon" Data="M1 1 L13 8 L1 15 Z" Fill="#FFFFFF"
+                                              Stretch="Fill" />
+                                        <Path x:Name="TogglePauseIcon" Data="M1 1 H5 V15 H1 Z M10 1 H14 V15 H10 Z"
+                                              Fill="#FFFFFF" Stretch="Fill" Visibility="Collapsed" />
+                                    </Grid>
+                                </Button>
                                 <Slider x:Name="VideoProgress" Grid.Column="1" Minimum="0" Maximum="1"
                                         VerticalAlignment="Center" Margin="6,0"
                                         PreviewMouseLeftButtonDown="VideoProgress_DragStart"
@@ -399,7 +420,7 @@
                                     <StackPanel Orientation="Horizontal" Margin="41,8,0,0">
                                         <TextBlock Text="{Binding TimeText}" FontSize="10.5"
                                                    Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
-                                        <Button Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        <Button Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}" Style="{StaticResource LinkButton}"
                                                 Margin="14,0,0,0" Height="18" Padding="0">
                                             <StackPanel Orientation="Horizontal">
@@ -420,7 +441,7 @@
                                                            Foreground="{DynamicResource Brush.TextTertiary}" Margin="4,0,0,0" />
                                             </StackPanel>
                                         </Button>
-                                        <Button Command="{Binding DataContext.DislikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        <Button Command="{Binding DataContext.DislikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}" Style="{StaticResource LinkButton}"
                                                 Margin="12,0,0,0" Height="18" Padding="0">
                                             <StackPanel Orientation="Horizontal">
@@ -442,7 +463,7 @@
                                         </Button>
                                         <Button Content="回复" Style="{StaticResource LinkButton}" Margin="14,0,0,0"
                                                 FontSize="10.5" Padding="0" Height="18"
-                                                Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}" />
                                     </StackPanel>
 
@@ -521,12 +542,12 @@
                                                         </ItemsControl>
 
                                                         <StackPanel Orientation="Horizontal" Margin="29,6,0,0">
-                                                            <Button Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                            <Button Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}" Style="{StaticResource LinkButton}"
                                                                     Height="18" Padding="0" FontSize="10.5" Content="赞" />
                                                             <Button Content="回复" Style="{StaticResource LinkButton}" Margin="12,0,0,0"
                                                                     FontSize="10.5" Padding="0" Height="18"
-                                                                    Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                    Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                     CommandParameter="{Binding}" />
                                                         </StackPanel>
 
@@ -682,16 +703,14 @@
             <TextBlock x:Name="LightboxCounter" HorizontalAlignment="Center" VerticalAlignment="Bottom"
                        Margin="0,0,0,22" Foreground="#B3FFFFFF" FontSize="12" />
             <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,18,12"
-                    Height="34" Padding="12,0" Cursor="Hand" Click="LightboxDownload_Click"
-                    Background="#33FFFFFF" BorderThickness="0">
+                    Width="34" Height="34" Padding="0" Cursor="Hand" Click="LightboxDownload_Click"
+                    Background="#33FFFFFF" BorderThickness="0" ToolTip="下载图片">
                 <Button.Template>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="Bd" Background="#33FFFFFF" CornerRadius="17" Padding="{TemplateBinding Padding}">
-                            <StackPanel Orientation="Horizontal">
-                                <Path Data="M1 10 V14 H15 V10 M8 1 V10 M5 7 L8 10 L11 7" Stroke="White"
-                                      StrokeThickness="1.3" Width="14" Height="13" Stretch="Uniform" VerticalAlignment="Center" />
-                                <TextBlock x:Name="Text" Text="下载" Foreground="White" FontSize="11.5" Margin="6,0,0,0" />
-                            </StackPanel>
+                        <Border x:Name="Bd" Background="#33FFFFFF" CornerRadius="17">
+                            <Path Data="M1 10 V14 H15 V10 M8 1 V10 M5 7 L8 10 L11 7" Stroke="White"
+                                  StrokeThickness="1.4" Width="15" Height="14" Stretch="Uniform"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="#55FFFFFF" /></Trigger>

@@ -67,6 +67,8 @@ public sealed partial class UserProfileViewModel : ObservableObject
     [ObservableProperty] private bool _hasFavorites;
     [ObservableProperty] private bool _hasGames;
     [ObservableProperty] private bool _hasTags;
+    [ObservableProperty] private GameAccount? _selectedGame;
+    [ObservableProperty] private bool _isGameDetailOpen;
 
     public bool HasIntroduce => !string.IsNullOrWhiteSpace(Introduce);
     public bool HasCertification => !string.IsNullOrWhiteSpace(Certification);
@@ -94,7 +96,7 @@ public sealed partial class UserProfileViewModel : ObservableObject
         try
         {
             var profileTask = _content.Api.GetUserProfileAsync(Uid);
-            var postsTask = _content.Api.GetUserPostsAsync(Uid, 2, 20);
+            var postsTask = _content.Api.GetUserPostsAsync(Uid, 0, 20);
             var repliesTask = _content.Api.GetUserRepliesAsync(Uid, 20);
             var collectionsTask = _content.Api.GetUserCollectionsAsync(Uid);
             var favoritesTask = _content.Api.GetFavoritePostsAsync(Uid, 20);
@@ -201,6 +203,18 @@ public sealed partial class UserProfileViewModel : ObservableObject
         foreach (var item in Tabs) item.IsSelected = item.Key == tab.Key;
         SelectedTab = tab.Key;
     }
+
+    /// <summary>点击「TA 的游戏角色」卡片，打开该游戏的战绩详情。</summary>
+    [RelayCommand]
+    private void OpenGame(GameAccount? game)
+    {
+        if (game is null) return;
+        SelectedGame = game;
+        IsGameDetailOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseGameDetail() => IsGameDetailOpen = false;
 
     [RelayCommand]
     private void SearchPosts()

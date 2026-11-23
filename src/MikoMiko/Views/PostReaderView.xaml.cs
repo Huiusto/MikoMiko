@@ -3,7 +3,9 @@ using MikoMiko.ViewModels;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace MikoMiko.Views;
@@ -95,8 +97,70 @@ public partial class PostReaderView : UserControl
         VideoCover.Visibility = Visibility.Collapsed;
         VideoPauseButton.Visibility = Visibility.Collapsed;
         VideoControls.Visibility = Visibility.Visible;
-        VideoToggleButton.Content = "❚❚";
+        SetToggleIcon(true);
         _videoTimer.Start();
+    }
+
+    /// <summary>0.1.11：控制栏仅在鼠标进入视频区域时出现，移出后消失。</summary>
+    private void VideoHost_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (VideoCover.Visibility == Visibility.Collapsed)
+            VideoControls.Visibility = Visibility.Visible;
+    }
+
+    private void VideoHost_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        VideoControls.Visibility = Visibility.Collapsed;
+        VideoCover.Cursor = null;
+        VideoHost.Cursor = null;
+    }
+
+    /// <summary>点击视频画面切换播放 / 暂停（按钮、进度条自身的点击不触发）。</summary>
+    private void VideoSurface_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (FindParent<System.Windows.Controls.Primitives.ButtonBase>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindParent<Slider>(e.OriginalSource as DependencyObject) is not null) return;
+        ToggleVideoPlayback();
+        e.Handled = true;
+    }
+
+    private static T? FindParent<T>(DependencyObject? source) where T : DependencyObject
+    {
+        while (source is not null)
+        {
+            if (source is T match) return match;
+            source = VisualTreeHelper.GetParent(source);
+        }
+        return null;
+    }
+
+    private void SetToggleIcon(bool playing)
+    {
+        TogglePlayIcon.Visibility = playing ? Visibility.Collapsed : Visibility.Visible;
+        TogglePauseIcon.Visibility = playing ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void ToggleVideoPlayback()
+    {
+        if (VideoCover.Visibility == Visibility.Visible ||
+            (Media.NaturalDuration.HasTimeSpan && Media.Position >= Media.NaturalDuration.TimeSpan))
+        {
+            VideoPlay_Click(this, new RoutedEventArgs());
+            return;
+        }
+
+        if (_videoTimer.IsEnabled)
+        {
+            Media.Pause();
+            _videoTimer.Stop();
+            SetToggleIcon(false);
+        }
+        else
+        {
+            Media.Play();
+            _videoTimer.Start();
+            SetToggleIcon(true);
+        }
     }
 
     private void VideoPause_Click(object sender, RoutedEventArgs e)
@@ -105,27 +169,7 @@ public partial class PostReaderView : UserControl
         ShowCover();
     }
 
-    private void VideoToggle_Click(object sender, RoutedEventArgs e)
-    {
-        if (VideoCover.Visibility == Visibility.Visible ||
-            Media.NaturalDuration.HasTimeSpan && Media.Position >= Media.NaturalDuration.TimeSpan)
-        {
-            VideoPlay_Click(sender, e);
-            return;
-        }
-        if (_videoTimer.IsEnabled)
-        {
-            Media.Pause();
-            _videoTimer.Stop();
-            VideoToggleButton.Content = "▶";
-        }
-        else
-        {
-            Media.Play();
-            _videoTimer.Start();
-            VideoToggleButton.Content = "❚❚";
-        }
-    }
+    private void VideoToggle_Click(object sender, RoutedEventArgs e) => ToggleVideoPlayback();
 
     private void UpdateVideoProgress()
     {

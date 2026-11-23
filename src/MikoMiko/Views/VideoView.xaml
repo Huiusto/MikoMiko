@@ -84,10 +84,10 @@
                                     <TextBlock Text="{Binding Selected.MikoBadgeText}" Foreground="{Binding Selected.MikoBadgeForeground}"
                                                FontSize="9.5" FontWeight="SemiBold" />
                                 </Border>
-                                <Border Background="#FF6FA5" CornerRadius="4" Padding="5,1" Margin="0,0,6,0"
+                                <Border Background="#FFF1F5" CornerRadius="4" Padding="5,1" Margin="0,0,6,0"
                                         VerticalAlignment="Center"
                                         Visibility="{Binding Selected.ShowCertBadge, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="V" Foreground="White" FontSize="9.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="V" Foreground="#F0A9BD" FontSize="9.5" FontWeight="SemiBold" />
                                 </Border>
                                 <Button Style="{StaticResource LinkButton}" Padding="0" Command="{Binding OpenAuthorCommand}" Cursor="Hand">
                                     <TextBlock Text="{Binding Selected.Author}" Foreground="White" FontSize="14"
@@ -206,13 +206,13 @@
                 <!-- 三色进度条：白色=未加载，灰色=已缓冲，米蓝=已播放；无常驻滑块、悬停不改变粗细 -->
                 <Grid x:Name="ProgressTrack" Height="16" VerticalAlignment="Bottom" Margin="16,0,16,54"
                       Cursor="Arrow" Background="Transparent">
-                    <Border Height="4" VerticalAlignment="Center" Background="#FFFFFF" CornerRadius="2" />
-                    <Border x:Name="BufferBar" Height="4" Width="0" HorizontalAlignment="Left"
-                            VerticalAlignment="Center" Background="#9A9A9A" CornerRadius="2" />
-                    <Border x:Name="PlayedBar" Height="4" Width="0" HorizontalAlignment="Left"
-                            VerticalAlignment="Center" Background="#4EA4DD" CornerRadius="2" />
-                    <Slider x:Name="ProgressSlider" Height="16" Minimum="0" Maximum="1" Background="Transparent"
-                            Cursor="Arrow" IsMoveToPointEnabled="True"
+                    <Border Height="3" VerticalAlignment="Center" Background="#FFFFFF" CornerRadius="1.5" />
+                    <Border x:Name="BufferBar" Height="3" Width="0" HorizontalAlignment="Left"
+                            VerticalAlignment="Center" Background="#9A9A9A" CornerRadius="1.5" />
+                    <Border x:Name="PlayedBar" Height="3" Width="0" HorizontalAlignment="Left"
+                            VerticalAlignment="Center" Background="#4EA4DD" CornerRadius="1.5" />
+                    <Slider x:Name="ProgressSlider" Height="14" Minimum="0" Maximum="1" Background="Transparent"
+                            Cursor="Arrow" IsMoveToPointEnabled="True" Opacity="0" Focusable="False"
                             PreviewMouseLeftButtonDown="Progress_DragStart"
                             PreviewMouseLeftButtonUp="Progress_DragEnd"
                             LostMouseCapture="Progress_LostMouseCapture"
@@ -346,7 +346,7 @@
                                 <DataTemplate>
                                     <Button Height="30" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0"
                                             HorizontalContentAlignment="Stretch"
-                                            Command="{Binding DataContext.PickQualityCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            Command="{Binding DataContext.PickQualityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}">
                                         <Button.Template>
                                             <ControlTemplate TargetType="{x:Type Button}">
@@ -402,7 +402,7 @@
                                 <DataTemplate>
                                     <Button Height="30" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0"
                                             HorizontalContentAlignment="Stretch"
-                                            Command="{Binding DataContext.PickSpeedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            Command="{Binding DataContext.PickSpeedCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}">
                                         <Button.Template>
                                             <ControlTemplate TargetType="{x:Type Button}">
@@ -483,7 +483,7 @@
                                                     </ItemsControl>
                                                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                                         <Button Style="{StaticResource LinkButton}" Height="18" Padding="0"
-                                                                Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                 CommandParameter="{Binding}">
                                                             <TextBlock Text="♡" FontSize="10.5" Foreground="#80FFFFFF">
                                                                 <TextBlock.Style>
@@ -503,7 +503,7 @@
                                                                    Margin="4,0,0,0" VerticalAlignment="Center" />
                                                         <Button Style="{StaticResource LinkButton}" Height="18" Padding="0"
                                                                 Margin="12,0,0,0"
-                                                                Command="{Binding DataContext.DislikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                Command="{Binding DataContext.DislikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                 CommandParameter="{Binding}">
                                                             <TextBlock Text="♧" FontSize="10.5" Foreground="#80FFFFFF">
                                                                 <TextBlock.Style>
@@ -520,7 +520,7 @@
                                                         </Button>
                                                         <Button Content="回复" Style="{StaticResource LinkButton}" Height="18" Padding="0"
                                                                 Margin="12,0,0,0" FontSize="10.5" Foreground="#99FFFFFF"
-                                                                Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                 CommandParameter="{Binding}" />
                                                     </StackPanel>
                                                 </StackPanel>
@@ -561,7 +561,7 @@
                                                                 <Button Content="回复" Style="{StaticResource LinkButton}" Height="18"
                                                                         Padding="0" Margin="0,4,0,0" FontSize="10" Foreground="#99FFFFFF"
                                                                         HorizontalAlignment="Left"
-                                                                        Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                         CommandParameter="{Binding}" />
                                                             </StackPanel>
                                                         </Border>

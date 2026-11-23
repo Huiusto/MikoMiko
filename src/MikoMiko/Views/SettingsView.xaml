@@ -285,7 +285,7 @@
                 </Border>
 
                 <!-- 缓存管理 -->
-                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" MinHeight="180"
+                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" MinHeight="180"
                         Style="{StaticResource SectionCard}" Tag="Cache">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Cache], Source={x:Static loc:Loc.Instance}}"
@@ -323,21 +323,6 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 窗口设置 -->
-                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" MinHeight="180"
-                        Style="{StaticResource SectionCard}" Tag="Window">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [S.Window], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource SectionTitle}" />
-
-                        <CheckBox Content="{Binding [S.Rounded], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" Margin="0,0,0,4"
-                                  IsChecked="{Binding Settings.RoundedWindow}" />
-                        <TextBlock Text="{Binding [S.WindowHint], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource RowHint}" Margin="0,4,0,0" />
-                    </StackPanel>
-                </Border>
-
                 <!-- 通用设置 -->
                 <Border Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="3" MinHeight="180"
                         Style="{StaticResource SectionCard}" Tag="Common">
@@ -353,7 +338,7 @@
                 </Border>
 
                 <!-- 应用维护 -->
-                <Border Grid.Row="2" Grid.Column="3" Grid.ColumnSpan="3" MinHeight="180"
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="6" MinHeight="180"
                         Style="{StaticResource SectionCard}" Tag="Maintain">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Maintain], Source={x:Static loc:Loc.Instance}}"

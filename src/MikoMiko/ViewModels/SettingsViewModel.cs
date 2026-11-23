@@ -25,7 +25,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         {
             new("General", Loc.Instance["S.General"]),
             new("Cache", Loc.Instance["S.Cache"]),
-            new("Window", Loc.Instance["S.Window"]),
             new("Common", Loc.Instance["S.Common"]),
             new("Maintain", Loc.Instance["S.Maintain"]),
             new("AppInfo", Loc.Instance["S.AppInfo"]),
@@ -543,8 +542,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         var sectionKeys = new[]
         {
-            "S.General", "S.Playback", "S.Cache", "S.Window", "S.Common",
-            "S.Maintain", "S.AppInfo", "S.About", "S.Disclaimer", "S.Changelog",
+            "S.General", "S.Cache", "S.Common",
+            "S.Maintain", "S.AppInfo", "S.About", "S.Disclaimer",
         };
         for (var i = 0; i < Sections.Count && i < sectionKeys.Length; i++)
         {

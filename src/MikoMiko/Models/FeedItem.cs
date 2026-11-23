@@ -46,8 +46,8 @@ public sealed class FeedItem
     public string MikoBadgeBackground => "#F1E8FC";
     public string MikoBadgeForeground => "#8B5CF6";
 
-    /// <summary>个人认证与开发者账号在 M-STAR 之后再显示一个粉红色「V」。</summary>
-    public bool ShowCertBadge => !IsOfficial && (CertificationType >= 2 || IsDeveloper);
+    /// <summary>仅个人认证账号在 M-STAR 之后再显示一个淡粉色「V」；开发者身份只显示 MikoMiko 徽标。</summary>
+    public bool ShowCertBadge => !IsOfficial && CertificationType >= 2;
     public string CertificationBadgeText => "V";
 
     /// <summary>首页卡片封面：没有配图的帖子使用默认占位图，但阅读器正文不插入该图。</summary>

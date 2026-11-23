@@ -212,6 +212,15 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
+                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                        HorizontalContentAlignment="Stretch"
+                                        Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <ContentPresenter />
+                                        </ControlTemplate>
+                                    </Button.Template>
                                 <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10"
                                         Padding="12,10" Margin="0,0,12,12">
                                     <Grid>
@@ -235,9 +244,15 @@
                                                 <Run Text="·" />
                                                 <Run Text="{Binding Server}" />
                                             </TextBlock>
+                                            <TextBlock FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0">
+                                                <Run Text="UID" />
+                                                <Run Text="{Binding Uid}" />
+                                            </TextBlock>
                                         </StackPanel>
                                     </Grid>
                                 </Border>
+                                </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -374,5 +389,94 @@
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- 0.1.11：点击「TA 的游戏角色」打开对应游戏的战绩详情 -->
+        <Grid Grid.RowSpan="2" Background="#CC000000"
+              Visibility="{Binding IsGameDetailOpen, Converter={StaticResource BoolToVis}}">
+            <Border Width="600" MaxHeight="560" Background="{DynamicResource Brush.WindowBg}" CornerRadius="14"
+                    Padding="24,20" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <StackPanel Orientation="Horizontal">
+                            <Border Width="6" Height="44" CornerRadius="3" Background="{Binding SelectedGame.Accent}" />
+                            <StackPanel Margin="12,0,0,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding SelectedGame.GameName}" FontSize="19" FontWeight="SemiBold" />
+                                    <Border Background="{DynamicResource Brush.Card}" CornerRadius="4" Padding="6,1"
+                                            Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedGame.Badge}" FontSize="10"
+                                                   Foreground="{DynamicResource Brush.TextTertiary}" />
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <TextBlock Text="{Binding SelectedGame.RoleName}" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Brush.TextSecondary}" />
+                                    <TextBlock Text="{Binding SelectedGame.Uid, StringFormat='UID {0}'}" FontSize="11.5"
+                                               Margin="12,0,0,0" Foreground="{DynamicResource Brush.TextTertiary}" />
+                                    <TextBlock Text="{Binding SelectedGame.Server}" FontSize="11.5" Margin="10,0,0,0"
+                                               Foreground="{DynamicResource Brush.TextTertiary}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="32" Height="32"
+                                Cursor="Hand" Command="{Binding CloseGameDetailCommand}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="{x:Type Button}">
+                                    <Border x:Name="Bd" CornerRadius="16" Background="{DynamicResource Brush.Card}">
+                                        <Path Data="M0 0 L10 10 M10 0 L0 10" Stroke="{DynamicResource Brush.TextSecondary}"
+                                              StrokeThickness="1.5" Width="11" Height="11" Stretch="Uniform"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.CardHover}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+
+                    <Border Grid.Row="1" Background="{DynamicResource Brush.Surface}" CornerRadius="12"
+                            Padding="14,12" Margin="0,16,0,4">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <TextBlock Text="战绩详情" FontSize="13.5" FontWeight="SemiBold" />
+                                <TextBlock Text="数据来自米游社公开角色卡" FontSize="10.5" HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding SelectedGame.Stats}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource Brush.Card}" CornerRadius="8" Padding="10,9"
+                                                Margin="0,0,8,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Label}" FontSize="10.5"
+                                                           Foreground="{DynamicResource Brush.TextTertiary}" />
+                                                <TextBlock Text="{Binding Value}" FontSize="13" FontWeight="SemiBold"
+                                                           Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="该角色没有公开战绩数据" FontSize="12.5"
+                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="2,6,0,2"
+                                       Visibility="{Binding SelectedGame.HasStats, Converter={StaticResource InverseBoolToVis}}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

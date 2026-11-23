@@ -270,6 +270,12 @@ public sealed partial class MineViewModel : ObservableObject
     private async Task OpenGameAsync(GameAccount? game)
     {
         if (game is null) return;
+        if (!_settings.ShowGameRecords)
+        {
+            IsGameSettingsOpen = false;
+            BindStatus = "游戏战绩详情已在角色管理中关闭";
+            return;
+        }
         SelectedGame = game;
         IsGameDetailOpen = true;
         GameStatus = "正在读取该游戏战绩…";
