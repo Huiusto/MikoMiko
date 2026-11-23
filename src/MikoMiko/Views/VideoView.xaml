@@ -78,7 +78,13 @@
                                     <TextBlock Text="{Binding Selected.BadgeText}" Foreground="{Binding Selected.BadgeForeground}"
                                                FontSize="9.5" FontWeight="SemiBold" />
                                 </Border>
-                                <Border Background="#E23A3A" CornerRadius="4" Padding="5,1" Margin="0,0,6,0"
+                                <Border Background="{Binding Selected.MikoBadgeBackground}" CornerRadius="4"
+                                        Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center"
+                                        Visibility="{Binding Selected.ShowMikoBadge, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding Selected.MikoBadgeText}" Foreground="{Binding Selected.MikoBadgeForeground}"
+                                               FontSize="9.5" FontWeight="SemiBold" />
+                                </Border>
+                                <Border Background="#FF6FA5" CornerRadius="4" Padding="5,1" Margin="0,0,6,0"
                                         VerticalAlignment="Center"
                                         Visibility="{Binding Selected.ShowCertBadge, Converter={StaticResource BoolToVis}}">
                                     <TextBlock Text="V" Foreground="White" FontSize="9.5" FontWeight="SemiBold" />
@@ -182,13 +188,7 @@
                         IsHitTestVisible="False" ClipToBounds="True"
                         Visibility="{Binding ShowDanmaku, Converter={StaticResource BoolToVis}}" />
 
-                <!-- 右上角三点：画质与下载 -->
-                <Button Style="{StaticResource PlayerBarButton}" HorizontalAlignment="Right" VerticalAlignment="Top"
-                        Margin="0,14,16,0" Width="32" Height="28" Padding="0"
-                        Command="{Binding ToggleKebabCommand}" ToolTip="画质与下载">
-                    <TextBlock Text="⋮" Foreground="White" FontSize="20" FontWeight="SemiBold"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Button>
+                <!-- 右上角不再放画质入口；清晰度已移到下方倍速旁。 -->
 
                 <!-- 返回封面（播放时显示） -->
                 <Button x:Name="ReturnCoverButton" HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -203,15 +203,19 @@
                     </StackPanel>
                 </Button>
 
-                <!-- 三色进度条：白色=未加载，灰色=已缓冲，米蓝=已播放 -->
+                <!-- 三色进度条：白色=未加载，灰色=已缓冲，米蓝=已播放；无常驻滑块、悬停不改变粗细 -->
                 <Grid x:Name="ProgressTrack" Height="16" VerticalAlignment="Bottom" Margin="16,0,16,54"
-                      Cursor="Hand" Background="Transparent">
-                    <Border Height="3" VerticalAlignment="Center" Background="#FFFFFF" CornerRadius="2" />
-                    <Border x:Name="BufferBar" Height="3" Width="0" HorizontalAlignment="Left"
+                      Cursor="Arrow" Background="Transparent">
+                    <Border Height="4" VerticalAlignment="Center" Background="#FFFFFF" CornerRadius="2" />
+                    <Border x:Name="BufferBar" Height="4" Width="0" HorizontalAlignment="Left"
                             VerticalAlignment="Center" Background="#9A9A9A" CornerRadius="2" />
                     <Border x:Name="PlayedBar" Height="4" Width="0" HorizontalAlignment="Left"
                             VerticalAlignment="Center" Background="#4EA4DD" CornerRadius="2" />
                     <Slider x:Name="ProgressSlider" Height="16" Minimum="0" Maximum="1" Background="Transparent"
+                            Cursor="Arrow" IsMoveToPointEnabled="True"
+                            PreviewMouseLeftButtonDown="Progress_DragStart"
+                            PreviewMouseLeftButtonUp="Progress_DragEnd"
+                            LostMouseCapture="Progress_LostMouseCapture"
                             ValueChanged="Progress_ValueChanged">
                         <Slider.Template>
                             <ControlTemplate TargetType="{x:Type Slider}">
@@ -226,10 +230,10 @@
                                                           BorderThickness="0" Focusable="False" />
                                         </Track.IncreaseRepeatButton>
                                         <Track.Thumb>
-                                            <Thumb Width="9" Height="9" Cursor="Hand">
+                                            <Thumb Width="10" Height="16" Cursor="Arrow" Opacity="0">
                                                 <Thumb.Template>
                                                     <ControlTemplate TargetType="{x:Type Thumb}">
-                                                        <Ellipse Fill="#4EA4DD" Stroke="White" StrokeThickness="1.2" />
+                                                        <Border Background="Transparent" />
                                                     </ControlTemplate>
                                                 </Thumb.Template>
                                             </Thumb>
@@ -291,6 +295,10 @@
                                 Click="SendDanmaku_Click" />
 
                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="QualityButton" Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
+                                    Command="{Binding ToggleQualityCommand}" ToolTip="清晰度">
+                                <TextBlock Text="{Binding QualityText}" Foreground="#E8FFFFFF" FontSize="12" />
+                            </Button>
                             <Button x:Name="SpeedButton" Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
                                     Command="{Binding ToggleSpeedCommand}">
                                 <TextBlock Text="{Binding SpeedText}" Foreground="#E8FFFFFF" FontSize="12" />
@@ -327,12 +335,12 @@
                     </Grid>
                 </Border>
 
-                <!-- 画质与下载抽屉（右上角三点展开） -->
-                <Border Width="176" HorizontalAlignment="Right" VerticalAlignment="Top"
-                        Margin="0,50,16,0" Background="#F2181820" CornerRadius="10" Padding="6"
+                <!-- 清晰度与下载抽屉（底部倍速旁展开） -->
+                <Border Width="176" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Margin="0,0,54,58" Background="#F2181820" CornerRadius="10" Padding="6"
                         Visibility="{Binding IsQualityOpen, Converter={StaticResource BoolToVis}}">
                     <StackPanel>
-                        <TextBlock Text="清晰度" Foreground="#80FFFFFF" FontSize="10.5" Margin="8,4,0,6" />
+                        <TextBlock Text="清晰度与下载" Foreground="#80FFFFFF" FontSize="10.5" Margin="8,4,0,6" />
                         <ItemsControl ItemsSource="{Binding QualityOptions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>

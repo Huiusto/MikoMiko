@@ -20,6 +20,9 @@ public sealed partial class GameAccount : ObservableObject
     public string Badge { get; set; } = string.Empty;
     public ImageSource? Logo { get; set; }
     public List<GameStatItem> Stats { get; set; } = new();
+    [ObservableProperty] private bool _isVisible = true;
+
+    public string Key => GameId.ToString();
 
     public bool HasStats => Stats.Count > 0;
 

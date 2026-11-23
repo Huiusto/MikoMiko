@@ -27,6 +27,9 @@ public partial class VideoView : UserControl
     private string? _proxyUrl;
     private bool _retriedRemote;
     private double _pendingSeekSeconds = -1;
+    private string? _lastSelectedPostId;
+    private bool _isSeeking;
+    private bool _wasPlayingBeforeSeek;
     private readonly DanmakuService _danmaku = new();
     private double _lastDanmakuSecond = -10;
 
@@ -147,6 +150,10 @@ public partial class VideoView : UserControl
         switch (e.PropertyName)
         {
             case nameof(VideoViewModel.Selected):
+                // 仅在真正切换到另一条视频时重载；点赞/收藏等字段通知不再打断播放。
+                var selectedId = _vm.Selected?.PostId;
+                if (selectedId == _lastSelectedPostId && Media.Source is not null) break;
+                _lastSelectedPostId = selectedId;
                 _retriedSource = false;
                 SyncSelected();
                 break;
@@ -496,6 +503,29 @@ public partial class VideoView : UserControl
         Media.Pause();
         _vm.IsPlaying = false;
         UpdatePlayIcon();
+    }
+
+    private void Progress_DragStart(object sender, MouseButtonEventArgs e)
+    {
+        if (_isSeeking) return;
+        _isSeeking = true;
+        _wasPlayingBeforeSeek = _vm.IsPlaying;
+        Media.Pause();
+    }
+
+    private void Progress_DragEnd(object sender, MouseButtonEventArgs e) => FinishSeek();
+    private void Progress_LostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e) => FinishSeek();
+
+    private void FinishSeek()
+    {
+        if (!_isSeeking) return;
+        _isSeeking = false;
+        // 松开后从落点继续缓冲；原本暂停则只停在新位置等待用户播放。
+        if (_wasPlayingBeforeSeek && Media.Source is not null)
+        {
+            _vm.IsPlaying = true;
+            Media.Play();
+        }
     }
 
     private void Progress_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)

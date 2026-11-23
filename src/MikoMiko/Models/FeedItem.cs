@@ -28,24 +28,26 @@ public sealed class FeedItem
     public int CertificationType { get; set; }
     public string CertificationLabel { get; set; } = string.Empty;
 
-    /// <summary>开发者账号（灰岁Huiusto / 通行证 310621322）显示蓝色 M。</summary>
+    /// <summary>开发者账号（灰岁Huiusto / 通行证 310621322）额外显示淡紫色 MikoMiko。</summary>
     public bool IsDeveloper => AuthorUid == "310621322" || Author == "灰岁Huiusto";
 
-    /// <summary>首页作者徽标：开发者=蓝色 M，官方=金色「官」，其余=M-STAR。</summary>
-    public string BadgeText => IsDeveloper ? "M" : IsOfficial ? "官" : "M-STAR";
+    /// <summary>首页作者徽标：官方=金色「官」，其余统一为蓝底 M-STAR。</summary>
+    public string BadgeText => IsOfficial ? "官" : "M-STAR";
 
-    public string BadgeBackground => IsDeveloper
-        ? "#4EA4DD"
-        : IsOfficial ? "#FFF2D6" : "#E6F4FB";
+    public string BadgeBackground => IsOfficial ? "#FFF2D6" : "#E6F4FB";
 
-    public string BadgeForeground => IsDeveloper
-        ? "#FFFFFF"
-        : IsOfficial ? "#B8860B" : "#2B8CC4";
+    public string BadgeForeground => IsOfficial ? "#B8860B" : "#2B8CC4";
 
     public bool IsWideBadge => false;
 
-    /// <summary>个人认证在 M-STAR 之后再显示一个红色「V」。</summary>
-    public bool ShowCertBadge => !IsDeveloper && !IsOfficial && CertificationType >= 2;
+    /// <summary>开发者账号在 M-STAR 后追加淡紫色 MikoMiko。</summary>
+    public bool ShowMikoBadge => IsDeveloper;
+    public string MikoBadgeText => "MikoMiko";
+    public string MikoBadgeBackground => "#F1E8FC";
+    public string MikoBadgeForeground => "#8B5CF6";
+
+    /// <summary>个人认证与开发者账号在 M-STAR 之后再显示一个粉红色「V」。</summary>
+    public bool ShowCertBadge => !IsOfficial && (CertificationType >= 2 || IsDeveloper);
     public string CertificationBadgeText => "V";
 
     /// <summary>首页卡片封面：没有配图的帖子使用默认占位图，但阅读器正文不插入该图。</summary>

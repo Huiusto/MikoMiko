@@ -53,6 +53,10 @@ public sealed partial class AppSettings : ObservableObject
     [ObservableProperty] private string _downloadPath = string.Empty;
     [ObservableProperty] private int _downloadThreads = 3;
 
+    // 「我的」页游戏角色展示：隐藏的游戏与展示顺序
+    [ObservableProperty] private List<string> _hiddenGameIds = new();
+    [ObservableProperty] private List<string> _gameOrder = new();
+
     // 通用
     [ObservableProperty] private bool _checkUpdateOnStartup = true;
     [ObservableProperty] private bool _enableGlobalHotkey = true;

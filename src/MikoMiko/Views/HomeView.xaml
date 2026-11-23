@@ -140,6 +140,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
@@ -155,14 +156,21 @@
                                        FontSize="9.5" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <Border Grid.Column="2" Background="#E23A3A" CornerRadius="4"
+                        <Border Grid.Column="2" Background="{Binding MikoBadgeBackground}" CornerRadius="4"
+                                Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center"
+                                Visibility="{Binding ShowMikoBadge, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding MikoBadgeText}" Foreground="{Binding MikoBadgeForeground}"
+                                       FontSize="9.5" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+
+                        <Border Grid.Column="3" Background="#FF6FA5" CornerRadius="4"
                                 Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center"
                                 Visibility="{Binding ShowCertBadge, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="V" Foreground="White" FontSize="9.5" FontWeight="SemiBold"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
-                        <TextBlock Grid.Column="3" Text="{Binding MetaText}" FontSize="12.5"
+                        <TextBlock Grid.Column="4" Text="{Binding MetaText}" FontSize="12.5"
                                    Foreground="{DynamicResource Brush.TextTertiary}" TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center" />
                     </Grid>
@@ -227,40 +235,7 @@
                                TextTrimming="CharacterEllipsis" Margin="14,0,0,0" />
                 </Grid>
 
-                <!-- 搜索结果分类页签（综合 / 攻略 / 视频 / 百科 / 图片 / 用户 / 话题） -->
-                <ItemsControl ItemsSource="{Binding SearchTabs}" Margin="0,14,0,16"
-                              Visibility="{Binding IsSearchMode, Converter={StaticResource BoolToVis}}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
-                                    Margin="0,0,22,0"
-                                    Command="{Binding DataContext.SelectSearchTabCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                    CommandParameter="{Binding}">
-                                <Button.Template>
-                                    <ControlTemplate TargetType="{x:Type Button}">
-                                        <StackPanel>
-                                            <TextBlock x:Name="Txt" Text="{Binding Label}" FontSize="13.5"
-                                                       Foreground="{DynamicResource Brush.TextTertiary}"
-                                                       HorizontalAlignment="Center" Margin="0,0,0,6" />
-                                            <Border x:Name="Line" Height="2" Width="18" CornerRadius="1"
-                                                    Background="Transparent" />
-                                        </StackPanel>
-                                        <ControlTemplate.Triggers>
-                                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                <Setter TargetName="Txt" Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
-                                                <Setter TargetName="Txt" Property="FontWeight" Value="SemiBold" />
-                                                <Setter TargetName="Line" Property="Background" Value="{DynamicResource Brush.Accent}" />
-                                            </DataTrigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Button.Template>
-                            </Button>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <!-- 0.1.10：去掉搜索结果分类页签，搜索直接展示用户与综合内容。 -->
 
                 <!-- 搜索优先展示用户，再展示内容 -->
                 <StackPanel Margin="0,0,0,16" Visibility="{Binding ShowSearchUsers, Converter={StaticResource BoolToVis}}">

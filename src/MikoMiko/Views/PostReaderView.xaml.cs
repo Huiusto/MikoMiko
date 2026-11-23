@@ -17,6 +17,7 @@ public partial class PostReaderView : UserControl
     private bool _localApplied;
     private bool _updatingInlineSlider;
     private bool _draggingInline;
+    private bool _inlinePlaying;
     private bool _draggingVideo;
     private bool _updatingVideoSlider;
     private string _lightboxUrl = string.Empty;
@@ -190,11 +191,40 @@ public partial class PostReaderView : UserControl
             InlineMedia.Source = new Uri(url, UriKind.Absolute);
             InlineMedia.Volume = 0.7;
             InlineMedia.Play();
+            _inlinePlaying = true;
+            InlineToggleButton.Content = "❚❚";
             _inlineTimer.Start();
         }
         catch
         {
             _vm.BufferText = "视频打开失败";
+        }
+    }
+
+    private void InlineToggle_Click(object sender, RoutedEventArgs e) => ToggleInlineMedia();
+
+    private void InlineMedia_Click(object sender, MouseButtonEventArgs e) => ToggleInlineMedia();
+
+    private void InlineMedia_MediaEnded(object sender, RoutedEventArgs e)
+    {
+        _inlinePlaying = false;
+        InlineToggleButton.Content = "▶";
+    }
+
+    private void ToggleInlineMedia()
+    {
+        if (InlineMedia.Source is null) return;
+        if (_inlinePlaying)
+        {
+            InlineMedia.Pause();
+            _inlinePlaying = false;
+            InlineToggleButton.Content = "▶";
+        }
+        else
+        {
+            InlineMedia.Play();
+            _inlinePlaying = true;
+            InlineToggleButton.Content = "❚❚";
         }
     }
 
@@ -253,6 +283,8 @@ public partial class PostReaderView : UserControl
     {
         _inlineTimer.Stop();
         InlineMedia.Pause();
+        _inlinePlaying = false;
+        InlineToggleButton.Content = "▶";
         InlineMedia.Source = null;
         VideoOverlay.Visibility = Visibility.Collapsed;
     }

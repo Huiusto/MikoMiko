@@ -69,6 +69,9 @@ public sealed class MiyousheApi
 
     public bool HasCookie => !string.IsNullOrWhiteSpace(_cookie);
 
+    /// <summary>当前 Cookie（只读），用于复用登录态读取公开战绩。</summary>
+    public string Cookie => _cookie;
+
     /// <summary>点赞（同步到当前 Cookie 对应的米游社账号）。</summary>
     public Task<bool> LikePostAsync(string postId, CancellationToken ct = default)
         => PostActionAsync("likePost", postId, ct);
@@ -98,21 +101,23 @@ public sealed class MiyousheApi
             });
 
             var rid = long.TryParse(replyId, out var parsedReplyId) ? parsedReplyId : 0L;
-            var payload = JsonSerializer.Serialize(new
+            // 顶层评论不携带 reply_id，回复评论才携带；传 0 会被服务端判为无效参数。
+            var payloadMap = new Dictionary<string, object>
             {
-                post_id = postId,
-                content = text,
-                structured_content = delta,
-                reply_id = rid,
-            });
+                ["post_id"] = postId,
+                ["content"] = text,
+                ["structured_content"] = delta,
+            };
+            if (rid > 0) payloadMap["reply_id"] = rid;
+            var payload = JsonSerializer.Serialize(payloadMap);
 
             var url = $"{PostApi}/releaseReply";
             using var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json"),
             };
-            // 评论接口按米游社 App 通道签名（client_type 5 + X4Salt），避免网页盐值错配导致 invalid request。
-            AddX4Headers(request, string.Empty, payload);
+            // 评论与合集同属网页端 wapi：client_type 4、2.102.0 网页盐，且 DS 只对 t/r 计算。
+            AddCollectionHeaders(request, string.Empty);
 
             var response = await _http.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
@@ -807,12 +812,32 @@ public sealed class MiyousheApi
                 Level = (int)Math.Max(Num(Obj(user, "level_exp"), "level"), Num(user, "level")),
                 IpRegion = Str(user, "ip_region"),
                 Certification = Str(Obj(user, "certification"), "label"),
+                CertificationType = (int)Num(Obj(user, "certification"), "type"),
                 Fans = FormatCount(long.TryParse(Str(achieve, "followed_cnt"), out var fans) ? fans : 0),
                 Following = FormatCount(long.TryParse(Str(achieve, "follow_cnt"), out var follow) ? follow : 0),
                 Likes = FormatCount(long.TryParse(Str(achieve, "like_num"), out var likes) ? likes : 0),
                 Posts = FormatCount(long.TryParse(Str(achieve, "post_num"), out var posts) ? posts : 0),
                 IsFollowing = Obj(user, "is_following")?.ValueKind == JsonValueKind.True,
             };
+            // 用户标签在部分账号来自 tags，部分账号来自 certifications；两处都解析并去重，不伪造标签。
+            foreach (var arrayName in new[] { "tags", "certifications" })
+            {
+                foreach (var tag in Items(Obj(user, arrayName)))
+                {
+                    var label = tag.ValueKind == JsonValueKind.String ? tag.GetString() ?? string.Empty : string.Empty;
+                    if (string.IsNullOrWhiteSpace(label))
+                        label = string.IsNullOrWhiteSpace(Str(tag, "name"))
+                            ? string.IsNullOrWhiteSpace(Str(tag, "label")) ? Str(tag, "title") : Str(tag, "label")
+                            : Str(tag, "name");
+                    if (string.IsNullOrWhiteSpace(label)) label = Str(tag, "tag_name");
+                    if (!string.IsNullOrWhiteSpace(label) && !profile.Tags.Contains(label)) profile.Tags.Add(label);
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(profile.Certification) && !profile.Tags.Contains(profile.Certification))
+                profile.Tags.Add(profile.Certification);
+            if ((profile.CertificationType == 0 && profile.Certification.Contains("官方"))
+                || profile.Certification.StartsWith("官方"))
+                profile.CertificationType = 1;
             return profile;
         }
         catch
@@ -854,15 +879,19 @@ public sealed class MiyousheApi
         }
     }
 
-    /// <summary>我创建的合集（collection/wapi/collection/list，需网页端 2.102 DS）。</summary>
-    public async Task<IReadOnlyList<UserCollectionItem>> GetUserCollectionsAsync(CancellationToken ct = default)
+    /// <summary>用户合集（collection/wapi/collection/list，需网页端 2.102 DS）；不传 uid 时取当前账号。</summary>
+    public async Task<IReadOnlyList<UserCollectionItem>> GetUserCollectionsAsync(string? uid = null,
+        CancellationToken ct = default)
     {
         if (!HasCookie) return Array.Empty<UserCollectionItem>();
         try
         {
-            const string url = "https://bbs-api.miyoushe.com/collection/wapi/collection/list?gids=2&size=30";
+            var query = string.IsNullOrWhiteSpace(uid)
+                ? "gids=2&size=30"
+                : $"uid={Uri.EscapeDataString(uid)}&gids=2&size=30";
+            var url = $"https://bbs-api.miyoushe.com/collection/wapi/collection/list?{query}";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            AddCollectionHeaders(request, "gids=2&size=30");
+            AddCollectionHeaders(request, query);
             using var response = await _http.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode) return Array.Empty<UserCollectionItem>();
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
@@ -928,6 +957,9 @@ public sealed class MiyousheApi
         request.Headers.TryAddWithoutValidation("x-rpc-client_type", "4");
         request.Headers.TryAddWithoutValidation("x-rpc-device_id", DeviceId);
         request.Headers.TryAddWithoutValidation("x-rpc-device_fp", DeviceId[..16]);
+        request.Headers.TryAddWithoutValidation("User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+        request.Headers.TryAddWithoutValidation("Referer", "https://www.miyoushe.com/");
     }
 
     private static string RandomString(int length)

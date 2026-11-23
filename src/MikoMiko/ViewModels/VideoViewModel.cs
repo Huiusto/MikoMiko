@@ -626,14 +626,14 @@ public sealed partial class VideoViewModel : ObservableObject
         if (Selected is null) return;
         if (!_content.Api.HasCookie)
         {
-            Toast = "请先在「我的」扫码登录后再点赞";
+            Toast = "请登陆账号";
             return;
         }
 
         var next = !IsLiked;
         IsLiked = next;
         Selected.LikeText = BumpCount(Selected.LikeText, next);
-        OnPropertyChanged(nameof(Selected));
+        // 不触发 Selected 变更通知：点赞只更新计数，不能让播放器重新加载视频。
         if (!next)
         {
             Toast = "已取消点赞";
@@ -653,7 +653,7 @@ public sealed partial class VideoViewModel : ObservableObject
         if (Selected is null) return;
         if (!_content.Api.HasCookie)
         {
-            Toast = "请先在「我的」扫码登录后再收藏";
+            Toast = "请登陆账号";
             return;
         }
 

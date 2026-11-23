@@ -41,6 +41,7 @@ public sealed partial class MineViewModel : ObservableObject
     public ObservableCollection<ChoiceOption> MineTabs { get; }
 
     public ObservableCollection<GameAccount> Games { get; } = new();
+    public ObservableCollection<GameAccount> VisibleGames { get; } = new();
     public ObservableCollection<FeedItem> Favorites { get; } = new();
     public ObservableCollection<FeedItem> MyPosts { get; } = new();
     public ObservableCollection<UserReplyItem> MyReplies { get; } = new();
@@ -56,6 +57,8 @@ public sealed partial class MineViewModel : ObservableObject
 
     [ObservableProperty] private UserProfile _profile;
     [ObservableProperty] private bool _isLoggedIn;
+    [ObservableProperty] private bool _isGameSettingsOpen;
+    [ObservableProperty] private bool _hasVisibleGames = true;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _mineTab = "Posts";
 
@@ -590,12 +593,85 @@ public sealed partial class MineViewModel : ObservableObject
                 });
             }
 
+            ApplyGamePreferences();
             await FillGameCardsAsync();
         }
         catch
         {
             // 角色接口失败不影响主页资料
         }
+    }
+
+    /// <summary>应用「我的」页角色卡的显示开关与排序。</summary>
+    private void ApplyGamePreferences()
+    {
+        foreach (var game in Games)
+            game.IsVisible = !_settings.HiddenGameIds.Contains(game.Key);
+
+        if (_settings.GameOrder.Count > 0)
+        {
+            var ordered = Games
+                .OrderBy(game =>
+                {
+                    var index = _settings.GameOrder.IndexOf(game.Key);
+                    return index < 0 ? int.MaxValue : index;
+                })
+                .ToList();
+            for (var target = 0; target < ordered.Count; target++)
+            {
+                var current = Games.IndexOf(ordered[target]);
+                if (current != target) Games.Move(current, target);
+            }
+        }
+
+        RefreshVisibleGames();
+    }
+
+    private void RefreshVisibleGames()
+    {
+        VisibleGames.Clear();
+        foreach (var game in Games.Where(game => game.IsVisible)) VisibleGames.Add(game);
+        HasVisibleGames = VisibleGames.Count > 0;
+    }
+
+    private void SyncGamePreferences()
+    {
+        _settings.GameOrder = Games.Select(game => game.Key).ToList();
+        _settings.HiddenGameIds = Games.Where(game => !game.IsVisible).Select(game => game.Key).ToList();
+    }
+
+    [RelayCommand]
+    private void ToggleGameSettings() => IsGameSettingsOpen = !IsGameSettingsOpen;
+
+    [RelayCommand]
+    private void ToggleGameVisible(GameAccount? game)
+    {
+        if (game is null) return;
+        game.IsVisible = !game.IsVisible;
+        RefreshVisibleGames();
+        SyncGamePreferences();
+    }
+
+    [RelayCommand]
+    private void MoveGameUp(GameAccount? game)
+    {
+        if (game is null) return;
+        var index = Games.IndexOf(game);
+        if (index <= 0) return;
+        Games.Move(index, index - 1);
+        RefreshVisibleGames();
+        SyncGamePreferences();
+    }
+
+    [RelayCommand]
+    private void MoveGameDown(GameAccount? game)
+    {
+        if (game is null) return;
+        var index = Games.IndexOf(game);
+        if (index < 0 || index >= Games.Count - 1) return;
+        Games.Move(index, index + 1);
+        RefreshVisibleGames();
+        SyncGamePreferences();
     }
 
     /// <summary>把所有游戏的公开战绩补到角色卡上（与游戏详情共用 getGameRecordCard）。</summary>

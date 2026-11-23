@@ -722,18 +722,23 @@
                     <RowDefinition Height="56" />
                 </Grid.RowDefinitions>
                 <MediaElement x:Name="InlineMedia" Grid.Row="0" LoadedBehavior="Manual" UnloadedBehavior="Manual"
-                              ScrubbingEnabled="True" Stretch="Uniform" Volume="0.7" />
+                              ScrubbingEnabled="True" Stretch="Uniform" Volume="0.7"
+                              MouseLeftButtonUp="InlineMedia_Click" MediaEnded="InlineMedia_MediaEnded" />
                 <Border Grid.Row="1" Background="#1AFFFFFF" CornerRadius="0,0,10,10" Margin="0,0,0,0">
                     <Grid Margin="16,0">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <Slider x:Name="InlineProgress" Grid.Column="0" VerticalAlignment="Center"
+                        <Button x:Name="InlineToggleButton" Grid.Column="0" Content="❚❚" Style="{StaticResource LinkButton}"
+                                Foreground="White" FontSize="13" Padding="6,0" Focusable="False"
+                                Click="InlineToggle_Click" ToolTip="暂停 / 播放" />
+                        <Slider x:Name="InlineProgress" Grid.Column="1" VerticalAlignment="Center" Margin="6,0"
                                 Minimum="0" Maximum="100" ValueChanged="InlineProgress_ValueChanged"
                                 PreviewMouseLeftButtonDown="InlineProgress_DragStart"
                                 PreviewMouseLeftButtonUp="InlineProgress_DragEnd" />
-                        <TextBlock x:Name="InlineTime" Grid.Column="1" Foreground="White" FontSize="11"
+                        <TextBlock x:Name="InlineTime" Grid.Column="2" Foreground="White" FontSize="11"
                                    VerticalAlignment="Center" Margin="12,0,0,0" />
                     </Grid>
                 </Border>
