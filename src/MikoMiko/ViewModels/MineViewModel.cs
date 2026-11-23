@@ -18,18 +18,22 @@ public sealed partial class MineViewModel : ObservableObject
     private readonly ContentService _content;
     private readonly AppSettings _settings;
     private readonly MiHoYoLoginService _login = new();
+    private readonly Action<FeedItem>? _openPost;
     private DispatcherTimer? _pollTimer;
     private string _ticket = string.Empty;
 
-    public MineViewModel(ContentService content, AppSettings settings)
+    public MineViewModel(ContentService content, AppSettings settings, Action<FeedItem>? openPost = null)
     {
         _content = content;
         _settings = settings;
+        _openPost = openPost;
         Profile = BuildGuestProfile();
+        LoadBackgroundSource();
     }
 
     public ObservableCollection<GameAccount> Games { get; } = new();
     public ObservableCollection<FeedItem> Favorites { get; } = new();
+    public ObservableCollection<FeedItem> GamePosts { get; } = new();
 
     public bool HasNoFavorites => Favorites.Count == 0;
     public bool IsGuest => !IsLoggedIn;
@@ -44,14 +48,48 @@ public sealed partial class MineViewModel : ObservableObject
     [ObservableProperty] private bool _isQrOpen;
     [ObservableProperty] private ImageSource? _qrImage;
     [ObservableProperty] private string _loginStatus = string.Empty;
+    [ObservableProperty] private ImageSource? _backgroundImage;
+    [ObservableProperty] private GameAccount? _selectedGame;
+    [ObservableProperty] private bool _isGameDetailOpen;
+    [ObservableProperty] private bool _isGamePostsLoading;
+    [ObservableProperty] private string _gameStatus = string.Empty;
 
     /// <summary>自定义个人页背景；为空时显示默认蓝色渐变。</summary>
-    public string BackgroundImage => _settings.ProfileBackground;
-    public bool HasCustomBackground => !string.IsNullOrWhiteSpace(_settings.ProfileBackground);
+    public bool HasCustomBackground => BackgroundImage is not null;
 
     partial void OnIsLoggedInChanged(bool value) => OnPropertyChanged(nameof(IsGuest));
 
-    /// <summary>选择本地图片作为「我的」页面背景，复制到应用数据目录后立即生效。</summary>
+    private void LoadBackgroundSource()
+    {
+        var path = _settings.ProfileBackground;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            BackgroundImage = null;
+            OnPropertyChanged(nameof(HasCustomBackground));
+            return;
+        }
+
+        try
+        {
+            // OnLoad + Freeze：立即释放文件句柄，第二次更换背景才不会被 WPF 锁住。
+            var image = new BitmapImage();
+            using var stream = File.OpenRead(path);
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            BackgroundImage = image;
+        }
+        catch
+        {
+            BackgroundImage = null;
+        }
+
+        OnPropertyChanged(nameof(HasCustomBackground));
+    }
+
+    /// <summary>选择本地图片作为「我的」页面背景，每次使用独立文件名后立即生效。</summary>
     [RelayCommand]
     private void ChangeBackground()
     {
@@ -65,11 +103,25 @@ public sealed partial class MineViewModel : ObservableObject
         try
         {
             var extension = Path.GetExtension(dialog.FileName);
-            var destination = Path.Combine(SettingsService.DataDirectory, "profile-background" + extension);
+            var destination = Path.Combine(SettingsService.DataDirectory,
+                $"profile-background-{DateTime.Now:yyyyMMddHHmmssfff}{extension}");
             File.Copy(dialog.FileName, destination, overwrite: true);
+
+            var old = _settings.ProfileBackground;
             _settings.ProfileBackground = destination;
-            OnPropertyChanged(nameof(BackgroundImage));
-            OnPropertyChanged(nameof(HasCustomBackground));
+            LoadBackgroundSource();
+
+            // 清理上一张自定义背景；旧图已 Freeze 在内存中，不影响当前显示。
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(old) && File.Exists(old) && old != destination) File.Delete(old);
+            }
+            catch
+            {
+                // 旧图被占用时忽略
+            }
+
+
         }
         catch (Exception ex)
         {
@@ -77,10 +129,66 @@ public sealed partial class MineViewModel : ObservableObject
         }
     }
 
+    /// <summary>恢复默认渐变背景。</summary>
+    [RelayCommand]
+    private void RestoreDefaultBackground()
+    {
+        var old = _settings.ProfileBackground;
+        _settings.ProfileBackground = string.Empty;
+        LoadBackgroundSource();
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(old) && File.Exists(old)) File.Delete(old);
+        }
+        catch
+        {
+            // 忽略
+        }
+
+        BindStatus = "已恢复默认背景";
+        OnPropertyChanged(nameof(HasCustomBackground));
+    }
+
+    /// <summary>角色管理：打开游戏详情与该游戏的官方帖。</summary>
+    [RelayCommand]
+    private async Task OpenGameAsync(GameAccount? game)
+    {
+        if (game is null) return;
+        SelectedGame = game;
+        IsGameDetailOpen = true;
+        GameStatus = "正在读取该游戏内容…";
+        GamePosts.Clear();
+        IsGamePostsLoading = true;
+        try
+        {
+            var posts = await _content.GetGamePostsAsync(game.GameId);
+            foreach (var post in posts) GamePosts.Add(post);
+            GameStatus = GamePosts.Count == 0 ? "暂无该游戏的最新帖子" : string.Empty;
+        }
+        catch
+        {
+            GameStatus = "该游戏内容读取失败，请稍后重试";
+        }
+        finally
+        {
+            IsGamePostsLoading = false;
+        }
+    }
+
+    [RelayCommand]
+    private void CloseGameDetail() => IsGameDetailOpen = false;
+
+    [RelayCommand]
+    private void OpenGamePost(FeedItem? post)
+    {
+        if (post is null) return;
+        IsGameDetailOpen = false;
+        _openPost?.Invoke(post);
+    }
+
     public async Task LoadAsync()
     {
-        OnPropertyChanged(nameof(BackgroundImage));
-        OnPropertyChanged(nameof(HasCustomBackground));
+        LoadBackgroundSource();
         IsLoggedIn = !string.IsNullOrWhiteSpace(_settings.Cookie);
         if (!IsLoggedIn)
         {
@@ -322,6 +430,9 @@ public sealed partial class MineViewModel : ObservableObject
             {
                 Games.Add(new GameAccount
                 {
+                    GameId = role.GameId,
+                    GameBiz = role.GameBiz,
+                    RoleName = role.Nickname,
                     GameName = role.GameName,
                     Uid = role.GameUid,
                     Server = string.IsNullOrWhiteSpace(role.Server) ? "米游社" : role.Server,

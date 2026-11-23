@@ -5,7 +5,10 @@ namespace MikoMiko.Models;
 /// <summary>绑定的游戏账号（原神 / 星穹铁道 / 绝区零）。</summary>
 public sealed class GameAccount
 {
+    public int GameId { get; set; }
+    public string GameBiz { get; set; } = string.Empty;
     public string GameName { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
     public string Uid { get; set; } = string.Empty;
     public string Server { get; set; } = string.Empty;
     public string LevelLabel { get; set; } = string.Empty;

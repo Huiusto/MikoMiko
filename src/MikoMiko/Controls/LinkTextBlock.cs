@@ -11,6 +11,9 @@ public sealed class LinkTextBlock : TextBlock
 {
     private static readonly Regex UrlRegex = new(@"https?://[^\s，。！？；、<>""）】]+", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    /// <summary>全应用统一的链接处理：由 Shell 在软件内打开，不跳系统浏览器。</summary>
+    public static Action<string>? LinkRequested { get; set; }
+
     public static readonly DependencyProperty SourceTextProperty = DependencyProperty.Register(
         nameof(SourceText), typeof(string), typeof(LinkTextBlock),
         new PropertyMetadata(string.Empty, OnSourceTextChanged));
@@ -67,15 +70,23 @@ public sealed class LinkTextBlock : TextBlock
         {
             try
             {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(args.Uri.AbsoluteUri)
+                if (LinkRequested is not null)
                 {
-                    UseShellExecute = true,
-                });
+                    LinkRequested(args.Uri.AbsoluteUri);
+                }
+                else
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(args.Uri.AbsoluteUri)
+                    {
+                        UseShellExecute = true,
+                    });
+                }
+
                 args.Handled = true;
             }
             catch
             {
-                // 浏览器打开失败时保留链接文本
+                // 打开失败时保留链接文本
             }
         };
         Inlines.Add(link);

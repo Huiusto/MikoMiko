@@ -10,6 +10,92 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
 
+        <Style x:Key="FilterCombo" TargetType="{x:Type ComboBox}">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="MinWidth" Value="132" />
+            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="{x:Type ComboBoxItem}">
+                        <Setter Property="Padding" Value="10,7" />
+                        <Setter Property="FontSize" Value="12.5" />
+                        <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.CardHover}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBox}">
+                        <Grid>
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+                                <Grid>
+                                    <ContentPresenter Margin="12,0,30,0" VerticalAlignment="Center"
+                                                      Content="{TemplateBinding SelectionBoxItem}"
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+                                    <Path Data="M0 0 L5 5 L10 0" Width="10" Height="5" Stretch="Uniform"
+                                          Stroke="{DynamicResource Brush.TextTertiary}" StrokeThickness="1.4"
+                                          HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                    <ToggleButton Focusable="False" ClickMode="Press"
+                                                  Background="Transparent" BorderThickness="0"
+                                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                                <Border Background="Transparent" />
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                </Grid>
+                            </Border>
+                            <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" StaysOpen="False"
+                                   IsOpen="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" PopupAnimation="Fade">
+                                <Border Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.Border}"
+                                        BorderThickness="1" CornerRadius="8" Margin="0,4,0,0"
+                                        MinWidth="{TemplateBinding ActualWidth}" MaxHeight="320">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter Margin="4" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <DataTemplate x:Key="FeedCard">
             <Button Style="{StaticResource CardButton}"
                     Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
@@ -91,6 +177,47 @@
                     </StackPanel>
                 </Border>
 
+                <!-- 帖子：分区 / 版块 / 排序（对应参考图三连下拉） -->
+                <Grid Margin="0,0,0,18" Visibility="{Binding IsPostsTab, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <Path Data="M2 2 H13 V13 H2 Z M2 6 H13 M6 2 V13" Stroke="{DynamicResource Brush.TextTertiary}"
+                              StrokeThickness="1.2" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center"
+                              Margin="0,0,7,0" />
+                        <ComboBox Style="{StaticResource FilterCombo}" Width="190"
+                                  ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection, Mode=TwoWay}" IsSynchronizedWithCurrentItem="False"
+                                  />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                        <Path Data="M1 1 H6 V6 H1 Z M9 1 H14 V6 H9 Z M1 9 H6 V14 H1 Z M9 9 H14 V14 H9 Z"
+                              Stroke="{DynamicResource Brush.TextTertiary}" StrokeThickness="1.1"
+                              Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center" Margin="0,0,7,0" />
+                        <ComboBox Style="{StaticResource FilterCombo}" Width="156"
+                                  ItemsSource="{Binding Boards}" SelectedItem="{Binding SelectedBoard, Mode=TwoWay}" IsSynchronizedWithCurrentItem="False"
+                                  />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0">
+                        <Path Data="M1 3 H14 M1 7 H10 M1 11 H13" Stroke="{DynamicResource Brush.TextTertiary}"
+                              StrokeThickness="1.2" Width="15" Height="15" Stretch="Uniform" VerticalAlignment="Center"
+                              Margin="0,0,7,0" />
+                        <ComboBox Style="{StaticResource FilterCombo}" Width="136"
+                                  ItemsSource="{Binding SortOptions}" SelectedItem="{Binding SelectedSort, Mode=TwoWay}" IsSynchronizedWithCurrentItem="False"
+                                  />
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="3" Text="{Binding StatusText}" Foreground="{DynamicResource Brush.TextTertiary}"
+                               FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Right"
+                               TextTrimming="CharacterEllipsis" Margin="14,0,0,0" />
+                </Grid>
+
                 <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource FeedCard}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -130,6 +257,45 @@
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- 内容右下角：刷新 / 返回顶部 -->
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,22">
+            <Button Width="42" Height="42" Cursor="Hand" Click="FloatingRefresh_Click" ToolTip="刷新">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="21" Background="#F2FFFFFF"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                            <Path Data="M8 1.5 A6.5 6.5 0 1 0 14.6 6.5 M14.6 6.5 V2.6 M14.6 6.5 H10.7"
+                                  Stroke="{DynamicResource Brush.Accent}" StrokeThickness="1.8"
+                                  Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button Width="42" Height="42" Margin="0,8,0,0" Cursor="Hand" Click="BackToTop_Click" ToolTip="返回顶部">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="21" Background="#F2FFFFFF"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                            <Path Data="M12 3 L12 21 M5 10 L12 3 L19 10" Stroke="{DynamicResource Brush.Accent}"
+                                  StrokeThickness="2" StrokeLineJoin="Round" Width="18" Height="18"
+                                  Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </StackPanel>
     </Grid>
 </UserControl>
+
 

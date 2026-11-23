@@ -83,13 +83,13 @@
                 <ControlTemplate TargetType="{x:Type Button}">
                     <Border x:Name="Bd" Background="Transparent" CornerRadius="10" Margin="9,3" Padding="0,8">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <Grid Width="32" Height="32" HorizontalAlignment="Center">
+                            <Grid Width="36" Height="36" HorizontalAlignment="Center">
                                 <Image x:Name="IconDefault" Source="{Binding IconDefault}"
-                                       Width="30" Height="30" Stretch="Uniform"
+                                       Width="34" Height="34" Stretch="Uniform"
                                        RenderOptions.BitmapScalingMode="HighQuality"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 <Image x:Name="IconSelected" Source="{Binding IconSelected}"
-                                       Width="30" Height="30" Stretch="Uniform"
+                                       Width="34" Height="34" Stretch="Uniform"
                                        RenderOptions.BitmapScalingMode="HighQuality"
                                        HorizontalAlignment="Center" VerticalAlignment="Center"
                                        Visibility="Collapsed" />
@@ -467,7 +467,7 @@
 
     <!-- ============ 圆形操作按钮（播放器） ============ -->
     <Style x:Key="CircleActionButton" TargetType="{x:Type Button}">
-        <Setter Property="Background" Value="#33FFFFFF" />
+        <Setter Property="Background" Value="#4D000000" />
         <Setter Property="Foreground" Value="White" />
         <Setter Property="Width" Value="38" />
         <Setter Property="Height" Value="38" />
@@ -482,7 +482,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#66FFFFFF" />
+                            <Setter TargetName="Bd" Property="Background" Value="#99000000" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

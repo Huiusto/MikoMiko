@@ -31,7 +31,6 @@ public sealed partial class SettingsViewModel : ObservableObject
             new("Maintain", Loc.Instance["S.Maintain"]),
             new("AppInfo", Loc.Instance["S.AppInfo"]),
             new("About", Loc.Instance["S.About"]),
-            new("OpenSource", Loc.Instance["S.OpenSource"]),
             new("Disclaimer", Loc.Instance["S.Disclaimer"]),
             new("Changelog", Loc.Instance["S.Changelog"]),
         };
@@ -99,6 +98,24 @@ public sealed partial class SettingsViewModel : ObservableObject
         : "pack://application:,,,/Assets/icon.png";
 
     public string AccountUid => IsLoggedIn ? "已绑定米游社账号" : "扫码登录后同步米游社账号信息";
+
+    /// <summary>账号资料在「我的」页登录后会变化，每次进入设置都重新读取。</summary>
+    public void RefreshAccount()
+    {
+        OnPropertyChanged(nameof(IsLoggedIn));
+        OnPropertyChanged(nameof(AccountName));
+        OnPropertyChanged(nameof(AccountAvatar));
+        OnPropertyChanged(nameof(AccountUid));
+    }
+
+    /// <summary>供右侧目录点击时同步选中态。</summary>
+    public void SelectSectionByKey(string key)
+    {
+        var option = Sections.FirstOrDefault(s => s.Key == key);
+        if (option is null) return;
+        IsSelected(Sections, option.Key);
+        SelectedSection = option.Key;
+    }
     public string AppName => AppInfo.Name;
     public string AppDataDirectory => AppInfo.DataDirectory;
     public string ChangelogText => Loc.Instance["S.Changelog.Body"];
@@ -212,6 +229,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(AccountAvatar));
         OnPropertyChanged(nameof(AccountUid));
         Toast = Loc.Instance["Mine.Unbind"];
+        RefreshAccount();
     }
 
     // ---------------------------------------------------------------- 维护
@@ -460,7 +478,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         var sectionKeys = new[]
         {
             "S.General", "S.Playback", "S.Cache", "S.Window", "S.Common",
-            "S.Maintain", "S.AppInfo", "S.About", "S.OpenSource", "S.Disclaimer", "S.Changelog",
+            "S.Maintain", "S.AppInfo", "S.About", "S.Disclaimer", "S.Changelog",
         };
         for (var i = 0; i < Sections.Count && i < sectionKeys.Length; i++)
         {

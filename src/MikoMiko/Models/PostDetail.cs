@@ -15,6 +15,9 @@ public sealed class PostDetail
 
     public List<string> Images { get; set; } = new();
 
+    /// <summary>帖子上原始的话题标签，保留官方展示样式。</summary>
+    public List<string> Topics { get; set; } = new();
+
     /// <summary>按官方正文顺序排列的混排块：文本 / 图片 / 视频。</summary>
     public List<PostBlock> Blocks { get; set; } = new();
 
@@ -45,14 +48,35 @@ public sealed class PostBlock
     public string Cover { get; set; } = string.Empty;
     public string DurationText { get; set; } = string.Empty;
 
+    /// <summary>文本块中的富文本片段，保留官方字号 / 颜色 / 粗斜体 / 链接。</summary>
+    public List<PostRun> Runs { get; set; } = new();
+
     public bool IsText => Kind == "text";
     public bool IsImage => Kind == "image";
     public bool IsVideo => Kind == "video";
 }
 
-/// <summary>评论（含楼中楼）。</summary>
-public sealed class CommentItem
+/// <summary>一段带样式的正文文字（对应米游社 structured_content 的 insert + attributes）。</summary>
+public sealed class PostRun
 {
+    public string Text { get; set; } = string.Empty;
+    public bool Bold { get; set; }
+    public bool Italic { get; set; }
+    public bool Underline { get; set; }
+    public bool Strike { get; set; }
+    public string Color { get; set; } = string.Empty;
+    public double FontSize { get; set; }
+    public string Link { get; set; } = string.Empty;
+}
+
+/// <summary>评论（含楼中楼）。</summary>
+public sealed class CommentItem : System.ComponentModel.INotifyPropertyChanged
+{
+    private bool _isLiked;
+    private bool _isDisliked;
+    private string _likeText = "0";
+    private string _dislikeText = "0";
+
     public string ReplyId { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Avatar { get; set; } = string.Empty;
@@ -60,10 +84,65 @@ public sealed class CommentItem
     public string IpRegion { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public string TimeText { get; set; } = string.Empty;
-    public string LikeText { get; set; } = "0";
-    public bool IsLiked { get; set; }
     public bool IsAuthor { get; set; }
+
+    /// <summary>回复到根楼（点击楼中楼的回复时仍挂到一级评论，保证对方能收到通知）。</summary>
+    public string RootReplyId { get; set; } = string.Empty;
+
+    /// <summary>楼中楼显示「回复 @某人：」。</summary>
+    public string ReplyToName { get; set; } = string.Empty;
+    public bool HasReplyTo => !string.IsNullOrWhiteSpace(ReplyToName);
+
+    public string LikeText
+    {
+        get => _likeText;
+        set
+        {
+            if (_likeText == value) return;
+            _likeText = value;
+            OnPropertyChanged(nameof(LikeText));
+        }
+    }
+
+    public string DislikeText
+    {
+        get => _dislikeText;
+        set
+        {
+            if (_dislikeText == value) return;
+            _dislikeText = value;
+            OnPropertyChanged(nameof(DislikeText));
+        }
+    }
+
+    public bool IsLiked
+    {
+        get => _isLiked;
+        set
+        {
+            if (_isLiked == value) return;
+            _isLiked = value;
+            OnPropertyChanged(nameof(IsLiked));
+        }
+    }
+
+    public bool IsDisliked
+    {
+        get => _isDisliked;
+        set
+        {
+            if (_isDisliked == value) return;
+            _isDisliked = value;
+            OnPropertyChanged(nameof(IsDisliked));
+        }
+    }
+
     public List<CommentItem> Children { get; set; } = new();
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged(string name)
+        => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 }
 
 internal static class Counts

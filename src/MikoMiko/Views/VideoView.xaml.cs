@@ -168,6 +168,9 @@ public partial class VideoView : UserControl
             case nameof(VideoViewModel.Volume):
                 Media.Volume = Math.Clamp(_vm.Volume / 100.0, 0, 1);
                 break;
+            case nameof(VideoViewModel.SpeedRatio):
+                Media.SpeedRatio = _vm.SpeedRatio;
+                break;
         }
     }
 
@@ -290,7 +293,7 @@ public partial class VideoView : UserControl
         Media.Volume = Math.Clamp(_vm.Volume / 100.0, 0, 1);
         Media.Play();
         CoverHost.Visibility = Visibility.Collapsed;
-        Media.SpeedRatio = _speed;
+        Media.SpeedRatio = _vm.SpeedRatio;
         Media.Volume = Math.Clamp(_vm.Volume / 100.0, 0, 1);
         Media.IsMuted = _vm.IsMuted;
         _positionTimer.Start();

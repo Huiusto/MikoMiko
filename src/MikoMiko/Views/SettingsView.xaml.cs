@@ -18,6 +18,7 @@ public partial class SettingsView : UserControl
     {
         if (sender is FrameworkElement button && button.Tag is string key)
         {
+            if (DataContext is SettingsViewModel vm) vm.SelectSectionByKey(key);
             ScrollToSection(key);
         }
     }

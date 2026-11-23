@@ -25,6 +25,17 @@ public sealed partial class AppSettings : ObservableObject
     [ObservableProperty] private string _lastPage = "Home";
     [ObservableProperty] private string _closeAction = "Ask";     // Tray / Exit / Ask
 
+    /// <summary>启动首页与启动视频页互斥：勾选其一时自动取消另一个。</summary>
+    partial void OnStartOnHomeChanged(bool value)
+    {
+        if (value && StartOnVideo) StartOnVideo = false;
+    }
+
+    partial void OnStartOnVideoChanged(bool value)
+    {
+        if (value && StartOnHome) StartOnHome = false;
+    }
+
     // 窗口
     [ObservableProperty] private double _windowWidth = 1240;
     [ObservableProperty] private double _windowHeight = 800;

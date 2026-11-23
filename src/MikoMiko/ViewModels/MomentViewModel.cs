@@ -10,11 +10,13 @@ namespace MikoMiko.ViewModels;
 public sealed partial class MomentViewModel : ObservableObject
 {
     private readonly ContentService _content;
+    private readonly Action<MomentItem> _openMoment;
     private List<MomentItem> _all = new();
 
-    public MomentViewModel(ContentService content)
+    public MomentViewModel(ContentService content, Action<MomentItem> openMoment)
     {
         _content = content;
+        _openMoment = openMoment;
     }
 
     public ObservableCollection<MomentItem> Moments { get; } = new();
@@ -62,6 +64,12 @@ public sealed partial class MomentViewModel : ObservableObject
 
     [RelayCommand]
     private Task Refresh() => LoadAsync();
+
+    [RelayCommand]
+    private void Open(MomentItem? item)
+    {
+        if (item is not null) _openMoment(item);
+    }
 
     [RelayCommand]
     private void ToggleOnlyFollowing()

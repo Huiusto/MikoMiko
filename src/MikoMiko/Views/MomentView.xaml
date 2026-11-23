@@ -31,7 +31,7 @@
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource Brush.WindowBg}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
+        <ScrollViewer x:Name="MomentScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
             <StackPanel Margin="26,18,18,30" MaxWidth="1160" HorizontalAlignment="Stretch">
 
                 <!-- 头部 -->
@@ -63,6 +63,9 @@
                 <ItemsControl ItemsSource="{Binding Moments}" Visibility="{Binding NeedsLogin, Converter={StaticResource InverseBoolToVis}}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
+                            <Button Style="{StaticResource CardButton}"
+                                    Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    CommandParameter="{Binding}">
                             <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10" Padding="18,16"
                                     Margin="0,0,0,12">
                                 <Grid>
@@ -159,6 +162,7 @@
                                     </StackPanel>
                                 </Grid>
                             </Border>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -174,6 +178,44 @@
                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
             </StackPanel>
         </ScrollViewer>
+
+        <!-- 内容右下角：刷新 / 返回顶部 -->
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,22">
+            <Button Width="42" Height="42" Cursor="Hand" Click="FloatingRefresh_Click" ToolTip="刷新">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="21" Background="#F2FFFFFF"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                            <Path Data="M8 1.5 A6.5 6.5 0 1 0 14.6 6.5 M14.6 6.5 V2.6 M14.6 6.5 H10.7"
+                                  Stroke="{DynamicResource Brush.Accent}" StrokeThickness="1.8"
+                                  Width="18" Height="18" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button Width="42" Height="42" Margin="0,8,0,0" Cursor="Hand" Click="BackToTop_Click" ToolTip="返回顶部">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="21" Background="#F2FFFFFF"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                            <Path Data="M12 3 L12 21 M5 10 L12 3 L19 10" Stroke="{DynamicResource Brush.Accent}"
+                                  StrokeThickness="2" StrokeLineJoin="Round" Width="18" Height="18"
+                                  Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </StackPanel>
     </Grid>
 </UserControl>
 

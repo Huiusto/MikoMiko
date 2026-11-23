@@ -6,6 +6,7 @@ namespace MikoMiko.Services;
 public sealed class ContentService
 {
     private readonly AppSettings _settings;
+    private List<ForumSection>? _forumSections;
 
     /// <summary>随机流用的翻页游标池（各版块 last_id），让「刷更多」能跳到不同时间段。</summary>
     private readonly List<string> _cursorPool = new();
@@ -90,6 +91,39 @@ public sealed class ContentService
         return DemoData.Home().Where(i => i.IsOfficial).ToList() is { Count: > 0 } official
             ? official
             : DemoData.Home();
+    }
+
+    /// <summary>分区 / 版块目录（结果缓存，避免每次打开帖子页都请求）。</summary>
+    public async Task<List<ForumSection>> GetForumSectionsAsync(CancellationToken ct = default)
+    {
+        _forumSections ??= await Api.GetForumSectionsAsync(ct);
+        return _forumSections;
+    }
+
+    /// <summary>按分区 / 版块 / 排序读取帖子流。</summary>
+    public async Task<(IReadOnlyList<FeedItem> Items, string LastId, bool IsLast)> GetForumFeedAsync(
+        int gameId, int forumId, int sortType, int pageSize = 20, string lastId = "",
+        CancellationToken ct = default)
+    {
+        var feed = await Api.GetForumFeedAsync(gameId, forumId, sortType, pageSize, lastId, ct);
+        if (feed.Items.Count > 0) IsDemo = false;
+        return feed;
+    }
+
+    /// <summary>角色管理里打开的游戏详情：该游戏官方帖流。</summary>
+    public async Task<IReadOnlyList<FeedItem>> GetGamePostsAsync(int gameId, int size = 12,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var items = await Api.GetGamePostsAsync(gameId, size, ct);
+            if (items.Count > 0) IsDemo = false;
+            return items;
+        }
+        catch
+        {
+            return Array.Empty<FeedItem>();
+        }
     }
 
     public async Task<IReadOnlyList<FeedItem>> GetVideosAsync(CancellationToken ct = default)

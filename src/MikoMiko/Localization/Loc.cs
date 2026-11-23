@@ -20,7 +20,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Common.Close", "关闭"), ("Common.Back", "返回"), ("Common.OpenInBrowser", "在浏览器中打开"), ("Common.Follow", "关注"), ("Common.Followed", "已关注"),
         ("Common.DemoMode", "演示数据"), ("Common.Offline", "当前为离线演示数据"),
 
-        ("Home.Recommend", "推荐"), ("Home.Official", "官方"), ("Home.Latest", "最新"), ("Home.Empty", "暂时没有找到相关内容"),
+        ("Home.Recommend", "推荐"), ("Home.Posts", "帖子"), ("Home.Official", "官方"), ("Home.Latest", "最新"), ("Home.Empty", "暂时没有找到相关内容"),
         ("Home.Subtitle.Recommend", "为你推荐的社区精选"), ("Home.Subtitle.Latest", "社区最新发布"),
         ("Post.Detail", "帖子详情"), ("Post.Read", "阅读正文"), ("Post.Comments", "评论"), ("Post.NoComments", "还没有评论，来说两句吧"),
 
@@ -30,7 +30,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Video.Auto", "自动"), ("Video.Quality", "清晰度"), ("Video.NoSource", "该内容暂无可播放的视频源"), ("Video.Buffering", "正在缓冲视频…"), ("Video.CacheFail", "视频加载失败，可点击重试"),
         ("Video.Play", "播放"), ("Video.Pause", "暂停"), ("Video.Playing", "正在播放"), ("Video.Back", "返回视频列表"),
 
-        ("Moment.Title", "动态"), ("Moment.All", "全部"), ("Moment.Following", "只看关注"), ("Moment.FollowingOnly", "只看关注"), ("Moment.Empty", "关注的人还没有发布新动态"), ("Moment.LoginRequired", "登录后查看关注动态"), ("Moment.LoginHint", "动态页只显示你关注的人发布的内容，请先在「我的」扫码登录米游社"),
+        ("Moment.Title", "关注"), ("Moment.All", "全部"), ("Moment.Following", "只看关注"), ("Moment.FollowingOnly", "只看关注"), ("Moment.Empty", "关注的人还没有发布新动态"), ("Moment.LoginRequired", "登录后查看关注动态"), ("Moment.LoginHint", "动态页只显示你关注的人发布的内容，请先在「我的」扫码登录米游社"),
 
         ("Mine.Title", "我的"), ("Mine.Guest", "演示账号"), ("Mine.Edit", "编辑资料"), ("Mine.Login", "登录"),
         ("Mine.Logout", "退出登录"), ("Mine.Following", "关注"), ("Mine.Fans", "粉丝"), ("Mine.Likes", "获赞"), ("Mine.Views", "浏览"),
@@ -71,7 +71,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("S.WindowHint", "窗口相关选项在下次启动时生效"),
         ("S.PlaybackHint", "播放设置将用于视频页播放器"),
         ("S.MaintainHint", "清理缓存或检查更新不会影响已保存的设置"),
-        ("S.Changelog.Body", "MikoMiko 完整更新日志（0.1.0 → 0.1.6）\n\nv0.1.6 · 2026-11-23\n· 左侧导航「动态」文案改为「关注」\n· 左侧导航换成手绘图标：默认灰色线稿，选中时米蓝填充 + 深色描边\n· 导航顺序调整为首页 / 关注 / 视频 / 我的，设置固定在左下\n\nv0.1.5 · 2026-11-22\n· 首页作者徽标区分 M-STAR、金色「官」与粉色 MikoMiko，新增「官方」标签\n· 左侧导航改用圆润图标；阅读器支持图片灯箱、内嵌视频拖动进度、正文链接与右下角回顶 / 评论按钮\n· 视频页支持关注、评论数字、发布页、点击暂停与可拖动进度条\n· 动态页显示关注用户的新旧帖子；我的页支持自定义背景；设置页改为多列卡片\n· 新增应用内检查更新、下载进度与忽略本次版本\n\nv0.1.4 · 2026-11-22  (｡･ω･｡)ﾉ♡\n· 设置顶部新增「访问项目主页（GitHub）」与「开发者首页（支持、讨论、问题反馈）」两个跳转按钮\n· 首页帖子改为官方富文本样式：正文、图片、视频按 structured_content 原顺序混排，长文与长图可折叠展开\n· 视频改为本机 Range 代理边缓冲边播放，进度条新增可拖动圆点，播放数前显示作者关注数，去掉「第 1/12」序号\n· 自动预加载后三个视频；右侧「收藏」下新增「评论」，同步视频帖评论，登录后可直接发表\n· 修复暂停后画面停住但声音继续；「自动」按钮改为真实切换 1080P / 720P / 480P 并保持播放位置\n· 弹幕可发送，按视频保存在本地 danmaku.json，并滚动回放本机用户发过的弹幕\n· 登录改为应用内嵌官方通行证二维码，扫码后自动换取 cookie_token / ltoken；「我的」按官方样式重做为蓝色横幅个人主页与角色管理\n· 补齐从 0.1.0 到 0.1.4 的全部更新日志\n· 增加单实例互斥：同一台电脑只允许一个 MikoMiko 进程，避免多开同时写设置与登录态造成数据错乱\n\nv0.1.3 · 2026-11-22\n· 首页搜索改为「搜索你感兴趣的内容」，直接走米游社全站搜索，帖子覆盖所有板块并随机出现\n· 阅读器支持登录后评论 / 回复，评论会同步到米游社官方\n· 视频页去掉滑动提示文字，进度条改为三色：白色未加载、灰色已缓冲、米蓝已播放\n· 视频改为全站所有用户随机流，点「视频」导航即可换一批\n· 修复扫码登录：兼容新版 ltoken_v2 / cookie_token_v2 Cookie，登录态持久保存\n· 设置右侧新增目录快捷跳转；十套米游社配色；移除下载目录；缓存每 5 分钟自动清理\n· 应用信息改为名称 / 版本 / 框架 / 数据目录，可打开与更改数据目录\n· 更新日志改为抽屉式展示\n· 修复关闭窗口时因托盘图标资源缺失导致的未处理异常\n\nv0.1.2 · 2026-11-21\n· 启用新的 MikoMiko 手写泡泡字标志与蓝色渐变图标\n· 设置页改为整页滚动布局，新增外观、启动、播放、通知、维护等分区\n· 「我的」新增未登录引导与 Cookie 绑定入口，「动态」新增关注流引导\n· 阅读器补齐评论与楼中楼展示，视频播放器支持出帧截图\n· 优化首页卡片布局、封面加载与深浅色切换细节\n\nv0.1.1 · 2026-11-20\n· 主色调整为米蓝 #4EA4DD，新增十套页面配色\n· 首页改为全站随机帖子流，下滑自动加载更多\n· 视频页上下滑动切换随机视频，保留米游社原生点赞 / 收藏 / 分享\n· 点赞与收藏在绑定 Cookie 后同步到米游社账号\n· 设置页支持整页滚动浏览\n\nv0.1.0 · 2026-11-19\n· MikoMiko 首个版本：WPF + .NET 8 桌面客户端工程搭建完成\n· 完成主窗口、左侧导航、首页、视频、动态、我的、搜索与设置基础页面\n· 接入米游社公开接口，支持首页帖子流、帖子详情、视频列表与搜索\n· 支持浅色 / 深色主题、主色切换、本地设置持久化与图片缓存\n· 内置离线演示数据，接口不可用时仍可浏览界面"),
+        ("S.Changelog.Body", "MikoMiko 完整更新日志（0.1.0 → 0.1.7）\n\nv0.1.7 · 2026-11-23\n· 左侧导航图标换成新版灰线稿 / 米蓝选中样式，顺序为首页、视频、关注、我的，设置固定在左下并统一对齐\n· 首页「官方」改为「帖子」：新增分区、版块、排序三联筛选，覆盖大别野、原神、星穹铁道、崩坏3、未定事件簿、绝区零、崩坏学园2、因缘精灵、星布谷地\n· 帖内图片支持滚轮缩放，正文沿用官方富文本样式与话题标签，链接一律在软件内打开\n· 首页帖子与关注页右下角新增「刷新」「返回顶部」；进入帖子可评论、楼中楼回复\n· 视频评论区支持回复与发送，画质、倍速改为抽屉式选择，弹幕可开关，点赞收藏有变色反馈并同步官方数据\n· 我的页移除 Lv.0，新增恢复默认背景并修复第二次更换背景失效；角色管理可打开对应游戏详情与帖子\n· 设置页重排为单列分区，目录点击与选中态同步，账号信息实时同步，移除开源说明\n· 首页 / 视频启动页改为互斥单选，发现新版本直接在软件内弹窗更新\n\nv0.1.6 · 2026-11-23\n· 左侧导航「动态」文案改为「关注」\n· 左侧导航换成手绘图标：默认灰色线稿，选中时米蓝填充 + 深色描边\n· 导航顺序调整为首页 / 关注 / 视频 / 我的，设置固定在左下\n\nv0.1.5 · 2026-11-22\n· 首页作者徽标区分 M-STAR、金色「官」与粉色 MikoMiko，新增「官方」标签\n· 左侧导航改用圆润图标；阅读器支持图片灯箱、内嵌视频拖动进度、正文链接与右下角回顶 / 评论按钮\n· 视频页支持关注、评论数字、发布页、点击暂停与可拖动进度条\n· 动态页显示关注用户的新旧帖子；我的页支持自定义背景；设置页改为多列卡片\n· 新增应用内检查更新、下载进度与忽略本次版本\n\nv0.1.4 · 2026-11-22  (｡･ω･｡)ﾉ♡\n· 设置顶部新增「访问项目主页（GitHub）」与「开发者首页（支持、讨论、问题反馈）」两个跳转按钮\n· 首页帖子改为官方富文本样式：正文、图片、视频按 structured_content 原顺序混排，长文与长图可折叠展开\n· 视频改为本机 Range 代理边缓冲边播放，进度条新增可拖动圆点，播放数前显示作者关注数，去掉「第 1/12」序号\n· 自动预加载后三个视频；右侧「收藏」下新增「评论」，同步视频帖评论，登录后可直接发表\n· 修复暂停后画面停住但声音继续；「自动」按钮改为真实切换 1080P / 720P / 480P 并保持播放位置\n· 弹幕可发送，按视频保存在本地 danmaku.json，并滚动回放本机用户发过的弹幕\n· 登录改为应用内嵌官方通行证二维码，扫码后自动换取 cookie_token / ltoken；「我的」按官方样式重做为蓝色横幅个人主页与角色管理\n· 补齐从 0.1.0 到 0.1.4 的全部更新日志\n· 增加单实例互斥：同一台电脑只允许一个 MikoMiko 进程，避免多开同时写设置与登录态造成数据错乱\n\nv0.1.3 · 2026-11-22\n· 首页搜索改为「搜索你感兴趣的内容」，直接走米游社全站搜索，帖子覆盖所有板块并随机出现\n· 阅读器支持登录后评论 / 回复，评论会同步到米游社官方\n· 视频页去掉滑动提示文字，进度条改为三色：白色未加载、灰色已缓冲、米蓝已播放\n· 视频改为全站所有用户随机流，点「视频」导航即可换一批\n· 修复扫码登录：兼容新版 ltoken_v2 / cookie_token_v2 Cookie，登录态持久保存\n· 设置右侧新增目录快捷跳转；十套米游社配色；移除下载目录；缓存每 5 分钟自动清理\n· 应用信息改为名称 / 版本 / 框架 / 数据目录，可打开与更改数据目录\n· 更新日志改为抽屉式展示\n· 修复关闭窗口时因托盘图标资源缺失导致的未处理异常\n\nv0.1.2 · 2026-11-21\n· 启用新的 MikoMiko 手写泡泡字标志与蓝色渐变图标\n· 设置页改为整页滚动布局，新增外观、启动、播放、通知、维护等分区\n· 「我的」新增未登录引导与 Cookie 绑定入口，「动态」新增关注流引导\n· 阅读器补齐评论与楼中楼展示，视频播放器支持出帧截图\n· 优化首页卡片布局、封面加载与深浅色切换细节\n\nv0.1.1 · 2026-11-20\n· 主色调整为米蓝 #4EA4DD，新增十套页面配色\n· 首页改为全站随机帖子流，下滑自动加载更多\n· 视频页上下滑动切换随机视频，保留米游社原生点赞 / 收藏 / 分享\n· 点赞与收藏在绑定 Cookie 后同步到米游社账号\n· 设置页支持整页滚动浏览\n\nv0.1.0 · 2026-11-19\n· MikoMiko 首个版本：WPF + .NET 8 桌面客户端工程搭建完成\n· 完成主窗口、左侧导航、首页、视频、动态、我的、搜索与设置基础页面\n· 接入米游社公开接口，支持首页帖子流、帖子详情、视频列表与搜索\n· 支持浅色 / 深色主题、主色切换、本地设置持久化与图片缓存\n· 内置离线演示数据，接口不可用时仍可浏览界面"),
 
 
         ("About.Title", "MikoMiko"),
@@ -89,7 +89,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Common.Close", "關閉"), ("Common.Back", "返回"), ("Common.OpenInBrowser", "在瀏覽器中開啟"), ("Common.Follow", "關注"), ("Common.Followed", "已關注"),
         ("Common.DemoMode", "示範資料"), ("Common.Offline", "目前為離線示範資料"),
 
-        ("Home.Recommend", "推薦"), ("Home.Official", "官方"), ("Home.Latest", "最新"), ("Home.Empty", "暫時沒有找到相關內容"),
+        ("Home.Recommend", "推薦"), ("Home.Posts", "帖子"), ("Home.Official", "官方"), ("Home.Latest", "最新"), ("Home.Empty", "暫時沒有找到相關內容"),
         ("Home.Subtitle.Recommend", "為你推薦的社群精選"), ("Home.Subtitle.Latest", "社群最新發佈"),
         ("Post.Detail", "貼文詳情"), ("Post.Read", "閱讀正文"), ("Post.Comments", "評論"), ("Post.NoComments", "還沒有評論，來說兩句吧"),
 
@@ -99,7 +99,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Video.Auto", "自動"), ("Video.Quality", "畫質"), ("Video.NoSource", "該內容暫無可播放的影片來源"), ("Video.Buffering", "正在緩衝影片…"), ("Video.CacheFail", "影片載入失敗，可點擊重試"),
         ("Video.Play", "播放"), ("Video.Pause", "暫停"), ("Video.Playing", "正在播放"), ("Video.Back", "返回影片列表"),
 
-        ("Moment.Title", "動態"), ("Moment.All", "全部"), ("Moment.Following", "只看關注"), ("Moment.FollowingOnly", "只看關注"), ("Moment.Empty", "關注的人還沒有發佈新動態"), ("Moment.LoginRequired", "登入後查看關注動態"), ("Moment.LoginHint", "動態頁只顯示你關注的人發佈的內容，請先在「我的」掃碼登入米遊社"),
+        ("Moment.Title", "關注"), ("Moment.All", "全部"), ("Moment.Following", "只看關注"), ("Moment.FollowingOnly", "只看關注"), ("Moment.Empty", "關注的人還沒有發佈新動態"), ("Moment.LoginRequired", "登入後查看關注動態"), ("Moment.LoginHint", "動態頁只顯示你關注的人發佈的內容，請先在「我的」掃碼登入米遊社"),
 
         ("Mine.Title", "我的"), ("Mine.Guest", "示範帳號"), ("Mine.Edit", "編輯資料"), ("Mine.Login", "登入"),
         ("Mine.Logout", "登出"), ("Mine.Following", "關注"), ("Mine.Fans", "粉絲"), ("Mine.Likes", "獲讚"), ("Mine.Views", "瀏覽"),
@@ -157,7 +157,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Common.Close", "Close"), ("Common.Back", "Back"), ("Common.OpenInBrowser", "Open in browser"), ("Common.Follow", "Follow"), ("Common.Followed", "Following"),
         ("Common.DemoMode", "Demo data"), ("Common.Offline", "Showing offline demo data"),
 
-        ("Home.Recommend", "For You"), ("Home.Official", "Official"), ("Home.Latest", "Latest"), ("Home.Empty", "No content found"),
+        ("Home.Recommend", "For You"), ("Home.Posts", "Posts"), ("Home.Official", "Official"), ("Home.Latest", "Latest"), ("Home.Empty", "No content found"),
         ("Home.Subtitle.Recommend", "Community picks for you"), ("Home.Subtitle.Latest", "Latest from the community"),
         ("Post.Detail", "Post"), ("Post.Read", "Read"), ("Post.Comments", "Comments"), ("Post.NoComments", "No comments yet"),
 
@@ -167,7 +167,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Video.Auto", "Auto"), ("Video.Quality", "Quality"), ("Video.NoSource", "No playable source for this video"), ("Video.Buffering", "Buffering video…"), ("Video.CacheFail", "Video failed to load, click to retry"),
         ("Video.Play", "Play"), ("Video.Pause", "Pause"), ("Video.Playing", "Now playing"), ("Video.Back", "Back to list"),
 
-        ("Moment.Title", "Feed"), ("Moment.All", "All"), ("Moment.Following", "Following"), ("Moment.FollowingOnly", "Following only"), ("Moment.Empty", "No new posts from people you follow"), ("Moment.LoginRequired", "Sign in to see your following feed"), ("Moment.LoginHint", "Only posts from people you follow are shown here. Sign in on the Me page first."),
+        ("Moment.Title", "Following"), ("Moment.All", "All"), ("Moment.Following", "Following"), ("Moment.FollowingOnly", "Following only"), ("Moment.Empty", "No new posts from people you follow"), ("Moment.LoginRequired", "Sign in to see your following feed"), ("Moment.LoginHint", "Only posts from people you follow are shown here. Sign in on the Me page first."),
 
         ("Mine.Title", "Me"), ("Mine.Guest", "Demo account"), ("Mine.Edit", "Edit profile"), ("Mine.Login", "Sign in"),
         ("Mine.Logout", "Sign out"), ("Mine.Following", "Following"), ("Mine.Fans", "Followers"), ("Mine.Likes", "Likes"), ("Mine.Views", "Views"),
@@ -208,7 +208,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("S.WindowHint", "Window options apply on next launch"),
         ("S.PlaybackHint", "Playback settings apply to the video player"),
         ("S.MaintainHint", "Clearing cache or checking updates keeps your settings"),
-        ("S.Changelog.Body", "MikoMiko full changelog (0.1.0 → 0.1.6)\n\nv0.1.6 · 2026-11-23\n· Left navigation label changed from Feed to Following\n· New hand-drawn navigation icons: gray outline by default, blue fill with dark outline when selected\n· Navigation order now Home / Following / Videos / Me, with Settings pinned at the bottom\n\nv0.1.5 · 2026-11-22\n· Author badges distinguish M-STAR, gold Official and pink MikoMiko; added the Official feed tab\n· Rounded navigation icons; reader image lightbox, draggable inline video, body links, back-to-top and comment buttons\n· Video page adds follow, comment count, publish page, click-to-pause and a draggable progress bar\n· Following feed shows old and new posts; custom Mine background; multi-column settings cards\n· In-app update check, download progress and ignore-this-version\n\nv0.1.4 · 2026-11-22\n· Settings header adds GitHub home and developer feedback links\n· Home posts render official rich text: text, images and videos keep their original order, long text can be expanded\n· Video uses a local Range proxy for real buffering, draggable progress thumb, author follower count before views, page index removed\n· Preloads the next three videos; adds a comment drawer under Favorite with synced comments and posting after login\n· Fixes audio continuing after pause; Auto now really cycles 1080P / 720P / 480P and keeps playback position\n· Danmaku can be sent, stored locally per video and replayed for local users\n· Login is an embedded official passport QR panel; Mine is rebuilt as a blue banner profile with character management\n· Full changelog from 0.1.0 to 0.1.4\n· Single-instance mutex prevents multiple processes from overwriting settings and login state\n\nv0.1.3 · 2026-11-22\n· Site-wide search, comments and replies synced to Miyoushe, three-color video progress bar, random all-site video feed\n· Fixed QR login cookies, settings section index, ten accent presets and five-minute cache cleanup\n· App info now shows name / version / runtime / data directory\n\nv0.1.2 · 2026-11-21\n· New wordmark and blue gradient icon, full-page settings, Mine and Moment guest guides, reader comments and video capture\n\nv0.1.1 · 2026-11-20\n· Accent switched to Miko Blue #4EA4DD with ten presets, random home feed, swipe video page and synced likes / favorites\n\nv0.1.0 · 2026-11-19\n· First WPF + .NET 8 build with main window, navigation, home, video, moment, mine, search and settings\n· Miyoushe public APIs, light / dark themes, settings persistence, image cache and offline demo data"),
+        ("S.Changelog.Body", "MikoMiko full changelog (0.1.0 → 0.1.7)\n\nv0.1.7 · 2026-11-23\n· New gray-outline / blue-selected navigation icons in the order Home, Videos, Following, Me, with Settings pinned bottom-left\n· Home Official tab renamed Posts, with section, board and sort filters for all nine communities\n· Post images zoom with the mouse wheel, official rich text and topic tags are preserved, links open inside the app\n· Refresh and back-to-top buttons on Home posts and Following; comments and nested replies available in the reader\n· Video comments can be replied to and sent; quality and speed use drawers, danmaku toggles, likes and favorites give color feedback and sync with the official account\n· Me page drops the Lv.0 badge, restores the default background and fixes repeated background changes; game cards open game details and posts\n· Settings reflowed into one column with synced section highlighting, live account sync and the open-source card removed\n· Home / Videos startup choices are mutually exclusive; new versions prompt an in-app update dialog\n\nv0.1.6 · 2026-11-23\n· Left navigation label changed from Feed to Following\n· New hand-drawn navigation icons: gray outline by default, blue fill with dark outline when selected\n· Navigation order now Home / Following / Videos / Me, with Settings pinned at the bottom\n\nv0.1.5 · 2026-11-22\n· Author badges distinguish M-STAR, gold Official and pink MikoMiko; added the Official feed tab\n· Rounded navigation icons; reader image lightbox, draggable inline video, body links, back-to-top and comment buttons\n· Video page adds follow, comment count, publish page, click-to-pause and a draggable progress bar\n· Following feed shows old and new posts; custom Mine background; multi-column settings cards\n· In-app update check, download progress and ignore-this-version\n\nv0.1.4 · 2026-11-22\n· Settings header adds GitHub home and developer feedback links\n· Home posts render official rich text: text, images and videos keep their original order, long text can be expanded\n· Video uses a local Range proxy for real buffering, draggable progress thumb, author follower count before views, page index removed\n· Preloads the next three videos; adds a comment drawer under Favorite with synced comments and posting after login\n· Fixes audio continuing after pause; Auto now really cycles 1080P / 720P / 480P and keeps playback position\n· Danmaku can be sent, stored locally per video and replayed for local users\n· Login is an embedded official passport QR panel; Mine is rebuilt as a blue banner profile with character management\n· Full changelog from 0.1.0 to 0.1.4\n· Single-instance mutex prevents multiple processes from overwriting settings and login state\n\nv0.1.3 · 2026-11-22\n· Site-wide search, comments and replies synced to Miyoushe, three-color video progress bar, random all-site video feed\n· Fixed QR login cookies, settings section index, ten accent presets and five-minute cache cleanup\n· App info now shows name / version / runtime / data directory\n\nv0.1.2 · 2026-11-21\n· New wordmark and blue gradient icon, full-page settings, Mine and Moment guest guides, reader comments and video capture\n\nv0.1.1 · 2026-11-20\n· Accent switched to Miko Blue #4EA4DD with ten presets, random home feed, swipe video page and synced likes / favorites\n\nv0.1.0 · 2026-11-19\n· First WPF + .NET 8 build with main window, navigation, home, video, moment, mine, search and settings\n· Miyoushe public APIs, light / dark themes, settings persistence, image cache and offline demo data"),
 
         ("About.Title", "MikoMiko"),
         ("About.Slogan", "A lighter Miyoushe desktop client"),
@@ -224,7 +224,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Common.Fail", "読み込みに失敗しました"), ("Common.Retry", "再試行"), ("Common.Cancel", "キャンセル"), ("Common.Confirm", "OK"),
         ("Common.Close", "閉じる"), ("Common.Back", "戻る"), ("Common.OpenInBrowser", "ブラウザで開く"), ("Common.Follow", "フォロー"), ("Common.Followed", "フォロー中"),
         ("Common.DemoMode", "デモデータ"), ("Common.Offline", "オフラインのデモデータを表示中"),
-        ("Home.Recommend", "おすすめ"), ("Home.Official", "公式"), ("Home.Latest", "最新"), ("Home.Empty", "コンテンツが見つかりません"),
+        ("Home.Recommend", "おすすめ"), ("Home.Posts", "投稿"), ("Home.Official", "公式"), ("Home.Latest", "最新"), ("Home.Empty", "コンテンツが見つかりません"),
         ("Home.Subtitle.Recommend", "あなたへのコミュニティピック"), ("Home.Subtitle.Latest", "コミュニティの最新投稿"),
         ("Post.Detail", "投稿"), ("Post.Read", "読む"), ("Post.Comments", "コメント"), ("Post.NoComments", "まだコメントはありません"),
         ("Video.Title", "動画"), ("Video.Related", "関連"), ("Video.Like", "いいね"), ("Video.Coin", "コイン"),
@@ -234,7 +234,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Video.Auto", "自動"), ("Video.Quality", "画質"), ("Video.NoSource", "再生できる動画ソースがありません"),
         ("Video.Play", "再生"), ("Video.Pause", "一時停止"), ("Video.Playing", "再生中"), ("Video.Back", "動画一覧へ"),
         ("Video.Buffering", "動画を読み込み中…"), ("Video.CacheFail", "動画の読み込みに失敗しました。クリックで再試行"),
-        ("Moment.Title", "フィード"), ("Moment.All", "すべて"), ("Moment.Following", "フォロー中"), ("Moment.FollowingOnly", "フォロー中のみ"),
+        ("Moment.Title", "フォロー中"), ("Moment.All", "すべて"), ("Moment.Following", "フォロー中"), ("Moment.FollowingOnly", "フォロー中のみ"),
         ("Moment.Empty", "フォロー中のユーザーの新着はありません"), ("Moment.LoginRequired", "ログインしてフィードを見る"),
         ("Moment.LoginHint", "フィードにはフォロー中のユーザーの投稿だけが表示されます。「マイ」でログインしてください。"),
         ("Mine.Title", "マイ"), ("Mine.Guest", "デモアカウント"), ("Mine.Edit", "プロフィール編集"), ("Mine.Login", "ログイン"),
@@ -268,13 +268,13 @@ public sealed class Loc : INotifyPropertyChanged
         ("Common.Loading", "Загрузка…"), ("Common.Refresh", "Обновить"), ("Common.More", "Ещё"), ("Common.Empty", "Здесь пока пусто"),
         ("Common.Fail", "Не удалось загрузить"), ("Common.Retry", "Повторить"), ("Common.Cancel", "Отмена"), ("Common.Confirm", "ОК"),
         ("Common.Close", "Закрыть"), ("Common.Back", "Назад"), ("Common.OpenInBrowser", "Открыть в браузере"), ("Common.Follow", "Подписаться"), ("Common.Followed", "Вы подписаны"),
-        ("Home.Recommend", "Рекомендации"), ("Home.Official", "Официальное"), ("Home.Latest", "Новое"), ("Home.Empty", "Ничего не найдено"),
+        ("Home.Recommend", "Рекомендации"), ("Home.Posts", "Посты"), ("Home.Official", "Официальное"), ("Home.Latest", "Новое"), ("Home.Empty", "Ничего не найдено"),
         ("Post.Detail", "Пост"), ("Post.Read", "Читать"), ("Post.Comments", "Комментарии"), ("Post.NoComments", "Комментариев пока нет"),
         ("Video.Title", "Видео"), ("Video.Like", "Нравится"), ("Video.SwipeHint", "Свайп вверх/вниз — следующее видео"),
         ("Video.Index", "{0} из {1}"), ("Video.Sync", "Синхронизировано с аккаунтом miyoushe"), ("Video.SyncFail", "Ошибка синхронизации — войдите в профиле"),
         ("Video.Favorite", "В избранное"), ("Video.Share", "Поделиться"), ("Video.Danmaku", "Данмаку"),
         ("Video.NoSource", "Нет доступного источника видео"), ("Video.Buffering", "Буферизация видео…"), ("Video.CacheFail", "Не удалось загрузить видео, нажмите для повтора"),
-        ("Moment.Title", "Лента"), ("Moment.FollowingOnly", "Только подписки"), ("Moment.Empty", "Нет новых постов от подписок"),
+        ("Moment.Title", "Подписки"), ("Moment.FollowingOnly", "Только подписки"), ("Moment.Empty", "Нет новых постов от подписок"),
         ("Moment.LoginRequired", "Войдите, чтобы увидеть ленту подписок"), ("Moment.LoginHint", "Здесь показываются только посты людей, на которых вы подписаны."),
         ("Mine.Title", "Профиль"), ("Mine.Login", "Войти"), ("Mine.Logout", "Выйти"), ("Mine.Following", "Подписки"), ("Mine.Fans", "Подписчики"),
         ("Mine.Likes", "Лайки"), ("Mine.Views", "Просмотры"), ("Mine.Games", "Игровые аккаунты"), ("Mine.Bound", "Привязано"),
@@ -302,7 +302,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("Post.Detail", "게시글"), ("Post.Comments", "댓글"), ("Post.NoComments", "아직 댓글이 없습니다"),
         ("Video.Title", "영상"), ("Video.Like", "좋아요"), ("Video.Favorite", "저장"), ("Video.Share", "공유"),
         ("Video.SwipeHint", "위아래로 넘겨 다음 영상"), ("Video.Buffering", "영상을 불러오는 중…"),
-        ("Moment.Title", "피드"), ("Moment.FollowingOnly", "팔로잉만"), ("Moment.Empty", "팔로우한 사람의 새 소식이 없습니다"),
+        ("Moment.Title", "팔로잉"), ("Moment.FollowingOnly", "팔로잉만"), ("Moment.Empty", "팔로우한 사람의 새 소식이 없습니다"),
         ("Moment.LoginRequired", "로그인 후 팔로잉 피드 보기"), ("Moment.LoginHint", "피드에는 팔로우한 사람의 게시글만 표시됩니다."),
         ("Mine.Title", "내 정보"), ("Mine.Login", "로그인"), ("Mine.Logout", "로그아웃"), ("Mine.Following", "팔로잉"), ("Mine.Fans", "팔로워"),
         ("Mine.GuestTitle", "miyoushe 로그인"), ("Mine.QrLogin", "QR 코드로 로그인"), ("Mine.CookieFallback", "Cookie로 로그인"),
@@ -356,6 +356,8 @@ public sealed class Loc : INotifyPropertyChanged
 
     public string T(string key) => this[key];
 }
+
+
 
 
 

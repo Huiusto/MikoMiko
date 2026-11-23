@@ -44,8 +44,11 @@ public sealed partial class PostReaderViewModel : ObservableObject
     private void Close() => CloseRequested?.Invoke();
 
     public ObservableCollection<string> Images { get; }
+    public ObservableCollection<string> Topics { get; } = new();
     public ObservableCollection<CommentItem> Comments { get; } = new();
     public ObservableCollection<PostBlock> Blocks { get; } = new();
+
+    public bool HasTopics => Topics.Count > 0;
 
     [ObservableProperty] private bool _isBodyExpanded;
     [ObservableProperty] private double _bodyMaxHeight = 460;
@@ -100,7 +103,7 @@ public sealed partial class PostReaderViewModel : ObservableObject
     public bool HasImages => Images.Count > 0;
     public bool HasBody => !string.IsNullOrWhiteSpace(Body);
     public string BodyToggleText => IsBodyExpanded ? "收起" : "展开全文";
-    public bool CanSync => !string.IsNullOrWhiteSpace(_settings.Cookie);
+    public bool CanSync => _content.Api.HasCookie;
     public bool HasReplyTarget => ReplyTargetId != "0" && !string.IsNullOrWhiteSpace(ReplyTargetId);
 
     partial void OnReplyTargetIdChanged(string value) => OnPropertyChanged(nameof(HasReplyTarget));
@@ -144,6 +147,12 @@ public sealed partial class PostReaderViewModel : ObservableObject
                         Blocks.Clear();
                         foreach (var block in detail.Blocks) Blocks.Add(block);
                     }
+
+                    if (detail.Topics.Count > 0)
+                    {
+                        Topics.Clear();
+                        foreach (var topic in detail.Topics) Topics.Add(topic);
+                    }
                 }
             }
 
@@ -165,6 +174,7 @@ public sealed partial class PostReaderViewModel : ObservableObject
 
             OnPropertyChanged(nameof(HasImages));
             OnPropertyChanged(nameof(HasBody));
+            OnPropertyChanged(nameof(HasTopics));
 
             // 视频帖：先把直链落到本地缓存，再让播放器读本地文件
             if (IsVideo && !string.IsNullOrWhiteSpace(VideoUrl))
@@ -197,6 +207,36 @@ public sealed partial class PostReaderViewModel : ObservableObject
 
     [RelayCommand]
     private async Task ReloadCommentsAsync() => await LoadCommentsAsync();
+
+    /// <summary>刷新整篇帖子与评论。</summary>
+    [RelayCommand]
+    private async Task ReloadAsync()
+    {
+        StatusText = string.Empty;
+        Toast = "正在刷新…";
+        await LoadAsync();
+        Toast = "已刷新";
+    }
+
+    /// <summary>评论点赞（本地即时反馈；已点赞时取消）。</summary>
+    [RelayCommand]
+    private void LikeComment(CommentItem? comment)
+    {
+        if (comment is null) return;
+        comment.IsLiked = !comment.IsLiked;
+        comment.LikeText = BumpCount(comment.LikeText, comment.IsLiked);
+        if (comment.IsLiked) comment.IsDisliked = false;
+    }
+
+    /// <summary>评论点踩（本地即时反馈；与点赞互斥）。</summary>
+    [RelayCommand]
+    private void DislikeComment(CommentItem? comment)
+    {
+        if (comment is null) return;
+        comment.IsDisliked = !comment.IsDisliked;
+        comment.DislikeText = BumpCount(comment.DislikeText, comment.IsDisliked);
+        if (comment.IsDisliked) comment.IsLiked = false;
+    }
 
     /// <summary>发表评论并同步到米游社；成功后重新拉取评论列表。</summary>
     [RelayCommand]
@@ -255,7 +295,8 @@ public sealed partial class PostReaderViewModel : ObservableObject
     private void ReplyTo(CommentItem? comment)
     {
         if (comment is null) return;
-        ReplyTargetId = string.IsNullOrWhiteSpace(comment.ReplyId) ? "0" : comment.ReplyId!;
+        var target = !string.IsNullOrWhiteSpace(comment.RootReplyId) ? comment.RootReplyId : comment.ReplyId;
+        ReplyTargetId = string.IsNullOrWhiteSpace(target) ? "0" : target;
         ReplyTargetName = comment.Author;
         CommentStatus = $"正在回复 {comment.Author}";
     }
@@ -329,7 +370,7 @@ public sealed partial class PostReaderViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(WebUrl)) return;
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(WebUrl) { UseShellExecute = true });
+            App.Shell.OpenLink(WebUrl);
         }
         catch
         {

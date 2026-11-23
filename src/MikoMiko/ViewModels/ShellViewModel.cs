@@ -4,6 +4,7 @@ using MikoMiko.Localization;
 using MikoMiko.Models;
 using MikoMiko.Services;
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 
 namespace MikoMiko.ViewModels;
 
@@ -32,22 +33,24 @@ public sealed partial class ShellViewModel : ObservableObject
         _settingsService = settingsService;
         _settings = settingsService.Current;
         _content = content;
+        // 正文中的链接统一交给软件内浏览器 / 阅读器处理，绝不打开系统浏览器
+        Controls.LinkTextBlock.LinkRequested = OpenLink;
 
         _home = new HomeViewModel(content, OpenItem);
         _video = new VideoViewModel(content);
-        _moment = new MomentViewModel(content);
-        _mine = new MineViewModel(content, _settings);
+        _moment = new MomentViewModel(content, OpenMoment);
+        _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
         _settingsVm.LanguageChanged = RefreshLocalization;
 
         Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
-        Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
+        Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
         Navigation.Add(new NavItem("Mine", "Nav.Mine", "mine"));
         FooterNavigation.Add(new NavItem("Settings", "Nav.Settings", "settings"));
 
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
-        HomeTabs.Add(new TabOption("Official", "Home.Official"));
+        HomeTabs.Add(new TabOption("Posts", "Home.Posts"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -68,6 +71,10 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private Views.PostReaderView? _readerView;
     [ObservableProperty] private bool _isReaderOpen;
     [ObservableProperty] private Views.VideoView? _videoPage;
+
+    /// <summary>软件内网页视图（正文里的外部链接），不打开系统浏览器。</summary>
+    [ObservableProperty] private Views.BrowserView? _browserView;
+    [ObservableProperty] private bool _isBrowserOpen;
 
     public SettingsViewModel SettingsViewModel => _settingsVm;
     public MineViewModel MineViewModel => _mine;
@@ -95,9 +102,18 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (tab is null) return;
         foreach (var option in HomeTabs) option.IsSelected = option == tab;
-        if (tab.Key == "Official") await _home.LoadOfficialAsync();
-        else await _home.LoadAsync(false);
-        Navigate("Home");
+        if (tab.Key == "Posts")
+        {
+            _home.IsPostsTab = true;
+            if (_currentKey == "Home") await _home.ActivatePostsAsync();
+            else Navigate("Home");
+        }
+        else
+        {
+            _home.DeactivatePosts();
+            if (_currentKey == "Home") await _home.LoadAsync(false);
+            else Navigate("Home");
+        }
     }
 
     public void Navigate(string key, bool pushHistory = true)
@@ -107,14 +123,16 @@ public sealed partial class ShellViewModel : ObservableObject
             if (key == "Home")
             {
                 if (IsReaderOpen) CloseReader();
-                _ = _home.IsOfficialTab ? _home.LoadOfficialAsync() : _home.LoadAsync(_home.IsLatest);
+                if (_home.IsPostsTab) _ = _home.ActivatePostsAsync();
+                else _ = _home.LoadAsync(_home.IsLatest);
             }
             if (key == "Video") _ = _video.RefreshAsync();
             return;
         }
 
-        // 首页打开帖子后切到视频 / 动态等页面时，自动关闭阅读器
+        // 首页打开帖子后切到视频 / 动态等页面时，自动关闭阅读器与浏览器
         if (IsReaderOpen) CloseReader();
+        if (IsBrowserOpen) CloseBrowser();
 
         // 离开视频页时暂停播放与特效，避免在别的页面继续出声
         if (_currentKey == "Video") VideoPage?.PausePlayback();
@@ -160,7 +178,8 @@ public sealed partial class ShellViewModel : ObservableObject
         switch (key)
         {
             case "Home":
-                if (_home.Items.Count == 0) await _home.LoadAsync(_home.IsLatest);
+                if (_home.IsPostsTab) await _home.ActivatePostsAsync();
+                else if (_home.Items.Count == 0) await _home.LoadAsync(_home.IsLatest);
                 break;
             case "Video":
                 if (_video.Videos.Count == 0) await _video.LoadAsync();
@@ -173,6 +192,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 break;
             case "Settings":
                 _settingsVm.SyncSelections();
+                _settingsVm.RefreshAccount();
                 _settingsVm.RefreshCacheSize();
                 break;
         }
@@ -182,7 +202,11 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         var start = _settings.StartOnVideo
             ? "Video"
-            : _settings.StartOnHome || !_settings.RememberLastPage ? "Home" : _settings.LastPage;
+            : _settings.StartOnHome
+                ? "Home"
+                : _settings.RememberLastPage
+                    ? _settings.LastPage
+                    : "Home";
         if (Navigation.Concat(FooterNavigation).All(i => i.Key != start)) start = "Home";
         Navigate(start, pushHistory: false);
         await EnsureLoadedAsync(start);
@@ -229,12 +253,65 @@ public sealed partial class ShellViewModel : ObservableObject
         // 从视频页点开帖子时先暂停视频
         VideoPage?.PausePlayback();
         CloseReader();
+        CloseBrowser();
 
         var reader = new PostReaderViewModel(_content, _settings, item);
         reader.CloseRequested = CloseReader;
         ReaderView = new Views.PostReaderView(reader);
         IsReaderOpen = true;
         _ = reader.LoadAsync();
+    }
+
+    private void OpenMoment(MomentItem moment)
+    {
+        if (string.IsNullOrWhiteSpace(moment.PostId)) return;
+        OpenItem(new FeedItem
+        {
+            PostId = moment.PostId,
+            Id = moment.PostId,
+            Title = moment.Text.Length > 60 ? moment.Text[..60] : moment.Text,
+            Summary = moment.Text,
+            Cover = moment.Images.FirstOrDefault() ?? moment.VideoCover,
+            Author = moment.Author,
+            AuthorAvatar = moment.Avatar,
+            TimeText = moment.TimeText,
+            LikeText = moment.LikeText,
+            ReplyText = moment.ReplyText,
+            IsVideo = moment.IsVideo,
+            VideoUrl = string.Empty,
+            DurationText = moment.DurationText,
+            Images = moment.Images.ToList(),
+        });
+    }
+
+    /// <summary>正文链接统一入口：米游社帖子在阅读器内打开，其他网页用软件内浏览器。</summary>
+    public void OpenLink(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+        var match = Regex.Match(url, @"(?:article|post)/(\d+)", RegexOptions.IgnoreCase);
+        if (url.Contains("miyoushe.com", StringComparison.OrdinalIgnoreCase) && match.Success)
+        {
+            OpenItem(new FeedItem
+            {
+                PostId = match.Groups[1].Value,
+                Id = match.Groups[1].Value,
+                Title = "米游社帖子",
+                WebUrl = url,
+            });
+            return;
+        }
+
+        CloseBrowser();
+        BrowserView = new Views.BrowserView(url, CloseBrowser);
+        IsBrowserOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseBrowser()
+    {
+        if (BrowserView is null) return;
+        BrowserView = null;
+        IsBrowserOpen = false;
     }
 
     /// <summary>收起阅读器，回到当前页面。</summary>

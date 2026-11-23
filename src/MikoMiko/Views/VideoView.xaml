@@ -107,17 +107,41 @@
                     <StackPanel HorizontalAlignment="Center" Margin="0,0,0,14">
                         <Button Command="{Binding LikeCommand}" Style="{StaticResource CircleActionButton}" Width="36" Height="36">
                             <Path Data="M8 15 C8 15 1 10.5 1 5.6 C1 2.8 3.9 1.2 5.9 2.6 L8 4.6 L10.1 2.6 C12.1 1.2 15 2.8 15 5.6 C15 10.5 8 15 8 15 Z"
-                                  Fill="#E6FFFFFF" Stroke="#E6FFFFFF" StrokeThickness="1" Width="16" Height="16" Stretch="Uniform" />
+                                  Stroke="#E6FFFFFF" StrokeThickness="1" Width="16" Height="16" Stretch="Uniform">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Fill" Value="#E6FFFFFF" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLiked}" Value="True">
+                                                <Setter Property="Fill" Value="#FF5C8A" />
+                                                <Setter Property="Stroke" Value="#FF5C8A" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
                         </Button>
                         <TextBlock Text="{Binding Selected.LikeText}" Foreground="#E6FFFFFF" FontSize="10.5"
                                    HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
                     <StackPanel HorizontalAlignment="Center" Margin="0,0,0,14">
                         <Button Command="{Binding FavoriteCommand}" Style="{StaticResource CircleActionButton}" Width="36" Height="36">
-                            <Path Data="M0 0 L6 3.8 L12 0 V13.4 L6 9.6 L0 13.4 Z"
-                                  Stroke="White" StrokeThickness="1.3" Width="14" Height="14" Stretch="Uniform" />
+                            <Path Data="M0 0 L6 3.8 L12 0 V13.4 L6 9.6 L0 13.4 Z" Stroke="White" StrokeThickness="1.3"
+                                  Width="14" Height="14" Stretch="Uniform">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Fill" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFavorited}" Value="True">
+                                                <Setter Property="Fill" Value="#FFD166" />
+                                                <Setter Property="Stroke" Value="#FFD166" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
                         </Button>
-                        <TextBlock Text="{Binding [Video.Favorite], Source={x:Static loc:Loc.Instance}}"
+                        <TextBlock Text="{Binding FavoriteText}"
                                    Foreground="#E6FFFFFF" FontSize="10.5" HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
                     <StackPanel HorizontalAlignment="Center" Margin="0,0,0,14">
@@ -139,9 +163,10 @@
 
                 <!-- 0.1.4：不再显示「第 1/12 个」序号 -->
 
-                <!-- 弹幕层 -->
+                <!-- 弹幕层：受「弹幕」按钮控制显隐 -->
                 <Canvas x:Name="DanmakuHost" Height="280" VerticalAlignment="Top" Margin="0,54,330,0"
-                        IsHitTestVisible="False" ClipToBounds="True" />
+                        IsHitTestVisible="False" ClipToBounds="True"
+                        Visibility="{Binding ShowDanmaku, Converter={StaticResource BoolToVis}}" />
 
                 <!-- 返回封面（播放时显示） -->
                 <Button x:Name="ReturnCoverButton" HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -244,16 +269,29 @@
                                 Click="SendDanmaku_Click" />
 
                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}" Click="Auto_Click">
+                            <Button Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
+                                    Command="{Binding ToggleQualityCommand}">
                                 <TextBlock Text="{Binding QualityText}" Foreground="#E8FFFFFF" FontSize="12" />
                             </Button>
                             <Button x:Name="SpeedButton" Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
-                                    Click="Speed_Click">
+                                    Command="{Binding ToggleSpeedCommand}">
                                 <TextBlock Text="{Binding SpeedText}" Foreground="#E8FFFFFF" FontSize="12" />
                             </Button>
-                            <Button Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}" Click="Danmaku_Click">
+                            <Button Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
+                                    Command="{Binding ToggleDanmakuCommand}">
                                 <TextBlock Text="{Binding [Video.Danmaku], Source={x:Static loc:Loc.Instance}}"
-                                           Foreground="#E8FFFFFF" FontSize="12" />
+                                           FontSize="12">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#88FFFFFF" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ShowDanmaku}" Value="True">
+                                                    <Setter Property="Foreground" Value="#FFFFFFFF" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </Button>
                             <Button x:Name="MuteButton" Style="{StaticResource PlayerBarButton}" Click="Mute_Click"
                                     Width="26" Padding="4,2">
@@ -270,7 +308,46 @@
                         </StackPanel>
                     </Grid>
                 </Border>
-                <!-- 评论区（右侧抽屉，同步该视频帖的米游社评论） -->
+
+                <!-- 画质抽屉（右下角从播放栏上方展开） -->
+                <Border Width="140" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Margin="0,0,150,58" Background="#F2181820" CornerRadius="10" Padding="6"
+                        Visibility="{Binding IsQualityOpen, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="清晰度" Foreground="#80FFFFFF" FontSize="10.5" Margin="8,4,0,6" />
+                        <ItemsControl ItemsSource="{Binding QualityOptions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding}" Height="30" Padding="10,0" Cursor="Hand"
+                                            HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0"
+                                            Foreground="#E8FFFFFF" FontSize="12"
+                                            Command="{Binding DataContext.PickQualityCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- 倍速抽屉 -->
+                <Border Width="140" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        Margin="0,0,90,58" Background="#F2181820" CornerRadius="10" Padding="6"
+                        Visibility="{Binding IsSpeedOpen, Converter={StaticResource BoolToVis}}">
+                    <StackPanel>
+                        <TextBlock Text="倍速" Foreground="#80FFFFFF" FontSize="10.5" Margin="8,4,0,6" />
+                        <ItemsControl ItemsSource="{Binding SpeedOptions}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding}" Height="30" Padding="10,0" Cursor="Hand"
+                                            HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0"
+                                            Foreground="#E8FFFFFF" FontSize="12"
+                                            Command="{Binding DataContext.PickSpeedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
                 <Border Width="390" HorizontalAlignment="Right" Margin="0,0,0,54" Background="#F2181820"
                         Visibility="{Binding IsCommentsOpen, Converter={StaticResource BoolToVis}}">
                     <Grid Margin="16,12,16,14">
@@ -295,21 +372,100 @@
                                     <DataTemplate>
                                         <StackPanel Margin="0,0,0,14">
                                             <StackPanel Orientation="Horizontal">
-                                                <Border Width="26" Height="26" CornerRadius="13" ClipToBounds="True"
+                                                <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True"
                                                         Background="#33FFFFFF">
                                                     <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
                                                 </Border>
-                                                <TextBlock Text="{Binding Author}" Foreground="#CCFFFFFF" FontSize="11.5"
-                                                           Margin="8,4,0,0" />
-                                                <TextBlock Text="{Binding IpRegion}" Foreground="#66FFFFFF" FontSize="10"
-                                                           Margin="6,5,0,0" />
-                                                <TextBlock Text="{Binding TimeText}" Foreground="#66FFFFFF" FontSize="10"
-                                                           Margin="6,5,0,0" />
+                                                <StackPanel Margin="8,0,0,0">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding Author}" Foreground="#FF9AC8" FontSize="11.5"
+                                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                        <Border Background="#334EA4DD" CornerRadius="3" Padding="4,0"
+                                                                Margin="6,0,0,0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Level, StringFormat=Lv.{0}}" FontSize="9.5"
+                                                                       Foreground="#8FD0FF" />
+                                                        </Border>
+                                                        <TextBlock Text="{Binding TimeText}" Foreground="#66FFFFFF" FontSize="10"
+                                                                   Margin="8,1,0,0" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Content}" Foreground="#EEFFFFFF" FontSize="12.5"
+                                                               TextWrapping="Wrap" Margin="0,4,0,0" />
+                                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                                        <Button Style="{StaticResource LinkButton}" Height="18" Padding="0"
+                                                                Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}">
+                                                            <TextBlock Text="♡" FontSize="10.5" Foreground="#80FFFFFF">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Text" Value="♡" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsLiked}" Value="True">
+                                                                                <Setter Property="Text" Value="♥" />
+                                                                                <Setter Property="Foreground" Value="#FF5C8A" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Button>
+                                                        <TextBlock Text="{Binding LikeText}" Foreground="#66FFFFFF" FontSize="10"
+                                                                   Margin="4,0,0,0" VerticalAlignment="Center" />
+                                                        <Button Style="{StaticResource LinkButton}" Height="18" Padding="0"
+                                                                Margin="12,0,0,0"
+                                                                Command="{Binding DataContext.DislikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}">
+                                                            <TextBlock Text="♧" FontSize="10.5" Foreground="#80FFFFFF">
+                                                                <TextBlock.Style>
+                                                                    <Style TargetType="TextBlock">
+                                                                        <Setter Property="Text" Value="♧" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsDisliked}" Value="True">
+                                                                                <Setter Property="Foreground" Value="#8FD0FF" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </TextBlock.Style>
+                                                            </TextBlock>
+                                                        </Button>
+                                                        <Button Content="回复" Style="{StaticResource LinkButton}" Height="18" Padding="0"
+                                                                Margin="12,0,0,0" FontSize="10.5" Foreground="#8FD0FF"
+                                                                Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                CommandParameter="{Binding}" />
+                                                    </StackPanel>
+                                                </StackPanel>
                                             </StackPanel>
-                                            <TextBlock Text="{Binding Content}" Foreground="#EEFFFFFF" FontSize="12.5"
-                                                       TextWrapping="Wrap" Margin="34,5,0,0" />
-                                            <TextBlock Text="{Binding LikeText, StringFormat=赞 {0}}" Foreground="#66FFFFFF"
-                                                       FontSize="10" Margin="34,4,0,0" />
+
+                                            <ItemsControl ItemsSource="{Binding Children}" Margin="36,8,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border BorderBrush="#33FFFFFF" BorderThickness="1,0,0,0"
+                                                                Padding="8,0,0,0" Margin="0,0,0,7">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding ReplyToName, StringFormat=回复 @{0}：}"
+                                                                           Foreground="#8FD0FF" FontSize="10.5" Margin="0,0,0,3"
+                                                                           Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}" />
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="{Binding Author}" Foreground="#FF9AC8"
+                                                                               FontSize="11" FontWeight="SemiBold" />
+                                                                    <TextBlock Text="{Binding TimeText}" Foreground="#66FFFFFF"
+                                                                               FontSize="9.5" Margin="7,1,0,0" />
+                                                                </StackPanel>
+                                                                <TextBlock FontSize="10.5" Foreground="#80FFFFFF" Margin="0,3,0,0"
+                                                                           Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}">
+                                                                    <Run Text="回复 @" /><Run Text="{Binding ReplyToName, Mode=OneWay}" /><Run Text="：" />
+                                                                </TextBlock>
+                                                                <TextBlock Text="{Binding Content}" Foreground="#DDFFFFFF"
+                                                                           FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                                                <Button Content="回复" Style="{StaticResource LinkButton}" Height="18"
+                                                                        Padding="0" Margin="0,4,0,0" FontSize="10" Foreground="#8FD0FF"
+                                                                        HorizontalAlignment="Left"
+                                                                        Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -319,15 +475,27 @@
                         <StackPanel Grid.Row="2" Margin="0,8,0,0">
                             <TextBlock Text="{Binding CommentStatus}" Foreground="#80FFFFFF" FontSize="10.5"
                                        Margin="0,0,0,5" Visibility="{Binding CommentStatus, Converter={StaticResource NotEmptyToVis}}" />
+                            <Border Background="#334EA4DD" CornerRadius="8" Padding="8,3" Margin="0,0,0,6"
+                                    HorizontalAlignment="Left"
+                                    Visibility="{Binding HasReplyTarget, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding ReplyTargetName, StringFormat=回复 @{0}}" Foreground="#8FD0FF"
+                                               FontSize="10.5" VerticalAlignment="Center" />
+                                    <Button Content="取消" Style="{StaticResource LinkButton}" Height="16" Padding="0"
+                                            Margin="8,0,0,0" FontSize="10" Foreground="#CCFFFFFF"
+                                            Command="{Binding CancelReplyCommand}" />
+                                </StackPanel>
+                            </Border>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBox Text="{Binding CommentInput, UpdateSourceTrigger=PropertyChanged}"
-                                         Height="34" Background="#26FFFFFF" Foreground="White" BorderThickness="0"
-                                         VerticalContentAlignment="Center" Padding="10,0" FontSize="12" />
-                                <Button Grid.Column="1" Content="发送" Height="34" Padding="16,0" Margin="8,0,0,0"
+                                         MinHeight="64" MaxHeight="110" Background="#26FFFFFF" Foreground="White"
+                                         BorderThickness="0" AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalContentAlignment="Top" Padding="10,7" FontSize="12" />
+                                <Button Grid.Column="1" Content="发送" Height="64" Padding="16,0" Margin="8,0,0,0"
                                         Background="#4EA4DD" Foreground="White" BorderThickness="0" Cursor="Hand"
                                         Command="{Binding SendCommentCommand}" />
                             </Grid>

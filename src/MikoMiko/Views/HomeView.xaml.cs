@@ -14,7 +14,7 @@ public partial class HomeView : UserControl
         DataContext = viewModel;
     }
 
-    /// <summary>接近底部时再追加一批随机帖子（无限下滑）。</summary>
+    /// <summary>接近底部时再追加一批内容（推荐流随机、帖子流按 last_id 翻页）。</summary>
     private void FeedScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         if (e.VerticalChange <= 0) return;
@@ -22,5 +22,14 @@ public partial class HomeView : UserControl
         if (scroll.VerticalOffset + scroll.ViewportHeight + 600 < scroll.ExtentHeight) return;
 
         _ = _vm.LoadMoreAsync();
+    }
+
+    private void BackToTop_Click(object sender, System.Windows.RoutedEventArgs e)
+        => FeedScroll.ScrollToTop();
+
+    private void FloatingRefresh_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        FeedScroll.ScrollToTop();
+        _vm.RefreshCommand.Execute(null);
     }
 }

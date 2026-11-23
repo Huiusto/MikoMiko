@@ -188,6 +188,12 @@
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             Focusable="False"
                             Visibility="{Binding IsReaderOpen, Converter={StaticResource BoolToVis}}" />
+
+            <!-- ==================== 软件内网页（正文外链，不跳系统浏览器） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding BrowserView}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False"
+                            Visibility="{Binding IsBrowserOpen, Converter={StaticResource BoolToVis}}" />
         </Grid>
     </Border>
 </Window>

@@ -18,4 +18,6 @@ public sealed partial class ChoiceOption : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
+
+    public override string ToString() => Label;
 }

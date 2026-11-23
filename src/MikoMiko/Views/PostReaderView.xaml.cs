@@ -177,7 +177,18 @@ public partial class PostReaderView : UserControl
     {
         if (sender is not Border { Tag: string url } || string.IsNullOrWhiteSpace(url)) return;
         LightboxImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(url, UriKind.Absolute));
+        LightboxScale.ScaleX = LightboxScale.ScaleY = 1;
         ImageLightbox.Visibility = Visibility.Visible;
+        e.Handled = true;
+    }
+
+    /// <summary>灯箱滚轮缩放（0.5×–6×），放大后可拖动滚动查看。</summary>
+    private void Lightbox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var factor = e.Delta > 0 ? 1.12 : 1 / 1.12;
+        var scale = Math.Clamp(LightboxScale.ScaleX * factor, 0.5, 6);
+        LightboxScale.ScaleX = scale;
+        LightboxScale.ScaleY = scale;
         e.Handled = true;
     }
 
@@ -185,6 +196,12 @@ public partial class PostReaderView : UserControl
     {
         ImageLightbox.Visibility = Visibility.Collapsed;
         LightboxImage.Source = null;
+    }
+
+    private void FloatingRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        BodyScroll.ScrollToTop();
+        _vm.ReloadCommand.Execute(null);
     }
 
     private void CloseImageLightbox_Click(object sender, RoutedEventArgs e)
@@ -201,5 +218,13 @@ public partial class PostReaderView : UserControl
     public void ScrollToComments()
     {
         CommentSection.BringIntoView();
+    }
+
+    /// <summary>开发期截图用：把评论输入框滚到顶部，检查多行输入是否完整可见。</summary>
+    public void ScrollToCommentBox()
+    {
+        var offset = CommentComposer.TransformToAncestor(BodyScroll).Transform(new Point(0, 0)).Y
+                     + BodyScroll.VerticalOffset;
+        BodyScroll.ScrollToVerticalOffset(Math.Max(0, offset - 24));
     }
 }

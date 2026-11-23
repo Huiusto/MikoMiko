@@ -277,14 +277,14 @@ public sealed class MiHoYoLoginService
     /// <summary>该账号在各游戏下的角色（原神/星铁/绝区零/崩坏3/崩坏学园2/未定）。</summary>
     public async Task<List<GameRole>> GetGameRolesAsync(string cookie)
     {
-        var games = new (string Biz, string Name, string Accent)[]
+        var games = new (string Biz, string Name, string Accent, int Gid)[]
         {
-            ("hk4e_cn", "原神", "#4EA4DD"),
-            ("hkrpg_cn", "崩坏：星穹铁道", "#8B7BE8"),
-            ("nap_cn", "绝区零", "#F5B94A"),
-            ("bh3_cn", "崩坏3", "#E86A9A"),
-            ("bh2_cn", "崩坏学园2", "#7EC8E3"),
-            ("nxx_cn", "未定事件簿", "#C9A063"),
+            ("hk4e_cn", "原神", "#4EA4DD", 2),
+            ("hkrpg_cn", "崩坏：星穹铁道", "#8B7BE8", 6),
+            ("nap_cn", "绝区零", "#F5B94A", 8),
+            ("bh3_cn", "崩坏3", "#E86A9A", 1),
+            ("bh2_cn", "崩坏学园2", "#7EC8E3", 3),
+            ("nxx_cn", "未定事件簿", "#C9A063", 4),
         };
 
         var result = new List<GameRole>();
@@ -309,6 +309,8 @@ public sealed class MiHoYoLoginService
             {
                 result.Add(new GameRole
                 {
+                    GameId = game.Gid,
+                    GameBiz = game.Biz,
                     GameName = game.Name,
                     AccentHex = game.Accent,
                     Nickname = GetString(role, "nickname"),
@@ -339,6 +341,8 @@ public sealed class MiHoYoLoginService
 
     public sealed class GameRole
     {
+        public int GameId { get; set; }
+        public string GameBiz { get; set; } = "";
         public string GameName { get; set; } = "";
         public string AccentHex { get; set; } = "#4EA4DD";
         public string Nickname { get; set; } = "";

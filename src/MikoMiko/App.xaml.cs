@@ -160,20 +160,21 @@ public partial class App : Application
             timer.Stop();
             try
             {
-                MainWindow!.Width = 1624;
-                MainWindow.Height = 1000;
+                var workArea = SystemParameters.WorkArea;
+                MainWindow!.Width = Math.Min(1624, workArea.Width);
+                MainWindow.Height = Math.Min(1000, workArea.Height);
                 Log(path, "resized");
-                var navPage = page is "Reader" or "ReaderComments" or "Search" or "Official" ? "Home"
+                var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" ? "Home"
                     : page == "VideoPlay" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" ? "Settings"
                     : page == "MineQr" ? "Mine"
                     : page == "MineProfile" ? "Mine"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
-                if (page == "Official" && Shell.HomeTabs.Count > 1)
+                if (page == "Posts" && Shell.HomeTabs.Count > 1)
                 {
-                    foreach (var tab in Shell.HomeTabs) tab.IsSelected = tab.Key == "Official";
-                    _ = Shell.Home.LoadOfficialAsync();
+                    foreach (var tab in Shell.HomeTabs) tab.IsSelected = tab.Key == "Posts";
+                    _ = Shell.Home.ActivatePostsAsync();
                 }
                 if (page == "MineQr")
                 {
@@ -251,7 +252,7 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" ? 12 : page is "Search" or "MineQr" or "Official" ? 5 : page == "Moment" ? 12 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" ? 12 : page is "Search" or "MineQr" or "Posts" ? 5 : page == "Moment" ? 12 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();
@@ -265,6 +266,12 @@ public partial class App : Application
                             view.ScrollToSection(page == "SettingsChangelog" ? "Changelog" : "AppInfo");
                             MainWindow!.UpdateLayout();
                         }
+                    }
+                    if (page == "ReaderComments")
+                    {
+                        MainWindow!.UpdateLayout();
+                        Shell.ReaderView?.ScrollToCommentBox();
+                        MainWindow!.UpdateLayout();
                     }
                     if (page != "VideoPlay") Shell.Video.IsPlaying = false; // 截图时停在封面，避免抓到解码中的黑帧
                     var settle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };

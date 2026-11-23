@@ -109,8 +109,8 @@ public sealed class MiyousheApi
             {
                 Content = new StringContent(payload, Encoding.UTF8, "application/json"),
             };
-            request.Headers.TryAddWithoutValidation("x-rpc-client_type", "4");
-            request.Headers.TryAddWithoutValidation("x-rpc-app_version", "2.11.1");
+            // 新版接口要求 X4 签名（ds）与客户端类型 5；旧版 2.11.1 头会导致发送成功但不同步 / 发送失败。
+            AddX4Headers(request, string.Empty, payload);
 
             var response = await _http.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
@@ -190,6 +190,132 @@ public sealed class MiyousheApi
             .OrderByDescending(i => i.CreatedAt)
             .Take(48)
             .ToList();
+    }
+
+    // ---------------------------------------------------------------- 帖子分区 / 版块
+
+    private static readonly (int Id, string Name, string Accent, (int Id, string Name)[] Boards)[] ForumFallback =
+    {
+        (5, "大别野", "#F2A65A", new[] { (54, "校园"), (35, "ACG"), (34, "生活"), (39, "同人图"), (47, "COS"), (48, "脑洞"), (55, "科技"), (36, "公告") }),
+        (2, "原神", "#4EA4DD", new[] { (26, "酒馆"), (43, "攻略"), (28, "官方"), (29, "同人图"), (49, "COS"), (50, "硬核") }),
+        (6, "崩坏：星穹铁道", "#8B7BE8", new[] { (52, "候车室"), (61, "攻略"), (53, "官方"), (56, "同人图"), (62, "COS") }),
+        (1, "崩坏3", "#E86A9A", new[] { (1, "甲板"), (14, "攻略"), (6, "官方"), (4, "同人图"), (41, "同人文") }),
+        (3, "崩坏学园2", "#7EC8E3", new[] { (30, "学园"), (51, "攻略"), (31, "官方"), (40, "同人图") }),
+        (4, "未定事件簿", "#C9A063", new[] { (60, "攻略"), (37, "律所"), (42, "同人文"), (38, "同人图"), (33, "官方") }),
+        (8, "绝区零", "#F5B94A", new[] { (57, "咖啡馆"), (64, "攻略"), (58, "官方"), (59, "同人图"), (65, "COS") }),
+        (9, "崩坏：因缘精灵", "#8ECBB0", new[] { (947, "官方"), (948, "因缘会馆") }),
+        (10, "星布谷地", "#7FB6E8", new[] { (949, "官方"), (950, "星空街市"), (951, "交友区") }),
+    };
+
+    /// <summary>九个官方分区与各自版块。优先读 getAllGamesForums，接口不可用时回退到本地快照。</summary>
+    public async Task<List<ForumSection>> GetForumSectionsAsync(CancellationToken ct = default)
+    {
+        var result = ForumFallback.Select(g => new ForumSection
+        {
+            GameId = g.Id,
+            Name = g.Name,
+            AccentHex = g.Accent,
+            Boards = g.Boards.Select(b => new ForumBoard { Id = b.Id, Name = b.Name }).ToList(),
+        }).ToList();
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get,
+                "https://bbs-api.miyoushe.com/apihub/wapi/getAllGamesForums");
+            request.Headers.TryAddWithoutValidation("User-Agent", "miHoYoBBS/2.119.0");
+            request.Headers.TryAddWithoutValidation("Referer", "https://bbs.mihoyo.com/");
+            using var response = await _http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode) return result;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            var root = doc.RootElement;
+            if (root.TryGetProperty("retcode", out var code) && code.GetInt32() != 0) return result;
+            var list = Obj(Obj(root, "data"), "list");
+            if (list is null || list.Value.ValueKind != JsonValueKind.Array) return result;
+
+            var byGame = list.Value.EnumerateArray()
+                .Where(x => x.TryGetProperty("game_id", out var id) && id.ValueKind == JsonValueKind.Number)
+                .ToDictionary(x => x.GetProperty("game_id").GetInt32());
+
+            foreach (var section in result)
+            {
+                var game = byGame.TryGetValue(section.GameId, out var found) ? found : default;
+                if (game.ValueKind != JsonValueKind.Object || !game.TryGetProperty("forums", out var forums)
+                    || forums.ValueKind != JsonValueKind.Array)
+                    continue;
+
+                var boards = forums.EnumerateArray()
+                    .Where(f => !f.TryGetProperty("visible", out var v) || v.ValueKind != JsonValueKind.Number || v.GetInt32() == 1)
+                    .OrderBy(f => f.TryGetProperty("order", out var o) && o.ValueKind == JsonValueKind.Number ? o.GetInt32() : 0)
+                    .Select(f => new ForumBoard
+                    {
+                        Id = f.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number ? id.GetInt32() : 0,
+                        Name = f.TryGetProperty("name", out var name) ? name.GetString() ?? "" : "",
+                    })
+                    .Where(b => b.Id > 0 && !string.IsNullOrWhiteSpace(b.Name))
+                    .ToList();
+
+                if (boards.Count > 0) section.Boards = boards;
+            }
+        }
+        catch
+        {
+            // 网络异常时继续使用本地快照，保证筛选栏可用
+        }
+
+        return result;
+    }
+
+    /// <summary>论坛帖子流：默认=最新回复，最新发布=按发布时间，热门=官方热榜。</summary>
+    public async Task<(IReadOnlyList<FeedItem> Items, string LastId, bool IsLast)> GetForumFeedAsync(
+        int gameId, int forumId, int sortType, int pageSize = 20, string lastId = "",
+        CancellationToken ct = default)
+    {
+        var endpoint = sortType == 3 ? "getHotForumPostList" : "getRecentForumPostList";
+        var url = $"{PainterApi}/{endpoint}?forum_id={forumId}&gids={gameId}&page_size={pageSize}&is_good=false";
+        if (sortType != 3) url += $"&sort_type={sortType}";
+        if (!string.IsNullOrWhiteSpace(lastId)) url += $"&last_id={Uri.EscapeDataString(lastId)}";
+
+        var root = await GetJsonAsync(url, ct);
+        var data = Obj(root, "data");
+        var items = new List<FeedItem>();
+        foreach (var element in Items(Obj(data, "list")))
+        {
+            var item = ParseHomeItem(element);
+            if (item is not null) items.Add(item);
+        }
+
+        var next = data is not null && data.Value.TryGetProperty("last_id", out var last)
+            ? last.ToString()
+            : string.Empty;
+        var isLast = data is not null && data.Value.TryGetProperty("is_last", out var v)
+            && (v.ValueKind == JsonValueKind.True || (v.ValueKind == JsonValueKind.Number && v.GetInt32() == 1));
+        return (items, next, isLast);
+    }
+
+    /// <summary>某游戏各版块的最新帖子（角色详情页展示该游戏社区内容）。</summary>
+    public async Task<IReadOnlyList<FeedItem>> GetGamePostsAsync(int gameId, int size = 12,
+        CancellationToken ct = default)
+    {
+        var sections = await GetForumSectionsAsync(ct);
+        var section = sections.FirstOrDefault(s => s.GameId == gameId);
+        if (section is null || section.Boards.Count == 0) return Array.Empty<FeedItem>();
+
+        var items = new List<FeedItem>();
+        foreach (var board in section.Boards.Take(3))
+        {
+            try
+            {
+                var feed = await GetForumFeedAsync(gameId, board.Id, 2, Math.Max(4, size / 3), "", ct);
+                items.AddRange(feed.Items);
+            }
+            catch
+            {
+                // 单个版块失败不影响其他版块
+            }
+        }
+
+        return items.GroupBy(i => i.PostId).Select(g => g.First())
+            .OrderByDescending(i => i.CreatedAt).Take(size).ToList();
     }
 
     /// <summary>拉取单个社区、单类官方资讯；单个请求失败不影响其余请求。</summary>
@@ -469,6 +595,12 @@ public sealed class MiyousheApi
 
         detail.Images.AddRange(images);
 
+        foreach (var topic in Items(Obj(post, "topics")))
+        {
+            var name = topic.ValueKind == JsonValueKind.String ? topic.GetString() : Str(topic, "name");
+            if (!string.IsNullOrWhiteSpace(name)) detail.Topics.Add(name!);
+        }
+
         // 0.1.4：按官方 structured_content 的原始顺序生成正文块（文本 / 图片 / 视频混排）
         var blocks = ParseStructuredBlocks(content);
         if (blocks.Count > 0)
@@ -523,6 +655,7 @@ public sealed class MiyousheApi
         var item = new CommentItem
         {
             ReplyId = Str(reply, "reply_id"),
+            RootReplyId = Str(reply, "reply_id"),
             Author = Str(user, "nickname"),
             Avatar = Str(user, "avatar_url"),
             Level = (int)Num(Obj(user, "level_exp"), "level"),
@@ -530,14 +663,24 @@ public sealed class MiyousheApi
             Content = Str(reply, "content"),
             TimeText = RelativeTime(Num(reply, "created_at")),
             LikeText = FormatCount(Num(Obj(element, "stat"), "like_num")),
+            DislikeText = FormatCount(Num(Obj(element, "stat"), "dislike_num")),
             IsLiked = Num(Obj(element, "self_operation"), "reply_vote_attitude") > 0,
             IsAuthor = Obj(element, "is_lz")?.ValueKind == JsonValueKind.True,
         };
 
+        // 楼中楼：显示被回复人；接口返回 reply_id 时也能带上父楼作者。
+        var replyToUid = Str(reply, "reply_to_uid");
+        var parentName = Str(Obj(element, "reply_to_user"), "nickname");
+        if (!string.IsNullOrWhiteSpace(parentName)) item.ReplyToName = parentName;
+        else if (!string.IsNullOrWhiteSpace(replyToUid)) item.ReplyToName = replyToUid;
+
         foreach (var sub in Items(Obj(element, "sub_replies")))
         {
             var child = ParseComment(sub);
-            if (child is not null) item.Children.Add(child);
+            if (child is null) continue;
+            if (string.IsNullOrWhiteSpace(child.ReplyToName)) child.ReplyToName = item.Author;
+            child.RootReplyId = item.RootReplyId;
+            item.Children.Add(child);
         }
 
         return item;
@@ -781,7 +924,7 @@ public sealed class MiyousheApi
         return time.ToString("yyyy-MM-dd");
     }
 
-    /// <summary>官方 structured_content（Quill delta）：按顺序拆成文本 / 图片 / 视频块。</summary>
+    /// <summary>官方 structured_content（Quill delta）：按顺序拆成文本 / 图片 / 视频块，并保留全部行内样式。</summary>
     private List<PostBlock> ParseStructuredBlocks(JsonElement? contentElement)
     {
         var result = new List<PostBlock>();
@@ -792,6 +935,33 @@ public sealed class MiyousheApi
         var trimmed = raw.Trim();
         if (!trimmed.StartsWith("[") || !trimmed.EndsWith("]")) return result;
 
+        PostBlock? current = null;
+
+        void Flush()
+        {
+            if (current is null) return;
+            current.Text = string.Concat(current.Runs.Select(r => r.Text));
+            if (!string.IsNullOrWhiteSpace(current.Text)) result.Add(current);
+            current = null;
+        }
+
+        void AddText(string text, JsonElement? attrs, string fallbackLink)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            var parts = text.Split('\n');
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var part = parts[i];
+                if (part.Length > 0)
+                {
+                    current ??= new PostBlock { Kind = "text" };
+                    current.Runs.Add(CreateRun(part, attrs, fallbackLink));
+                }
+
+                if (i < parts.Length - 1) Flush();
+            }
+        }
+
         try
         {
             using var document = JsonDocument.Parse(trimmed);
@@ -801,45 +971,33 @@ public sealed class MiyousheApi
                 if (!op.TryGetProperty("insert", out var insert)) continue;
                 var attrs = Obj(op, "attributes");
                 var linkUrl = Str(attrs, "link");
+
                 if (insert.ValueKind == JsonValueKind.String)
                 {
-                    var text = insert.GetString() ?? string.Empty;
-                    foreach (var line in text.Split('\n'))
-                    {
-                        var clean = line.Trim();
-                        if (clean.Length == 0) continue;
-                        result.Add(new PostBlock { Kind = "text", Text = clean, Url = linkUrl });
-                    }
+                    AddText(insert.GetString() ?? string.Empty, attrs, linkUrl);
+                    continue;
                 }
-                else if (insert.ValueKind == JsonValueKind.Object)
+
+                if (insert.ValueKind == JsonValueKind.Object)
                 {
-                    // 新版 delta 也可能把文本与链接一起放在 insert 对象里
                     var inlineText = Str(insert, "text");
                     if (!string.IsNullOrWhiteSpace(inlineText))
                     {
-                        foreach (var line in inlineText.Split('\n'))
-                        {
-                            var clean = line.Trim();
-                            if (clean.Length == 0) continue;
-                            result.Add(new PostBlock
-                            {
-                                Kind = "text",
-                                Text = clean,
-                                Url = string.IsNullOrEmpty(linkUrl) ? Str(insert, "link") : linkUrl,
-                            });
-                        }
+                        AddText(inlineText, attrs, string.IsNullOrEmpty(linkUrl) ? Str(insert, "link") : linkUrl);
                         continue;
                     }
 
                     var image = Str(insert, "image");
                     if (!string.IsNullOrEmpty(image))
                     {
+                        Flush();
                         result.Add(new PostBlock { Kind = "image", Url = image });
                         continue;
                     }
 
                     if (insert.TryGetProperty("vod", out var vod) && vod.ValueKind == JsonValueKind.Object)
                     {
+                        Flush();
                         result.Add(new PostBlock
                         {
                             Kind = "video",
@@ -856,7 +1014,44 @@ public sealed class MiyousheApi
             // 结构化正文异常时退回纯文本
         }
 
+        Flush();
         return result;
+    }
+
+    private static PostRun CreateRun(string text, JsonElement? attrs, string link)
+    {
+        var run = new PostRun
+        {
+            Text = text,
+            Bold = BoolAttr(attrs, "bold"),
+            Italic = BoolAttr(attrs, "italic"),
+            Underline = BoolAttr(attrs, "underline"),
+            Strike = BoolAttr(attrs, "strike") || BoolAttr(attrs, "strikethrough"),
+            Color = Str(attrs, "color"),
+            Link = string.IsNullOrWhiteSpace(link) ? Str(attrs, "link") : link,
+        };
+
+        var size = Str(attrs, "fontSize");
+        if (string.IsNullOrWhiteSpace(size)) size = Str(attrs, "font_size");
+        if (!string.IsNullOrWhiteSpace(size))
+        {
+            var numeric = new string(size.Where(ch => char.IsDigit(ch) || ch == '.').ToArray());
+            if (double.TryParse(numeric, out var parsed) && parsed is >= 10 and <= 42) run.FontSize = parsed;
+        }
+
+        return run;
+    }
+
+    private static bool BoolAttr(JsonElement? attrs, string name)
+    {
+        if (attrs is null || !attrs.Value.TryGetProperty(name, out var value)) return false;
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.Number => value.GetInt32() != 0,
+            JsonValueKind.String => value.GetString() is "1" or "true",
+            _ => false,
+        };
     }
 
     /// <summary>正文：图片帖的 content 是一段 JSON（{"imgs":[...],"text":"..."}），需要取 text 并去掉标记。</summary>

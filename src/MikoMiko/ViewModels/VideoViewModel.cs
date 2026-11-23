@@ -46,6 +46,18 @@ public sealed partial class VideoViewModel : ObservableObject
     [ObservableProperty] private bool _canComment;
     [ObservableProperty] private string _qualityText = "自动";
     [ObservableProperty] private bool _isBuffering;
+    [ObservableProperty] private bool _isQualityOpen;
+    [ObservableProperty] private bool _isSpeedOpen;
+    [ObservableProperty] private double _speedRatio = 1.0;
+    [ObservableProperty] private string _replyTargetId = "0";
+    [ObservableProperty] private string _replyTargetName = string.Empty;
+    [ObservableProperty] private bool _hasReplyTarget;
+
+    public IReadOnlyList<string> QualityOptions { get; } = new[] { "自动", "1080P", "720P", "480P" };
+    public IReadOnlyList<string> SpeedOptions { get; } = new[] { "0.5×", "0.75×", "1.0×", "1.25×", "1.5×", "2.0×" };
+
+    public string FavoriteText => IsFavorited ? "已收藏" : Localization.Loc.Instance["Video.Favorite"];
+    partial void OnIsFavoritedChanged(bool value) => OnPropertyChanged(nameof(FavoriteText));
 
     public string FollowText => IsFollowingAuthor ? "已关注" : "关注";
     partial void OnIsFollowingAuthorChanged(bool value) => OnPropertyChanged(nameof(FollowText));
@@ -114,6 +126,9 @@ public sealed partial class VideoViewModel : ObservableObject
         IsPlaying = false;
         IsLiked = false;
         IsFavorited = false;
+        ReplyTargetId = "0";
+        ReplyTargetName = string.Empty;
+        HasReplyTarget = false;
         IsFollowingAuthor = item.IsFollowing;
         Toast = string.Empty;
         StatusText = string.Empty;
@@ -167,6 +182,7 @@ public sealed partial class VideoViewModel : ObservableObject
     private async Task SendCommentAsync()
     {
         if (Selected is null) return;
+        CanComment = _content.Api.HasCookie;
         if (!CanComment)
         {
             CommentStatus = "请先在「我的」扫码登录后再评论";
@@ -176,7 +192,8 @@ public sealed partial class VideoViewModel : ObservableObject
         var text = CommentInput.Trim();
         if (string.IsNullOrWhiteSpace(text)) return;
         CommentStatus = "正在发送…";
-        var result = await _content.Api.ReleaseReplyAsync(Selected.PostId, text);
+        var result = await _content.Api.ReleaseReplyAsync(Selected.PostId, text,
+            string.IsNullOrWhiteSpace(ReplyTargetId) ? "0" : ReplyTargetId);
         if (!result.Ok)
         {
             CommentStatus = result.Message;
@@ -185,8 +202,109 @@ public sealed partial class VideoViewModel : ObservableObject
 
         CommentInput = string.Empty;
         CommentStatus = "评论成功";
+        ReplyTargetId = "0";
+        ReplyTargetName = string.Empty;
+        HasReplyTarget = false;
         await LoadCommentsAsync(Selected);
     }
+
+    /// <summary>选择要回复的评论（与米游社楼中楼一致，挂到该一级评论下）。</summary>
+    [RelayCommand]
+    private void ReplyTo(CommentItem? comment)
+    {
+        if (comment is null) return;
+        var target = !string.IsNullOrWhiteSpace(comment.RootReplyId) ? comment.RootReplyId : comment.ReplyId;
+        ReplyTargetId = string.IsNullOrWhiteSpace(target) ? "0" : target;
+        ReplyTargetName = comment.Author;
+        HasReplyTarget = true;
+        CommentStatus = $"正在回复 {comment.Author}";
+    }
+
+    [RelayCommand]
+    private void CancelReply()
+    {
+        ReplyTargetId = "0";
+        ReplyTargetName = string.Empty;
+        HasReplyTarget = false;
+        CommentStatus = string.Empty;
+    }
+
+    [RelayCommand]
+    private void LikeComment(CommentItem? comment)
+    {
+        if (comment is null) return;
+        comment.IsLiked = !comment.IsLiked;
+        comment.LikeText = BumpCount(comment.LikeText, comment.IsLiked);
+    }
+
+    [RelayCommand]
+    private void DislikeComment(CommentItem? comment)
+    {
+        if (comment is null) return;
+        comment.IsDisliked = !comment.IsDisliked;
+        comment.DislikeText = BumpCount(comment.DislikeText, comment.IsDisliked);
+        if (comment.IsDisliked) comment.IsLiked = false;
+    }
+
+    private static string BumpCount(string text, bool up)
+    {
+        var trimmed = (text ?? string.Empty).Trim();
+        var unit = string.Empty;
+        var number = 0.0;
+        if (trimmed.EndsWith("万"))
+        {
+            unit = "万";
+            number = double.TryParse(trimmed.TrimEnd('万'), out var w) ? w * 10000 : 0;
+        }
+        else
+        {
+            number = double.TryParse(trimmed, out var n) ? n : 0;
+        }
+        number = Math.Max(0, number + (up ? 1 : -1));
+        if (number >= 10000 || unit == "万" && number >= 10000)
+            return $"{number / 10000:0.#}万";
+        return number <= 0 ? string.Empty : ((long)number).ToString();
+    }
+
+    [RelayCommand]
+    private void ToggleQuality()
+    {
+        IsQualityOpen = !IsQualityOpen;
+        IsSpeedOpen = false;
+    }
+
+    [RelayCommand]
+    private async Task PickQuality(string? quality)
+    {
+        if (string.IsNullOrWhiteSpace(quality)) return;
+        IsQualityOpen = false;
+        if (QualityText == quality) return;
+        QualityText = quality;
+        _content.Api.Quality = quality == "自动" ? "1080P" : quality;
+        var wasPlaying = IsPlaying;
+        await RefreshSourceAsync();
+        if (wasPlaying) IsPlaying = true;
+    }
+
+    [RelayCommand]
+    private void ToggleSpeed()
+    {
+        IsSpeedOpen = !IsSpeedOpen;
+        IsQualityOpen = false;
+    }
+
+    [RelayCommand]
+    private void PickSpeed(string? speed)
+    {
+        if (string.IsNullOrWhiteSpace(speed)) return;
+        IsSpeedOpen = false;
+        var value = double.TryParse(speed.TrimEnd('×', 'x'), out var parsed) ? parsed : 1.0;
+        SpeedRatio = Math.Clamp(value, 0.5, 2.0);
+        SpeedText = $"{SpeedRatio:0.##}×";
+    }
+
+    [RelayCommand]
+    private void ToggleDanmaku() => ShowDanmaku = !ShowDanmaku;
 
     /// <summary>「自动」按钮真实切清晰度：自动 → 1080P → 720P → 480P 循环。</summary>
     public async Task ChangeQualityAsync()
@@ -407,8 +525,17 @@ public sealed partial class VideoViewModel : ObservableObject
             Toast = "请先在「我的」扫码登录后再点赞";
             return;
         }
-        if (IsLiked) return;
-        IsLiked = true;
+
+        var next = !IsLiked;
+        IsLiked = next;
+        Selected.LikeText = BumpCount(Selected.LikeText, next);
+        OnPropertyChanged(nameof(Selected));
+        if (!next)
+        {
+            Toast = "已取消点赞";
+            return;
+        }
+
         var ok = await _content.Api.LikePostAsync(Selected.PostId);
         Toast = ok
             ? Localization.Loc.Instance["Video.Sync"]
@@ -425,8 +552,15 @@ public sealed partial class VideoViewModel : ObservableObject
             Toast = "请先在「我的」扫码登录后再收藏";
             return;
         }
-        if (IsFavorited) return;
-        IsFavorited = true;
+
+        var next = !IsFavorited;
+        IsFavorited = next;
+        if (!next)
+        {
+            Toast = "已取消收藏";
+            return;
+        }
+
         var ok = await _content.Api.FavoritePostAsync(Selected.PostId);
         Toast = ok
             ? Localization.Loc.Instance["Video.Sync"]
@@ -439,10 +573,7 @@ public sealed partial class VideoViewModel : ObservableObject
         if (Selected is null || string.IsNullOrWhiteSpace(Selected.WebUrl)) return;
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Selected.WebUrl)
-            {
-                UseShellExecute = true,
-            });
+            App.Shell.OpenLink(Selected.WebUrl);
         }
         catch
         {

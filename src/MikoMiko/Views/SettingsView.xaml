@@ -53,9 +53,10 @@
         <Style x:Key="SectionCard" TargetType="{x:Type Border}">
             <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="18,16" />
-            <Setter Property="Width" Value="420" />
-            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="Padding" Value="24,18" />
+            <Setter Property="MaxWidth" Value="1080" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Margin" Value="0,0,0,12" />
             <Setter Property="VerticalAlignment" Value="Top" />
         </Style>
 
@@ -88,37 +89,9 @@
                       Padding="0,0,4,0">
             <StackPanel Margin="26,18,24,30">
 
-                <!-- 0.1.4 顶部外链入口 -->
-                <Grid Margin="0,0,0,14" MaxWidth="1200" HorizontalAlignment="Stretch">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" Style="{StaticResource GhostButton}" Height="40" Padding="14,0"
-                            HorizontalContentAlignment="Left" Cursor="Hand"
-                            Command="{Binding OpenUrlCommand}"
-                            CommandParameter="https://github.com/Huiusto/MikoMiko">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="M0 0 H13 V13 H0 Z M3 3 H10 V10 H3 Z" Stroke="{DynamicResource Brush.Accent}"
-                                  StrokeThickness="1.2" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
-                            <TextBlock Text="访问项目主页（GitHub）" Margin="8,0,0,0" FontSize="13" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                    <Button Grid.Column="1" Style="{StaticResource GhostButton}" Height="40" Padding="14,0" Margin="10,0,0,0"
-                            HorizontalContentAlignment="Left" Cursor="Hand"
-                            Command="{Binding OpenUrlCommand}"
-                            CommandParameter="https://www.miyoushe.com/planet/accountCenter/postList?id=310621322">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="M0 0 H13 V13 H0 Z M2 2 L11 11 M11 11 V6 M11 11 H6" Stroke="{DynamicResource Brush.Accent}"
-                                  StrokeThickness="1.2" Width="14" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
-                            <TextBlock Text="开发者首页（支持、讨论、问题反馈）" Margin="8,0,0,0" FontSize="13" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
                 <!-- 账号头部 -->
                 <Border Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="20,16"
-                        MaxWidth="1200" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                        MaxWidth="1080" HorizontalAlignment="Stretch" Margin="0,0,0,16">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -146,7 +119,7 @@
                     </Grid>
                 </Border>
 
-                <WrapPanel x:Name="SectionsPanel" Orientation="Horizontal">
+                <StackPanel x:Name="SectionsPanel">
 
                 <!-- 常规设置 -->
                 <Border Style="{StaticResource SectionCard}" Margin="0,14,0,14" Tag="General">
@@ -247,10 +220,12 @@
                                    Style="{StaticResource RowLabel}" Margin="0,14,0,10" />
                         <CheckBox Content="{Binding [S.AutoStart], Source={x:Static loc:Loc.Instance}}"
                                   Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoStart}" />
-                        <CheckBox Content="{Binding [S.StartHome], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.StartOnHome}" />
-                        <CheckBox Content="启动时默认进入视频"
-                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.StartOnVideo}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                            <RadioButton Content="{Binding [S.StartHome], Source={x:Static loc:Loc.Instance}}"
+                                         GroupName="StartPage" IsChecked="{Binding Settings.StartOnHome}" Margin="0,0,24,0" />
+                            <RadioButton Content="启动时默认进入视频" GroupName="StartPage"
+                                         IsChecked="{Binding Settings.StartOnVideo}" />
+                        </StackPanel>
                         <CheckBox Content="视频结束自动下滑"
                                   Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoNextVideo}" />
                         <CheckBox Content="下滑视频自动播放"
@@ -473,51 +448,18 @@
                         <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
                                 Style="{StaticResource SoftButton}" Height="32" HorizontalAlignment="Left"
                                 Margin="0,14,0,0" Command="{Binding OpenRepositoryCommand}" />
-                    </StackPanel>
-                </Border>
 
-                <!-- 开源说明 -->
-                <Border Style="{StaticResource SectionCard}" Tag="OpenSource">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [S.OpenSource], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource SectionTitle}" />
-                        <TextBlock Text="{Binding [OpenSource.Desc], Source={x:Static loc:Loc.Instance}}"
-                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left" />
-
-                        <StackPanel Margin="0,14,0,0">
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <TextBlock Text="TeyvatGuide" FontSize="13" FontWeight="SemiBold" Width="130" />
-                                <TextBlock Text="BTMuli / Avalonia 米游社客户端（架构与页面结构参考）"
-                                           FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                                           VerticalAlignment="Center" />
-                                <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
-                                        Style="{StaticResource LinkButton}" Margin="12,0,0,0"
-                                        Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="https://github.com/BTMuli/TeyvatGuide" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <TextBlock Text="Starward" FontSize="13" FontWeight="SemiBold" Width="130" />
-                                <TextBlock Text="Scighost / 米哈游游戏启动器（账号与游戏数据展示参考）"
-                                           FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                                           VerticalAlignment="Center" />
-                                <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
-                                        Style="{StaticResource LinkButton}" Margin="12,0,0,0"
-                                        Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="https://github.com/Scighost/Starward" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="CommunityToolkit.Mvvm" FontSize="13" FontWeight="SemiBold" Width="130" />
-                                <TextBlock Text="MIT / MVVM 基础设施" FontSize="12"
-                                           Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
-                                <Button Content="{Binding [Common.OpenInBrowser], Source={x:Static loc:Loc.Instance}}"
-                                        Style="{StaticResource LinkButton}" Margin="12,0,0,0"
-                                        Command="{Binding OpenUrlCommand}"
-                                        CommandParameter="https://github.com/CommunityToolkit/dotnet" />
-                            </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="访问项目主页" Style="{StaticResource GhostButton}" Height="32"
+                                    Padding="14,0" Command="{Binding OpenUrlCommand}"
+                                    CommandParameter="https://github.com/Huiusto/MikoMiko" />
+                            <Button Content="开发者首页" Style="{StaticResource GhostButton}" Height="32"
+                                    Padding="14,0" Margin="10,0,0,0" Command="{Binding OpenUrlCommand}"
+                                    CommandParameter="https://www.miyoushe.com/planet/accountCenter/postList?id=310621322" />
                         </StackPanel>
                     </StackPanel>
                 </Border>
+
 
                 <!-- 免责说明 -->
                 <Border Style="{StaticResource SectionCard}" Tag="Disclaimer">
@@ -563,7 +505,7 @@
                     </StackPanel>
                 </Border>
 
-            </WrapPanel>
+            </StackPanel>
             </StackPanel>
         </ScrollViewer>
 
