@@ -91,6 +91,12 @@
                     <Border CornerRadius="16" ClipToBounds="True" Background="{StaticResource ProfileBanner}"
                             Height="236">
                         <Grid>
+                            <!-- 用户自定义背景图 -->
+                            <Image Source="{Binding BackgroundImage}" Stretch="UniformToFill"
+                                   Visibility="{Binding HasCustomBackground, Converter={StaticResource BoolToVis}}" />
+                            <Border Background="#40000000"
+                                    Visibility="{Binding HasCustomBackground, Converter={StaticResource BoolToVis}}" />
+
                             <!-- 装饰圆 -->
                             <Ellipse Width="280" Height="280" Fill="#33FFFFFF" HorizontalAlignment="Right"
                                      VerticalAlignment="Top" Margin="0,-100,-60,0" />
@@ -127,14 +133,6 @@
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
-                                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal" Margin="0,2,0,0">
-                                        <Button Content="刷新资料" Height="32" Padding="14,0" Cursor="Hand"
-                                                Background="#33FFFFFF" Foreground="White" BorderThickness="0"
-                                                Command="{Binding RefreshCommand}" />
-                                        <Button Content="退出登录" Height="32" Padding="14,0" Margin="8,0,0,0" Cursor="Hand"
-                                                Background="#22FFFFFF" Foreground="White" BorderThickness="0"
-                                                Command="{Binding UnbindCommand}" />
-                                    </StackPanel>
                                 </StackPanel>
 
                                 <TextBlock Text="{Binding Profile.Signature}" FontSize="13" Foreground="#F2FFFFFF"
@@ -159,6 +157,70 @@
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
+
+                            <!-- 右上角：圆润刷新 / 退出 -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                        Margin="0,18,18,0">
+                                <Button Height="32" Padding="16,0" Cursor="Hand" Command="{Binding RefreshCommand}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border x:Name="Bd" CornerRadius="16" Background="#47FFFFFF"
+                                                    BorderBrush="#66FFFFFF" BorderThickness="1"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#66FFFFFF" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <TextBlock Text="刷新资料" Foreground="White" FontSize="12" />
+                                </Button>
+                                <Button Height="32" Padding="16,0" Margin="8,0,0,0" Cursor="Hand" Command="{Binding UnbindCommand}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border x:Name="Bd" CornerRadius="16" Background="#30FFFFFF"
+                                                    BorderBrush="#55FFFFFF" BorderThickness="1"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#52FFFFFF" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <TextBlock Text="退出登录" Foreground="White" FontSize="12" />
+                                </Button>
+                            </StackPanel>
+
+                            <!-- 右下角：更换背景 -->
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,18,16"
+                                    Height="32" Padding="14,0" Cursor="Hand" Command="{Binding ChangeBackgroundCommand}">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="{x:Type Button}">
+                                        <Border x:Name="Bd" CornerRadius="16" Background="#40000000"
+                                                BorderBrush="#55FFFFFF" BorderThickness="1"
+                                                Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#66000000" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Button.Template>
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="M4 5 H20 V19 H4 Z M6 17 L10 12 L13 15 L16 11 L20 17"
+                                          Stroke="White" StrokeThickness="1.3" Width="12" Height="11"
+                                          Stretch="Uniform" VerticalAlignment="Center" />
+                                    <TextBlock Text="更换背景" Foreground="White" FontSize="12" Margin="6,0,0,0" />
+                                </StackPanel>
+                            </Button>
                         </Grid>
                     </Border>
 

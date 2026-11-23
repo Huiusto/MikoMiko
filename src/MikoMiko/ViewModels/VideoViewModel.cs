@@ -38,6 +38,7 @@ public sealed partial class VideoViewModel : ObservableObject
     [ObservableProperty] private string _indexText = string.Empty;
     [ObservableProperty] private bool _isLiked;
     [ObservableProperty] private bool _isFavorited;
+    [ObservableProperty] private bool _isFollowingAuthor;
     [ObservableProperty] private string _toast = string.Empty;
     [ObservableProperty] private bool _isCommentsOpen;
     [ObservableProperty] private string _commentInput = string.Empty;
@@ -45,6 +46,19 @@ public sealed partial class VideoViewModel : ObservableObject
     [ObservableProperty] private bool _canComment;
     [ObservableProperty] private string _qualityText = "自动";
     [ObservableProperty] private bool _isBuffering;
+
+    public string FollowText => IsFollowingAuthor ? "已关注" : "关注";
+    partial void OnIsFollowingAuthorChanged(bool value) => OnPropertyChanged(nameof(FollowText));
+
+    public string CommentCountText
+    {
+        get
+        {
+            if (Selected is null) return "0";
+            if (Comments.Count > 0) return Comments.Count.ToString();
+            return string.IsNullOrWhiteSpace(Selected.ReplyText) ? "0" : Selected.ReplyText;
+        }
+    }
 
     public async Task LoadAsync()
     {
@@ -100,6 +114,7 @@ public sealed partial class VideoViewModel : ObservableObject
         IsPlaying = false;
         IsLiked = false;
         IsFavorited = false;
+        IsFollowingAuthor = item.IsFollowing;
         Toast = string.Empty;
         StatusText = string.Empty;
         Related.Clear();
@@ -137,6 +152,7 @@ public sealed partial class VideoViewModel : ObservableObject
             if (Selected?.PostId != item.PostId) return;
             Comments.Clear();
             foreach (var reply in replies) Comments.Add(reply);
+            OnPropertyChanged(nameof(CommentCountText));
         }
         catch
         {
@@ -356,11 +372,42 @@ public sealed partial class VideoViewModel : ObservableObject
     [RelayCommand]
     private void PreviousVideo() => Previous();
 
+    /// <summary>关注 / 取消关注视频作者（同步米游社）。</summary>
+    [RelayCommand]
+    private async Task FollowAuthor()
+    {
+        if (Selected is null || string.IsNullOrWhiteSpace(Selected.AuthorUid)) return;
+        if (!_content.Api.HasCookie)
+        {
+            Toast = "请先在「我的」扫码登录后再关注";
+            return;
+        }
+
+        var next = !IsFollowingAuthor;
+        var ok = await _content.Api.SetFollowAsync(Selected.AuthorUid, next);
+        if (ok)
+        {
+            IsFollowingAuthor = next;
+            Selected.IsFollowing = next;
+            Toast = next ? "已关注作者" : "已取消关注";
+        }
+        else
+        {
+            Toast = "关注失败，请稍后重试";
+        }
+    }
+
     /// <summary>点赞：本地立即反馈，绑定 Cookie 时同步到米游社账号。</summary>
     [RelayCommand]
     private async Task Like()
     {
-        if (Selected is null || IsLiked) return;
+        if (Selected is null) return;
+        if (!_content.Api.HasCookie)
+        {
+            Toast = "请先在「我的」扫码登录后再点赞";
+            return;
+        }
+        if (IsLiked) return;
         IsLiked = true;
         var ok = await _content.Api.LikePostAsync(Selected.PostId);
         Toast = ok
@@ -372,7 +419,13 @@ public sealed partial class VideoViewModel : ObservableObject
     [RelayCommand]
     private async Task Favorite()
     {
-        if (Selected is null || IsFavorited) return;
+        if (Selected is null) return;
+        if (!_content.Api.HasCookie)
+        {
+            Toast = "请先在「我的」扫码登录后再收藏";
+            return;
+        }
+        if (IsFavorited) return;
         IsFavorited = true;
         var ok = await _content.Api.FavoritePostAsync(Selected.PostId);
         Toast = ok

@@ -69,6 +69,29 @@ public sealed class ContentService
         return DemoData.Home();
     }
 
+    /// <summary>官方页：只显示米游社官方公告 / 活动 / 资讯。</summary>
+    public async Task<IReadOnlyList<FeedItem>> GetOfficialAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var items = await Api.GetOfficialPostsAsync(Games.Take(4), 16, ct);
+            if (items.Count > 0)
+            {
+                IsDemo = false;
+                return items;
+            }
+        }
+        catch
+        {
+            // 回落演示数据
+        }
+
+        IsDemo = true;
+        return DemoData.Home().Where(i => i.IsOfficial).ToList() is { Count: > 0 } official
+            ? official
+            : DemoData.Home();
+    }
+
     public async Task<IReadOnlyList<FeedItem>> GetVideosAsync(CancellationToken ct = default)
     {
         var gameIds = new[] { 6, 5, 3, 2 };
@@ -251,26 +274,69 @@ public sealed class ContentService
     {
         if (!Api.HasCookie) return Array.Empty<MomentItem>();
 
+        // 先拿到完整关注列表，再逐个取作者发布过的帖子（不限新旧），按发布时间倒序聚合。
+        var users = await Api.GetFollowingAsync(ct);
         var posts = new List<FeedItem>();
-        foreach (var gids in Games)
+        if (users.Count > 0)
         {
-            try
+            // 并发拉取关注作者的帖子，最多 40 人、每人 24 条；不再限制“仅新动态”。
+            using var gate = new SemaphoreSlim(6);
+            var tasks = users.Take(40).Select(async user =>
             {
-                var items = await Api.GetRecommendedAsync(gids, 20, ct);
-                posts.AddRange(items.Where(i => i.IsFollowing));
-            }
-            catch
-            {
-                // 单个版块失败继续
-            }
+                await gate.WaitAsync(ct);
+                try
+                {
+                    var items = await Api.GetUserPostsAsync(user.Uid, _settings.CommunityId, 24, ct);
+                    if (items.Count == 0 && _settings.CommunityId != 2)
+                        items = await Api.GetUserPostsAsync(user.Uid, 2, 24, ct);
+                    return items;
+                }
+                catch
+                {
+                    return new List<FeedItem>();
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }).ToArray();
 
-            if (posts.Count >= 30) break;
+            var lists = await Task.WhenAll(tasks);
+            foreach (var list in lists)
+            {
+                if (posts.Count >= 400) break;
+                posts.AddRange(list.Take(400 - posts.Count));
+            }
+        }
+
+        // 关注接口不可用时，退回从推荐流中挑选已关注作者的帖子
+        if (posts.Count == 0)
+        {
+            var tasks = Games.Select(async gids =>
+            {
+                try
+                {
+                    var items = await Api.GetRecommendedAsync(gids, 20, ct);
+                    return items.Where(i => i.IsFollowing).ToArray();
+                }
+                catch
+                {
+                    return Array.Empty<FeedItem>();
+                }
+            }).ToArray();
+
+            foreach (var list in await Task.WhenAll(tasks))
+            {
+                if (posts.Count >= 50) break;
+                posts.AddRange(list.Take(50 - posts.Count));
+            }
         }
 
         IsDemo = false;
         return posts
             .GroupBy(i => i.PostId)
-            .Select(g => g.First())
+            .Select(g => g.OrderByDescending(i => i.CreatedAt).First())
+            .OrderByDescending(i => i.CreatedAt)
             .Select(i => new MomentItem
             {
                 Id = i.PostId,

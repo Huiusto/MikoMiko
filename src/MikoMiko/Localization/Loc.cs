@@ -13,14 +13,14 @@ public sealed class Loc : INotifyPropertyChanged
     public static Loc Instance { get; } = new();
 
     private static readonly Dictionary<string, string> ZhHans = Build(
-        ("Nav.Home", "首页"), ("Nav.Video", "视频"), ("Nav.Moment", "动态"), ("Nav.Mine", "我的"), ("Nav.Settings", "设置"),
+        ("Nav.Home", "首页"), ("Nav.Video", "视频"), ("Nav.Moment", "关注"), ("Nav.Mine", "我的"), ("Nav.Settings", "设置"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "搜索你感兴趣的内容"),
         ("Common.Loading", "正在加载…"), ("Common.Refresh", "刷新"), ("Common.More", "加载更多"), ("Common.Empty", "这里空空的，去逛逛别的吧"),
         ("Common.Fail", "内容加载失败，请稍后重试"), ("Common.Retry", "重试"), ("Common.Cancel", "取消"), ("Common.Confirm", "确定"),
         ("Common.Close", "关闭"), ("Common.Back", "返回"), ("Common.OpenInBrowser", "在浏览器中打开"), ("Common.Follow", "关注"), ("Common.Followed", "已关注"),
         ("Common.DemoMode", "演示数据"), ("Common.Offline", "当前为离线演示数据"),
 
-        ("Home.Recommend", "推荐"), ("Home.Latest", "最新"), ("Home.Empty", "暂时没有找到相关内容"),
+        ("Home.Recommend", "推荐"), ("Home.Official", "官方"), ("Home.Latest", "最新"), ("Home.Empty", "暂时没有找到相关内容"),
         ("Home.Subtitle.Recommend", "为你推荐的社区精选"), ("Home.Subtitle.Latest", "社区最新发布"),
         ("Post.Detail", "帖子详情"), ("Post.Read", "阅读正文"), ("Post.Comments", "评论"), ("Post.NoComments", "还没有评论，来说两句吧"),
 
@@ -71,7 +71,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("S.WindowHint", "窗口相关选项在下次启动时生效"),
         ("S.PlaybackHint", "播放设置将用于视频页播放器"),
         ("S.MaintainHint", "清理缓存或检查更新不会影响已保存的设置"),
-        ("S.Changelog.Body", "MikoMiko 完整更新日志（0.1.0 → 0.1.4）\n\nv0.1.4 · 2026-11-22  (｡･ω･｡)ﾉ♡\n· 设置顶部新增「访问项目主页（GitHub）」与「开发者首页（支持、讨论、问题反馈）」两个跳转按钮\n· 首页帖子改为官方富文本样式：正文、图片、视频按 structured_content 原顺序混排，长文与长图可折叠展开\n· 视频改为本机 Range 代理边缓冲边播放，进度条新增可拖动圆点，播放数前显示作者关注数，去掉「第 1/12」序号\n· 自动预加载后三个视频；右侧「收藏」下新增「评论」，同步视频帖评论，登录后可直接发表\n· 修复暂停后画面停住但声音继续；「自动」按钮改为真实切换 1080P / 720P / 480P 并保持播放位置\n· 弹幕可发送，按视频保存在本地 danmaku.json，并滚动回放本机用户发过的弹幕\n· 登录改为应用内嵌官方通行证二维码，扫码后自动换取 cookie_token / ltoken；「我的」按官方样式重做为蓝色横幅个人主页与角色管理\n· 补齐从 0.1.0 到 0.1.4 的全部更新日志\n· 增加单实例互斥：同一台电脑只允许一个 MikoMiko 进程，避免多开同时写设置与登录态造成数据错乱\n\nv0.1.3 · 2026-11-22\n· 首页搜索改为「搜索你感兴趣的内容」，直接走米游社全站搜索，帖子覆盖所有板块并随机出现\n· 阅读器支持登录后评论 / 回复，评论会同步到米游社官方\n· 视频页去掉滑动提示文字，进度条改为三色：白色未加载、灰色已缓冲、米蓝已播放\n· 视频改为全站所有用户随机流，点「视频」导航即可换一批\n· 修复扫码登录：兼容新版 ltoken_v2 / cookie_token_v2 Cookie，登录态持久保存\n· 设置右侧新增目录快捷跳转；十套米游社配色；移除下载目录；缓存每 5 分钟自动清理\n· 应用信息改为名称 / 版本 / 框架 / 数据目录，可打开与更改数据目录\n· 更新日志改为抽屉式展示\n· 修复关闭窗口时因托盘图标资源缺失导致的未处理异常\n\nv0.1.2 · 2026-11-21\n· 启用新的 MikoMiko 手写泡泡字标志与蓝色渐变图标\n· 设置页改为整页滚动布局，新增外观、启动、播放、通知、维护等分区\n· 「我的」新增未登录引导与 Cookie 绑定入口，「动态」新增关注流引导\n· 阅读器补齐评论与楼中楼展示，视频播放器支持出帧截图\n· 优化首页卡片布局、封面加载与深浅色切换细节\n\nv0.1.1 · 2026-11-20\n· 主色调整为米蓝 #4EA4DD，新增十套页面配色\n· 首页改为全站随机帖子流，下滑自动加载更多\n· 视频页上下滑动切换随机视频，保留米游社原生点赞 / 收藏 / 分享\n· 点赞与收藏在绑定 Cookie 后同步到米游社账号\n· 设置页支持整页滚动浏览\n\nv0.1.0 · 2026-11-19\n· MikoMiko 首个版本：WPF + .NET 8 桌面客户端工程搭建完成\n· 完成主窗口、左侧导航、首页、视频、动态、我的、搜索与设置基础页面\n· 接入米游社公开接口，支持首页帖子流、帖子详情、视频列表与搜索\n· 支持浅色 / 深色主题、主色切换、本地设置持久化与图片缓存\n· 内置离线演示数据，接口不可用时仍可浏览界面"),
+        ("S.Changelog.Body", "MikoMiko 完整更新日志（0.1.0 → 0.1.6）\n\nv0.1.6 · 2026-11-23\n· 左侧导航「动态」文案改为「关注」\n· 左侧导航换成手绘图标：默认灰色线稿，选中时米蓝填充 + 深色描边\n· 导航顺序调整为首页 / 关注 / 视频 / 我的，设置固定在左下\n\nv0.1.5 · 2026-11-22\n· 首页作者徽标区分 M-STAR、金色「官」与粉色 MikoMiko，新增「官方」标签\n· 左侧导航改用圆润图标；阅读器支持图片灯箱、内嵌视频拖动进度、正文链接与右下角回顶 / 评论按钮\n· 视频页支持关注、评论数字、发布页、点击暂停与可拖动进度条\n· 动态页显示关注用户的新旧帖子；我的页支持自定义背景；设置页改为多列卡片\n· 新增应用内检查更新、下载进度与忽略本次版本\n\nv0.1.4 · 2026-11-22  (｡･ω･｡)ﾉ♡\n· 设置顶部新增「访问项目主页（GitHub）」与「开发者首页（支持、讨论、问题反馈）」两个跳转按钮\n· 首页帖子改为官方富文本样式：正文、图片、视频按 structured_content 原顺序混排，长文与长图可折叠展开\n· 视频改为本机 Range 代理边缓冲边播放，进度条新增可拖动圆点，播放数前显示作者关注数，去掉「第 1/12」序号\n· 自动预加载后三个视频；右侧「收藏」下新增「评论」，同步视频帖评论，登录后可直接发表\n· 修复暂停后画面停住但声音继续；「自动」按钮改为真实切换 1080P / 720P / 480P 并保持播放位置\n· 弹幕可发送，按视频保存在本地 danmaku.json，并滚动回放本机用户发过的弹幕\n· 登录改为应用内嵌官方通行证二维码，扫码后自动换取 cookie_token / ltoken；「我的」按官方样式重做为蓝色横幅个人主页与角色管理\n· 补齐从 0.1.0 到 0.1.4 的全部更新日志\n· 增加单实例互斥：同一台电脑只允许一个 MikoMiko 进程，避免多开同时写设置与登录态造成数据错乱\n\nv0.1.3 · 2026-11-22\n· 首页搜索改为「搜索你感兴趣的内容」，直接走米游社全站搜索，帖子覆盖所有板块并随机出现\n· 阅读器支持登录后评论 / 回复，评论会同步到米游社官方\n· 视频页去掉滑动提示文字，进度条改为三色：白色未加载、灰色已缓冲、米蓝已播放\n· 视频改为全站所有用户随机流，点「视频」导航即可换一批\n· 修复扫码登录：兼容新版 ltoken_v2 / cookie_token_v2 Cookie，登录态持久保存\n· 设置右侧新增目录快捷跳转；十套米游社配色；移除下载目录；缓存每 5 分钟自动清理\n· 应用信息改为名称 / 版本 / 框架 / 数据目录，可打开与更改数据目录\n· 更新日志改为抽屉式展示\n· 修复关闭窗口时因托盘图标资源缺失导致的未处理异常\n\nv0.1.2 · 2026-11-21\n· 启用新的 MikoMiko 手写泡泡字标志与蓝色渐变图标\n· 设置页改为整页滚动布局，新增外观、启动、播放、通知、维护等分区\n· 「我的」新增未登录引导与 Cookie 绑定入口，「动态」新增关注流引导\n· 阅读器补齐评论与楼中楼展示，视频播放器支持出帧截图\n· 优化首页卡片布局、封面加载与深浅色切换细节\n\nv0.1.1 · 2026-11-20\n· 主色调整为米蓝 #4EA4DD，新增十套页面配色\n· 首页改为全站随机帖子流，下滑自动加载更多\n· 视频页上下滑动切换随机视频，保留米游社原生点赞 / 收藏 / 分享\n· 点赞与收藏在绑定 Cookie 后同步到米游社账号\n· 设置页支持整页滚动浏览\n\nv0.1.0 · 2026-11-19\n· MikoMiko 首个版本：WPF + .NET 8 桌面客户端工程搭建完成\n· 完成主窗口、左侧导航、首页、视频、动态、我的、搜索与设置基础页面\n· 接入米游社公开接口，支持首页帖子流、帖子详情、视频列表与搜索\n· 支持浅色 / 深色主题、主色切换、本地设置持久化与图片缓存\n· 内置离线演示数据，接口不可用时仍可浏览界面"),
 
 
         ("About.Title", "MikoMiko"),
@@ -82,14 +82,14 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> ZhHant = Build(
-        ("Nav.Home", "首頁"), ("Nav.Video", "影片"), ("Nav.Moment", "動態"), ("Nav.Mine", "我的"), ("Nav.Settings", "設定"),
+        ("Nav.Home", "首頁"), ("Nav.Video", "影片"), ("Nav.Moment", "關注"), ("Nav.Mine", "我的"), ("Nav.Settings", "設定"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "搜尋你感興趣的內容"),
         ("Common.Loading", "正在載入…"), ("Common.Refresh", "重新整理"), ("Common.More", "載入更多"), ("Common.Empty", "這裡空空的，去逛逛別的吧"),
         ("Common.Fail", "內容載入失敗，請稍後重試"), ("Common.Retry", "重試"), ("Common.Cancel", "取消"), ("Common.Confirm", "確定"),
         ("Common.Close", "關閉"), ("Common.Back", "返回"), ("Common.OpenInBrowser", "在瀏覽器中開啟"), ("Common.Follow", "關注"), ("Common.Followed", "已關注"),
         ("Common.DemoMode", "示範資料"), ("Common.Offline", "目前為離線示範資料"),
 
-        ("Home.Recommend", "推薦"), ("Home.Latest", "最新"), ("Home.Empty", "暫時沒有找到相關內容"),
+        ("Home.Recommend", "推薦"), ("Home.Official", "官方"), ("Home.Latest", "最新"), ("Home.Empty", "暫時沒有找到相關內容"),
         ("Home.Subtitle.Recommend", "為你推薦的社群精選"), ("Home.Subtitle.Latest", "社群最新發佈"),
         ("Post.Detail", "貼文詳情"), ("Post.Read", "閱讀正文"), ("Post.Comments", "評論"), ("Post.NoComments", "還沒有評論，來說兩句吧"),
 
@@ -150,14 +150,14 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> En = Build(
-        ("Nav.Home", "Home"), ("Nav.Video", "Videos"), ("Nav.Moment", "Feed"), ("Nav.Mine", "Me"), ("Nav.Settings", "Settings"),
+        ("Nav.Home", "Home"), ("Nav.Video", "Videos"), ("Nav.Moment", "Following"), ("Nav.Mine", "Me"), ("Nav.Settings", "Settings"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "Search anything you like"),
         ("Common.Loading", "Loading…"), ("Common.Refresh", "Refresh"), ("Common.More", "Load more"), ("Common.Empty", "Nothing here yet"),
         ("Common.Fail", "Failed to load, please retry"), ("Common.Retry", "Retry"), ("Common.Cancel", "Cancel"), ("Common.Confirm", "OK"),
         ("Common.Close", "Close"), ("Common.Back", "Back"), ("Common.OpenInBrowser", "Open in browser"), ("Common.Follow", "Follow"), ("Common.Followed", "Following"),
         ("Common.DemoMode", "Demo data"), ("Common.Offline", "Showing offline demo data"),
 
-        ("Home.Recommend", "For You"), ("Home.Latest", "Latest"), ("Home.Empty", "No content found"),
+        ("Home.Recommend", "For You"), ("Home.Official", "Official"), ("Home.Latest", "Latest"), ("Home.Empty", "No content found"),
         ("Home.Subtitle.Recommend", "Community picks for you"), ("Home.Subtitle.Latest", "Latest from the community"),
         ("Post.Detail", "Post"), ("Post.Read", "Read"), ("Post.Comments", "Comments"), ("Post.NoComments", "No comments yet"),
 
@@ -208,7 +208,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("S.WindowHint", "Window options apply on next launch"),
         ("S.PlaybackHint", "Playback settings apply to the video player"),
         ("S.MaintainHint", "Clearing cache or checking updates keeps your settings"),
-        ("S.Changelog.Body", "MikoMiko full changelog (0.1.0 → 0.1.4)\n\nv0.1.4 · 2026-11-22\n· Settings header adds GitHub home and developer feedback links\n· Home posts render official rich text: text, images and videos keep their original order, long text can be expanded\n· Video uses a local Range proxy for real buffering, draggable progress thumb, author follower count before views, page index removed\n· Preloads the next three videos; adds a comment drawer under Favorite with synced comments and posting after login\n· Fixes audio continuing after pause; Auto now really cycles 1080P / 720P / 480P and keeps playback position\n· Danmaku can be sent, stored locally per video and replayed for local users\n· Login is an embedded official passport QR panel; Mine is rebuilt as a blue banner profile with character management\n· Full changelog from 0.1.0 to 0.1.4\n· Single-instance mutex prevents multiple processes from overwriting settings and login state\n\nv0.1.3 · 2026-11-22\n· Site-wide search, comments and replies synced to Miyoushe, three-color video progress bar, random all-site video feed\n· Fixed QR login cookies, settings section index, ten accent presets and five-minute cache cleanup\n· App info now shows name / version / runtime / data directory\n\nv0.1.2 · 2026-11-21\n· New wordmark and blue gradient icon, full-page settings, Mine and Moment guest guides, reader comments and video capture\n\nv0.1.1 · 2026-11-20\n· Accent switched to Miko Blue #4EA4DD with ten presets, random home feed, swipe video page and synced likes / favorites\n\nv0.1.0 · 2026-11-19\n· First WPF + .NET 8 build with main window, navigation, home, video, moment, mine, search and settings\n· Miyoushe public APIs, light / dark themes, settings persistence, image cache and offline demo data"),
+        ("S.Changelog.Body", "MikoMiko full changelog (0.1.0 → 0.1.6)\n\nv0.1.6 · 2026-11-23\n· Left navigation label changed from Feed to Following\n· New hand-drawn navigation icons: gray outline by default, blue fill with dark outline when selected\n· Navigation order now Home / Following / Videos / Me, with Settings pinned at the bottom\n\nv0.1.5 · 2026-11-22\n· Author badges distinguish M-STAR, gold Official and pink MikoMiko; added the Official feed tab\n· Rounded navigation icons; reader image lightbox, draggable inline video, body links, back-to-top and comment buttons\n· Video page adds follow, comment count, publish page, click-to-pause and a draggable progress bar\n· Following feed shows old and new posts; custom Mine background; multi-column settings cards\n· In-app update check, download progress and ignore-this-version\n\nv0.1.4 · 2026-11-22\n· Settings header adds GitHub home and developer feedback links\n· Home posts render official rich text: text, images and videos keep their original order, long text can be expanded\n· Video uses a local Range proxy for real buffering, draggable progress thumb, author follower count before views, page index removed\n· Preloads the next three videos; adds a comment drawer under Favorite with synced comments and posting after login\n· Fixes audio continuing after pause; Auto now really cycles 1080P / 720P / 480P and keeps playback position\n· Danmaku can be sent, stored locally per video and replayed for local users\n· Login is an embedded official passport QR panel; Mine is rebuilt as a blue banner profile with character management\n· Full changelog from 0.1.0 to 0.1.4\n· Single-instance mutex prevents multiple processes from overwriting settings and login state\n\nv0.1.3 · 2026-11-22\n· Site-wide search, comments and replies synced to Miyoushe, three-color video progress bar, random all-site video feed\n· Fixed QR login cookies, settings section index, ten accent presets and five-minute cache cleanup\n· App info now shows name / version / runtime / data directory\n\nv0.1.2 · 2026-11-21\n· New wordmark and blue gradient icon, full-page settings, Mine and Moment guest guides, reader comments and video capture\n\nv0.1.1 · 2026-11-20\n· Accent switched to Miko Blue #4EA4DD with ten presets, random home feed, swipe video page and synced likes / favorites\n\nv0.1.0 · 2026-11-19\n· First WPF + .NET 8 build with main window, navigation, home, video, moment, mine, search and settings\n· Miyoushe public APIs, light / dark themes, settings persistence, image cache and offline demo data"),
 
         ("About.Title", "MikoMiko"),
         ("About.Slogan", "A lighter Miyoushe desktop client"),
@@ -218,13 +218,13 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> Ja = Build(
-        ("Nav.Home", "ホーム"), ("Nav.Video", "動画"), ("Nav.Moment", "フィード"), ("Nav.Mine", "マイ"), ("Nav.Settings", "設定"),
+        ("Nav.Home", "ホーム"), ("Nav.Video", "動画"), ("Nav.Moment", "フォロー"), ("Nav.Mine", "マイ"), ("Nav.Settings", "設定"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "気になる内容を検索"),
         ("Common.Loading", "読み込み中…"), ("Common.Refresh", "更新"), ("Common.More", "もっと見る"), ("Common.Empty", "まだ何もありません"),
         ("Common.Fail", "読み込みに失敗しました"), ("Common.Retry", "再試行"), ("Common.Cancel", "キャンセル"), ("Common.Confirm", "OK"),
         ("Common.Close", "閉じる"), ("Common.Back", "戻る"), ("Common.OpenInBrowser", "ブラウザで開く"), ("Common.Follow", "フォロー"), ("Common.Followed", "フォロー中"),
         ("Common.DemoMode", "デモデータ"), ("Common.Offline", "オフラインのデモデータを表示中"),
-        ("Home.Recommend", "おすすめ"), ("Home.Latest", "最新"), ("Home.Empty", "コンテンツが見つかりません"),
+        ("Home.Recommend", "おすすめ"), ("Home.Official", "公式"), ("Home.Latest", "最新"), ("Home.Empty", "コンテンツが見つかりません"),
         ("Home.Subtitle.Recommend", "あなたへのコミュニティピック"), ("Home.Subtitle.Latest", "コミュニティの最新投稿"),
         ("Post.Detail", "投稿"), ("Post.Read", "読む"), ("Post.Comments", "コメント"), ("Post.NoComments", "まだコメントはありません"),
         ("Video.Title", "動画"), ("Video.Related", "関連"), ("Video.Like", "いいね"), ("Video.Coin", "コイン"),
@@ -263,12 +263,12 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> Ru = Build(
-        ("Nav.Home", "Главная"), ("Nav.Video", "Видео"), ("Nav.Moment", "Лента"), ("Nav.Mine", "Профиль"), ("Nav.Settings", "Настройки"),
+        ("Nav.Home", "Главная"), ("Nav.Video", "Видео"), ("Nav.Moment", "Подписки"), ("Nav.Mine", "Профиль"), ("Nav.Settings", "Настройки"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "Поиск интересного контента"),
         ("Common.Loading", "Загрузка…"), ("Common.Refresh", "Обновить"), ("Common.More", "Ещё"), ("Common.Empty", "Здесь пока пусто"),
         ("Common.Fail", "Не удалось загрузить"), ("Common.Retry", "Повторить"), ("Common.Cancel", "Отмена"), ("Common.Confirm", "ОК"),
         ("Common.Close", "Закрыть"), ("Common.Back", "Назад"), ("Common.OpenInBrowser", "Открыть в браузере"), ("Common.Follow", "Подписаться"), ("Common.Followed", "Вы подписаны"),
-        ("Home.Recommend", "Рекомендации"), ("Home.Latest", "Новое"), ("Home.Empty", "Ничего не найдено"),
+        ("Home.Recommend", "Рекомендации"), ("Home.Official", "Официальное"), ("Home.Latest", "Новое"), ("Home.Empty", "Ничего не найдено"),
         ("Post.Detail", "Пост"), ("Post.Read", "Читать"), ("Post.Comments", "Комментарии"), ("Post.NoComments", "Комментариев пока нет"),
         ("Video.Title", "Видео"), ("Video.Like", "Нравится"), ("Video.SwipeHint", "Свайп вверх/вниз — следующее видео"),
         ("Video.Index", "{0} из {1}"), ("Video.Sync", "Синхронизировано с аккаунтом miyoushe"), ("Video.SyncFail", "Ошибка синхронизации — войдите в профиле"),
@@ -296,7 +296,7 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> Ko = Build(
-        ("Nav.Home", "홈"), ("Nav.Video", "영상"), ("Nav.Moment", "피드"), ("Nav.Mine", "내 정보"), ("Nav.Settings", "설정"),
+        ("Nav.Home", "홈"), ("Nav.Video", "영상"), ("Nav.Moment", "팔로잉"), ("Nav.Mine", "내 정보"), ("Nav.Settings", "설정"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "관심 있는 콘텐츠 검색"),
         ("Common.Loading", "불러오는 중…"), ("Common.Refresh", "새로고침"), ("Common.Empty", "아직 내용이 없습니다"), ("Common.Back", "뒤로"),
         ("Post.Detail", "게시글"), ("Post.Comments", "댓글"), ("Post.NoComments", "아직 댓글이 없습니다"),

@@ -74,6 +74,25 @@ public partial class App : Application
         window.Show();
 
         _ = Shell.InitializeAsync();
+
+        // 每次启动自动检查一次更新；点了「取消」的版本不再打扰
+        if (settings.CheckUpdateOnStartup && !e.Args.Contains("--shot"))
+        {
+            var updateTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            updateTimer.Tick += async (_, _) =>
+            {
+                updateTimer.Stop();
+                try
+                {
+                    await UpdateService.PromptIfAvailableAsync(MainWindow, settings, manual: false);
+                }
+                catch
+                {
+                    // 网络异常时静默跳过启动检查
+                }
+            };
+            updateTimer.Start();
+        }
 #if DEBUG
         TryCapture(e.Args);
 #endif
@@ -144,13 +163,18 @@ public partial class App : Application
                 MainWindow!.Width = 1624;
                 MainWindow.Height = 1000;
                 Log(path, "resized");
-                var navPage = page is "Reader" or "ReaderComments" or "Search" ? "Home"
+                var navPage = page is "Reader" or "ReaderComments" or "Search" or "Official" ? "Home"
                     : page == "VideoPlay" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" ? "Settings"
                     : page == "MineQr" ? "Mine"
                     : page == "MineProfile" ? "Mine"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
+                if (page == "Official" && Shell.HomeTabs.Count > 1)
+                {
+                    foreach (var tab in Shell.HomeTabs) tab.IsSelected = tab.Key == "Official";
+                    _ = Shell.Home.LoadOfficialAsync();
+                }
                 if (page == "MineQr")
                 {
                     Shell.MineViewModel.LoginCommand.Execute(null);
@@ -227,7 +251,7 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" ? 12 : page is "Search" or "MineQr" ? 5 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" ? 12 : page is "Search" or "MineQr" or "Official" ? 5 : page == "Moment" ? 12 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();

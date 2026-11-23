@@ -22,6 +22,25 @@ public sealed class FeedItem
     public string ForumName { get; set; } = string.Empty;
     public bool IsVideo { get; set; }
     public bool IsOfficial { get; set; }
+    public long CreatedAt { get; set; }
+
+    /// <summary>首页作者徽标：官方=金色「官」，开发者=粉色「MikoMiko」，其余=M-STAR。</summary>
+    public string BadgeText => Author == "灰岁Huiusto" ? "MikoMiko" : IsOfficial ? "官" : "M-STAR";
+
+    public string BadgeBackground => Author == "灰岁Huiusto"
+        ? "#FFE3F0"
+        : IsOfficial ? "#FFF2D6" : "#E6F4FB";
+
+    public string BadgeForeground => Author == "灰岁Huiusto"
+        ? "#E7549E"
+        : IsOfficial ? "#B8860B" : "#2B8CC4";
+
+    public bool IsWideBadge => BadgeText == "MikoMiko";
+
+    /// <summary>首页卡片封面：没有配图的帖子使用默认占位图，但阅读器正文不插入该图。</summary>
+    public string CardCover => string.IsNullOrWhiteSpace(Cover)
+        ? "pack://application:,,,/Assets/Demo/placeholder.png"
+        : Cover;
 
     /// <summary>作者是否被我关注（需 Cookie，接口返回 user.is_following）。</summary>
     public bool IsFollowing { get; set; }

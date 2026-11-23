@@ -17,8 +17,12 @@
                 <StackPanel Margin="0,0,0,2">
                     <Grid Height="190">
                         <Border CornerRadius="9" ClipToBounds="True" Background="{DynamicResource Brush.Surface}">
-                            <Image controls:AsyncImage.Url="{Binding Cover}" controls:AsyncImage.Fallback="Assets/Demo/cover01.jpg" Stretch="UniformToFill"
-                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                            <Grid>
+                                <Image Source="pack://application:,,,/Assets/Demo/placeholder.png" Stretch="UniformToFill"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                                <Image controls:AsyncImage.Url="{Binding CardCover}" Stretch="UniformToFill"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                            </Grid>
                         </Border>
 
                         <Border Height="54" VerticalAlignment="Bottom" CornerRadius="0,0,9,9"
@@ -57,10 +61,10 @@
                             <TextBlock Text="{Binding TagText}" Foreground="{DynamicResource Brush.TagOrange}" FontSize="11.5" />
                         </Border>
 
-                        <Border Grid.Column="1" Width="16" Height="16" CornerRadius="3"
-                                Background="{DynamicResource Brush.AccentSoft}" Margin="0,0,5,0" VerticalAlignment="Center">
-                            <TextBlock Text="UP" FontSize="8.5" Foreground="{DynamicResource Brush.Accent}"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" Background="{Binding BadgeBackground}" CornerRadius="4"
+                                Padding="5,1" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding BadgeText}" Foreground="{Binding BadgeForeground}"
+                                       FontSize="9.5" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
 
                         <TextBlock Grid.Column="2" Text="{Binding MetaText}" FontSize="12.5"

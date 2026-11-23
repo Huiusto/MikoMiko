@@ -83,9 +83,17 @@
                 <ControlTemplate TargetType="{x:Type Button}">
                     <Border x:Name="Bd" Background="Transparent" CornerRadius="10" Margin="9,3" Padding="0,8">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <Path x:Name="Icon" Data="{Binding IconData}" Width="23" Height="23"
-                                  Stretch="Uniform" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
-                                  StrokeLineJoin="Round" HorizontalAlignment="Center" />
+                            <Grid Width="32" Height="32" HorizontalAlignment="Center">
+                                <Image x:Name="IconDefault" Source="{Binding IconDefault}"
+                                       Width="30" Height="30" Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Image x:Name="IconSelected" Source="{Binding IconSelected}"
+                                       Width="30" Height="30" Stretch="Uniform"
+                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       Visibility="Collapsed" />
+                            </Grid>
                             <TextBlock x:Name="Label" Text="{Binding Title}" FontSize="12"
                                        Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center"
                                        Margin="0,5,0,0" />
@@ -98,8 +106,10 @@
                         </Trigger>
                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
-                            <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
-                            <Setter TargetName="Icon" Property="StrokeThickness" Value="1.8" />
+                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+                            <Setter TargetName="IconDefault" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="IconSelected" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
                         </DataTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

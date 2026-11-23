@@ -53,8 +53,10 @@
         <Style x:Key="SectionCard" TargetType="{x:Type Border}">
             <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
             <Setter Property="CornerRadius" Value="12" />
-            <Setter Property="Padding" Value="22,20" />
-            <Setter Property="Margin" Value="0,0,0,14" />
+            <Setter Property="Padding" Value="18,16" />
+            <Setter Property="Width" Value="420" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="VerticalAlignment" Value="Top" />
         </Style>
 
         <Style x:Key="SectionTitle" TargetType="{x:Type TextBlock}">
@@ -84,10 +86,10 @@
 
         <ScrollViewer x:Name="ScrollHost" Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                       Padding="0,0,4,0">
-            <StackPanel x:Name="SectionsPanel" Margin="26,18,24,30">
+            <StackPanel Margin="26,18,24,30">
 
                 <!-- 0.1.4 顶部外链入口 -->
-                <Grid Margin="0,0,0,14">
+                <Grid Margin="0,0,0,14" MaxWidth="1200" HorizontalAlignment="Stretch">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="*" />
@@ -115,7 +117,8 @@
                 </Grid>
 
                 <!-- 账号头部 -->
-                <Border Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="20,16">
+                <Border Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="20,16"
+                        MaxWidth="1200" HorizontalAlignment="Stretch" Margin="0,0,0,16">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -142,6 +145,8 @@
                         </StackPanel>
                     </Grid>
                 </Border>
+
+                <WrapPanel x:Name="SectionsPanel" Orientation="Horizontal">
 
                 <!-- 常规设置 -->
                 <Border Style="{StaticResource SectionCard}" Margin="0,14,0,14" Tag="General">
@@ -244,6 +249,12 @@
                                   Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoStart}" />
                         <CheckBox Content="{Binding [S.StartHome], Source={x:Static loc:Loc.Instance}}"
                                   Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.StartOnHome}" />
+                        <CheckBox Content="启动时默认进入视频"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.StartOnVideo}" />
+                        <CheckBox Content="视频结束自动下滑"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoNextVideo}" />
+                        <CheckBox Content="下滑视频自动播放"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoPlayOnSwipe}" />
                         <CheckBox Content="{Binding [S.RememberPage], Source={x:Static loc:Loc.Instance}}"
                                   Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.RememberLastPage}" />
 
@@ -266,7 +277,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 播放设置 -->
+                <!-- 播放选项 -->
                 <Border Style="{StaticResource SectionCard}" Tag="Playback">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Playback], Source={x:Static loc:Loc.Instance}}"
@@ -353,26 +364,6 @@
                                   IsChecked="{Binding Settings.RoundedWindow}" />
                         <TextBlock Text="{Binding [S.WindowHint], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource RowHint}" Margin="0,4,0,0" />
-                    </StackPanel>
-                </Border>
-
-                <!-- 快捷键 -->
-                <Border Style="{StaticResource SectionCard}" Tag="Shortcuts">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [S.Shortcuts], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource SectionTitle}" />
-
-                        <CheckBox Content="{Binding [S.ShortcutEnable], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.EnableGlobalHotkey}" />
-
-                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                            <TextBlock Text="{Binding [S.ShortcutHint], Source={x:Static loc:Loc.Instance}}"
-                                       Style="{StaticResource RowLabel}" />
-                            <TextBox Text="{Binding Settings.Hotkey, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource InputBox}" Width="180" Height="34" Margin="8,0,0,0" />
-                        </StackPanel>
-                        <TextBlock Text="{Binding [S.ShortcutToggle], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource RowHint}" Margin="0,10,0,0" />
                     </StackPanel>
                 </Border>
 
@@ -572,6 +563,7 @@
                     </StackPanel>
                 </Border>
 
+            </WrapPanel>
             </StackPanel>
         </ScrollViewer>
 

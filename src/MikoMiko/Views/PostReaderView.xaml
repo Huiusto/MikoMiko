@@ -88,55 +88,50 @@
                 <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"
                            LineHeight="30" Margin="0,16,0,0" />
 
-                <!-- 正文：按官方 structured_content 顺序混排文本 / 图片 / 视频，长文可折叠 -->
-                <ScrollViewer MaxHeight="{Binding BodyMaxHeight}" VerticalScrollBarVisibility="Hidden"
-                              HorizontalScrollBarVisibility="Disabled" Margin="0,14,0,0">
-                    <ItemsControl ItemsSource="{Binding Blocks}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <TextBlock Text="{Binding Text}" FontSize="13.5" LineHeight="24" TextWrapping="Wrap"
-                                               Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,0,0,10"
-                                               Visibility="{Binding IsText, Converter={StaticResource BoolToVis}}" />
-                                    <Border CornerRadius="10" ClipToBounds="True" Margin="0,2,0,14"
-                                            Background="{DynamicResource Brush.Card}" HorizontalAlignment="Center"
-                                            MaxWidth="820"
-                                            Visibility="{Binding IsImage, Converter={StaticResource BoolToVis}}">
-                                        <Image controls:AsyncImage.Url="{Binding Url}" Stretch="Uniform" MaxHeight="620" />
-                                    </Border>
-                                    <Border CornerRadius="10" ClipToBounds="True" Margin="0,2,0,14" Height="220"
-                                            Background="{DynamicResource Brush.PlayerBg}"
-                                            Visibility="{Binding IsVideo, Converter={StaticResource BoolToVis}}">
-                                        <Grid>
-                                            <Image controls:AsyncImage.Url="{Binding Cover}" Stretch="UniformToFill" />
-                                            <Border Background="#66000000" />
-                                            <Button Tag="{Binding Url}" Click="InlineVideo_Click" Cursor="Hand"
-                                                    Width="58" Height="58" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                <Button.Template>
-                                                    <ControlTemplate TargetType="{x:Type Button}">
-                                                        <Border CornerRadius="29" Background="#40FFFFFF" BorderBrush="#80FFFFFF"
-                                                                BorderThickness="1">
-                                                            <Path Data="M0 0 L17 10 L0 20 Z" Fill="White" Width="17" Height="20"
-                                                                  Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                        </Border>
-                                                    </ControlTemplate>
-                                                </Button.Template>
-                                            </Button>
-                                            <Border Background="#66000000" CornerRadius="9" Padding="8,3"
-                                                    HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10">
-                                                <TextBlock Text="{Binding DurationText}" Foreground="White" FontSize="10.5" />
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                <!-- 正文：按官方 structured_content 顺序混排文本 / 图片 / 视频，不再折叠 -->
+                <ItemsControl ItemsSource="{Binding Blocks}" Margin="0,14,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <controls:LinkTextBlock SourceText="{Binding Text}" SourceUrl="{Binding Url}"
+                                                        FontSize="13.5" LineHeight="24" TextWrapping="Wrap"
+                                                        Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,0,0,10"
+                                                        Visibility="{Binding IsText, Converter={StaticResource BoolToVis}}" />
+                                <Border CornerRadius="10" ClipToBounds="True" Margin="0,2,0,14"
+                                        Background="{DynamicResource Brush.Card}" HorizontalAlignment="Center"
+                                        MaxWidth="820" Cursor="Hand" Tag="{Binding Url}" MouseLeftButtonUp="InlineImage_Click"
+                                        Visibility="{Binding IsImage, Converter={StaticResource BoolToVis}}">
+                                    <Image controls:AsyncImage.Url="{Binding Url}" Stretch="Uniform" MaxHeight="620" />
+                                </Border>
+                                <Border CornerRadius="10" ClipToBounds="True" Margin="0,2,0,14" Height="220"
+                                        Background="{DynamicResource Brush.PlayerBg}"
+                                        Visibility="{Binding IsVideo, Converter={StaticResource BoolToVis}}">
+                                    <Grid>
+                                        <Image controls:AsyncImage.Url="{Binding Cover}" Stretch="UniformToFill" />
+                                        <Border Background="#66000000" />
+                                        <Button Tag="{Binding Url}" Click="InlineVideo_Click" Cursor="Hand"
+                                                Width="58" Height="58" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="{x:Type Button}">
+                                                    <Border CornerRadius="29" Background="#40FFFFFF" BorderBrush="#80FFFFFF"
+                                                            BorderThickness="1">
+                                                        <Path Data="M0 0 L17 10 L0 20 Z" Fill="White" Width="17" Height="20"
+                                                              Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                        <Border Background="#66000000" CornerRadius="9" Padding="8,3"
+                                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="10">
+                                            <TextBlock Text="{Binding DurationText}" Foreground="White" FontSize="10.5" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-                <Button Content="{Binding BodyToggleText}" Style="{StaticResource LinkButton}"
-                        HorizontalAlignment="Center" Margin="0,4,0,0" Command="{Binding ToggleBodyCommand}"
-                        Visibility="{Binding IsLongBody, Converter={StaticResource BoolToVis}}" />
 
                 <!-- 视频 -->
                 <Border Margin="0,16,0,0" CornerRadius="10" ClipToBounds="True"
@@ -236,7 +231,7 @@
                 </Border>
 
                 <!-- 评论 -->
-                <StackPanel Orientation="Horizontal" Margin="2,26,0,10">
+                <StackPanel x:Name="CommentSection" Orientation="Horizontal" Margin="2,26,0,10">
                     <TextBlock Text="{Binding [Post.Comments], Source={x:Static loc:Loc.Instance}}"
                                FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding ReplyText}" FontSize="12"
@@ -355,5 +350,98 @@
                            Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVis}}" />
             </StackPanel>
         </ScrollViewer>
+
+        <!-- 右下角悬浮：回到顶部 / 直达评论区 -->
+        <StackPanel Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                    Margin="0,0,22,22">
+            <Button Width="44" Height="44" Cursor="Hand" Click="BackToTop_Click" ToolTip="回到帖子顶部">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="22" Background="#F2FFFFFF"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                            <Path Data="M12 3 L12 21 M5 10 L12 3 L19 10" Stroke="{DynamicResource Brush.Accent}"
+                                  StrokeThickness="2.2" StrokeLineJoin="Round" Width="18" Height="18"
+                                  Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button Width="44" Height="44" Margin="0,10,0,0" Cursor="Hand" Click="GoComments_Click" ToolTip="直达评论区">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="22" Background="#F2FFFFFF"
+                                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
+                            <Path Data="M3 4 H21 V16 H11 L5 21 V16 H3 Z" Stroke="{DynamicResource Brush.Accent}"
+                                  StrokeThickness="2" StrokeLineJoin="Round" Width="18" Height="18"
+                                  Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </StackPanel>
+
+        <!-- 图片灯箱 -->
+        <Grid x:Name="ImageLightbox" Grid.Row="1" Background="#DD000000" Visibility="Collapsed"
+              MouseLeftButtonUp="CloseImageLightbox_Click">
+            <Image x:Name="LightboxImage" Stretch="Uniform" Margin="56" />
+            <Button Width="40" Height="40" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="18"
+                    Cursor="Hand" Click="CloseImageLightbox_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border CornerRadius="20" Background="#33FFFFFF">
+                            <Path Data="M0 0 L10 10 M10 0 L0 10" Stroke="White" StrokeThickness="1.6"
+                                  Width="11" Height="11" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
+
+        <!-- 帖内视频播放器：可拖动进度条 -->
+        <Grid x:Name="VideoOverlay" Grid.Row="1" Background="#EE0B1220" Visibility="Collapsed">
+            <Grid Width="900" Height="560" MaxWidth="1100" MaxHeight="720">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="56" />
+                </Grid.RowDefinitions>
+                <MediaElement x:Name="InlineMedia" Grid.Row="0" LoadedBehavior="Manual" UnloadedBehavior="Manual"
+                              ScrubbingEnabled="True" Stretch="Uniform" Volume="0.7" />
+                <Border Grid.Row="1" Background="#1AFFFFFF" CornerRadius="0,0,10,10" Margin="0,0,0,0">
+                    <Grid Margin="16,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="InlineProgress" Grid.Column="0" VerticalAlignment="Center"
+                                Minimum="0" Maximum="100" ValueChanged="InlineProgress_ValueChanged"
+                                PreviewMouseLeftButtonDown="InlineProgress_DragStart"
+                                PreviewMouseLeftButtonUp="InlineProgress_DragEnd" />
+                        <TextBlock x:Name="InlineTime" Grid.Column="1" Foreground="White" FontSize="11"
+                                   VerticalAlignment="Center" Margin="12,0,0,0" />
+                    </Grid>
+                </Border>
+                <Button Width="40" Height="40" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="18"
+                        Cursor="Hand" Click="CloseInlineVideo_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Border CornerRadius="20" Background="#33FFFFFF">
+                                <Path Data="M0 0 L10 10 M10 0 L0 10" Stroke="White" StrokeThickness="1.6"
+                                      Width="11" Height="11" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>

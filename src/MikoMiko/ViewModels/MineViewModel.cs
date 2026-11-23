@@ -45,10 +45,42 @@ public sealed partial class MineViewModel : ObservableObject
     [ObservableProperty] private ImageSource? _qrImage;
     [ObservableProperty] private string _loginStatus = string.Empty;
 
+    /// <summary>自定义个人页背景；为空时显示默认蓝色渐变。</summary>
+    public string BackgroundImage => _settings.ProfileBackground;
+    public bool HasCustomBackground => !string.IsNullOrWhiteSpace(_settings.ProfileBackground);
+
     partial void OnIsLoggedInChanged(bool value) => OnPropertyChanged(nameof(IsGuest));
+
+    /// <summary>选择本地图片作为「我的」页面背景，复制到应用数据目录后立即生效。</summary>
+    [RelayCommand]
+    private void ChangeBackground()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "选择个人主页背景",
+            Filter = "图片文件|*.jpg;*.jpeg;*.png;*.bmp;*.webp|所有文件|*.*",
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            var extension = Path.GetExtension(dialog.FileName);
+            var destination = Path.Combine(SettingsService.DataDirectory, "profile-background" + extension);
+            File.Copy(dialog.FileName, destination, overwrite: true);
+            _settings.ProfileBackground = destination;
+            OnPropertyChanged(nameof(BackgroundImage));
+            OnPropertyChanged(nameof(HasCustomBackground));
+        }
+        catch (Exception ex)
+        {
+            BindStatus = $"背景设置失败：{ex.Message}";
+        }
+    }
 
     public async Task LoadAsync()
     {
+        OnPropertyChanged(nameof(BackgroundImage));
+        OnPropertyChanged(nameof(HasCustomBackground));
         IsLoggedIn = !string.IsNullOrWhiteSpace(_settings.Cookie);
         if (!IsLoggedIn)
         {

@@ -15,6 +15,12 @@ public sealed partial class AppSettings : ObservableObject
     // 启动 / 关闭
     [ObservableProperty] private bool _autoStart;
     [ObservableProperty] private bool _startOnHome = true;
+    [ObservableProperty] private bool _startOnVideo;
+    [ObservableProperty] private bool _autoNextVideo = true;
+    [ObservableProperty] private bool _autoPlayOnSwipe = true;
+    [ObservableProperty] private bool _autoCheckUpdate = true;
+    [ObservableProperty] private string _ignoredUpdateVersion = string.Empty;
+    [ObservableProperty] private string _profileBackground = string.Empty;
     [ObservableProperty] private bool _rememberLastPage = true;
     [ObservableProperty] private string _lastPage = "Home";
     [ObservableProperty] private string _closeAction = "Ask";     // Tray / Exit / Ask

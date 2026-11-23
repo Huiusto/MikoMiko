@@ -33,11 +33,13 @@ public sealed partial class HomeViewModel : ObservableObject
     [ObservableProperty] private bool _isEmpty;
     [ObservableProperty] private bool _hasMore = true;
     [ObservableProperty] private bool _isSearchMode;
+    [ObservableProperty] private bool _isOfficialTab;
     [ObservableProperty] private string _searchKeyword = string.Empty;
 
     public async Task LoadAsync(bool latest)
     {
         IsLatest = latest;
+        IsOfficialTab = false;
         IsSearchMode = false;
         IsLoading = true;
         StatusText = Localization.Loc.Instance["Common.Loading"];
@@ -55,6 +57,43 @@ public sealed partial class HomeViewModel : ObservableObject
             Items.Clear();
             foreach (var item in _feed) Items.Add(item);
             IsEmpty = Items.Count == 0;
+            HasMore = true;
+        }
+        catch
+        {
+            StatusText = Localization.Loc.Instance["Common.Fail"];
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>「官方」页：只加载米游社官方发布的内容。</summary>
+    public async Task LoadOfficialAsync()
+    {
+        IsLatest = false;
+        IsOfficialTab = true;
+        IsSearchMode = false;
+        IsLoading = true;
+        StatusText = "正在加载官方内容…";
+        try
+        {
+            _seen.Clear();
+            _feed.Clear();
+            Items.Clear();
+            var items = await _content.GetOfficialAsync();
+            IsDemo = _content.IsDemo;
+            foreach (var item in items)
+            {
+                if (_seen.Add(item.PostId)) _feed.Add(item);
+            }
+
+            Items.Clear();
+            foreach (var item in _feed) Items.Add(item);
+            IsEmpty = Items.Count == 0;
+            HasMore = false;
+            StatusText = string.Empty;
         }
         catch
         {
@@ -113,7 +152,7 @@ public sealed partial class HomeViewModel : ObservableObject
     /// <summary>下滑到底时追加一批随机帖子。</summary>
     public async Task LoadMoreAsync()
     {
-        if (IsLoading || IsLoadingMore || !HasMore || IsSearchMode) return;
+        if (IsLoading || IsLoadingMore || !HasMore || IsSearchMode || IsOfficialTab) return;
 
         IsLoadingMore = true;
         try
@@ -144,7 +183,7 @@ public sealed partial class HomeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task Refresh() => LoadAsync(IsLatest);
+    private Task Refresh() => IsOfficialTab ? LoadOfficialAsync() : LoadAsync(IsLatest);
 
     [RelayCommand]
     private void Open(FeedItem? item)

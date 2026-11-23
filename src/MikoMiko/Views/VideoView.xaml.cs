@@ -4,6 +4,7 @@ using MikoMiko.ViewModels;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -73,7 +74,7 @@ public partial class VideoView : UserControl
     }
 
     /// <summary>上下滑动（滚轮 / 触摸板）切换随机视频，像刷短视频一样。</summary>
-    private void PlayerCard_MouseWheel(object sender, MouseWheelEventArgs e)
+    private async void PlayerCard_MouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (DateTime.Now - _lastSwipe < TimeSpan.FromMilliseconds(280)) return;
         if (Math.Abs(e.Delta) < 40) return;
@@ -81,8 +82,52 @@ public partial class VideoView : UserControl
         _lastSwipe = DateTime.Now;
         e.Handled = true;
 
-        if (e.Delta < 0) _ = _vm.NextAsync();
-        else _vm.Previous();
+        if (e.Delta < 0)
+        {
+            await _vm.NextAsync();
+        }
+        else
+        {
+            _vm.Previous();
+        }
+
+        if (_settings.AutoPlayOnSwipe)
+        {
+            _playRequested = true;
+            _vm.IsPlaying = true;
+        }
+    }
+
+    /// <summary>点击画面切换播放 / 暂停；点按钮、滑块时不触发。</summary>
+    private void PlayerCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (FindAncestor<System.Windows.Controls.Button>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindAncestor<Slider>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindAncestor<Thumb>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindAncestor<System.Windows.Controls.TextBox>(e.OriginalSource as DependencyObject) is not null) return;
+        TogglePlay();
+    }
+
+    private void TogglePlay()
+    {
+        if (!_vm.HasSource)
+        {
+            _playRequested = true;
+            SyncSelected();
+        }
+
+        if (_vm.TogglePlayCommand.CanExecute(null)) _vm.TogglePlayCommand.Execute(null);
+    }
+
+    private static T? FindAncestor<T>(DependencyObject? source) where T : DependencyObject
+    {
+        while (source is not null)
+        {
+            if (source is T match) return match;
+            source = System.Windows.Media.VisualTreeHelper.GetParent(source);
+        }
+
+        return null;
     }
 
     private void ApplyPlayerSettings()
@@ -294,14 +339,22 @@ public partial class VideoView : UserControl
         UpdatePosition();
     }
 
-    private void OnMediaEnded(object sender, RoutedEventArgs e)
+    private async void OnMediaEnded(object sender, RoutedEventArgs e)
     {
         _vm.IsPlaying = false;
         CoverHost.Visibility = Visibility.Visible;
         UpdatePlayIcon();
 
-        // 播完自动下一个，保持抖音式连续刷
-        _ = _vm.NextAsync();
+        // 播完自动下一个，可在「设置 → 播放」关闭
+        if (_settings.AutoNextVideo)
+        {
+            await _vm.NextAsync();
+            if (_settings.AutoPlayOnSwipe)
+            {
+                _playRequested = true;
+                _vm.IsPlaying = true;
+            }
+        }
     }
 
     private async void OnMediaFailed(object? sender, ExceptionRoutedEventArgs e)

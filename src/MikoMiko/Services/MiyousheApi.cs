@@ -1,6 +1,7 @@
 using MikoMiko.Models;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -12,6 +13,10 @@ public sealed class MiyousheApi
 {
     private const string WebHomeUrl = "https://bbs-api-static.miyoushe.com/apihub/wapi/webHome";
     private const string PostApi = "https://bbs-api.miyoushe.com/post/wapi";
+    private const string PainterApi = "https://bbs-api.miyoushe.com/painter/wapi";
+    private const string UserApi = "https://bbs-api.miyoushe.com/user/wapi";
+    private const string X4Salt = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs";
+    private static readonly string DeviceId = Guid.NewGuid().ToString("N");
 
     private readonly HttpClient _http;
     private readonly string _cookie;
@@ -134,10 +139,10 @@ public sealed class MiyousheApi
         try
         {
             var url = $"{PostApi}/{action}?post_id={postId}";
-            using var content = new StringContent(string.Empty);
-            content.Headers.TryAddWithoutValidation("x-rpc-client_type", "4");
-            content.Headers.TryAddWithoutValidation("x-rpc-app_version", "2.11.1");
-            var response = await _http.PostAsync(url, content, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Content = new StringContent(string.Empty);
+            AddX4Headers(request, $"post_id={postId}", string.Empty);
+            var response = await _http.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
             using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
             return doc.RootElement.TryGetProperty("retcode", out var code)
@@ -169,7 +174,145 @@ public sealed class MiyousheApi
         return items;
     }
 
-    /// <summary>版块帖子列表（getForumPostList），支持按热度 / 最新排序与 last_id 翻页。</summary>
+    /// <summary>官方资讯流（getNewsList）：只返回米游社官方发布的公告 / 活动 / 资讯。</summary>
+    public async Task<IReadOnlyList<FeedItem>> GetOfficialPostsAsync(IEnumerable<int> gameIds, int pageSize = 16,
+        CancellationToken ct = default)
+    {
+        var items = new List<FeedItem>();
+        var tasks = gameIds
+            .SelectMany(gid => new[] { 1, 2, 3 }.Select(type => FetchOfficialAsync(gid, type, pageSize, ct)))
+            .ToArray();
+        foreach (var list in await Task.WhenAll(tasks)) items.AddRange(list);
+
+        return items
+            .GroupBy(i => i.PostId)
+            .Select(g => g.OrderByDescending(i => i.CreatedAt).First())
+            .OrderByDescending(i => i.CreatedAt)
+            .Take(48)
+            .ToList();
+    }
+
+    /// <summary>拉取单个社区、单类官方资讯；单个请求失败不影响其余请求。</summary>
+    private async Task<IReadOnlyList<FeedItem>> FetchOfficialAsync(int gid, int type, int pageSize,
+        CancellationToken ct)
+    {
+        var items = new List<FeedItem>();
+        try
+        {
+            var url = $"{PainterApi}/getNewsList?gids={gid}&page_size={pageSize}&type={type}&last_id=0";
+            var root = await GetJsonAsync(url, ct);
+            foreach (var element in Items(Obj(Obj(root, "data"), "list")))
+            {
+                var post = ParseHomeItem(element);
+                if (post is null || string.IsNullOrWhiteSpace(post.PostId)) continue;
+                post.IsOfficial = true;
+                if (string.IsNullOrWhiteSpace(post.Author)) post.Author = "米游社官方";
+                if (string.IsNullOrWhiteSpace(post.AuthorAvatar))
+                    post.AuthorAvatar = "pack://application:,,,/Assets/icon.png";
+                if (string.IsNullOrWhiteSpace(post.ForumName)) post.ForumName = "官方";
+                items.Add(post);
+            }
+        }
+        catch
+        {
+            // 单个社区或分类失败不影响其余官方内容
+        }
+
+        return items;
+    }
+
+    /// <summary>获取当前账号关注列表（需要 Cookie + X4 签名）。</summary>
+    public async Task<IReadOnlyList<(string Uid, string Nickname, string Avatar)>> GetFollowingAsync(
+        CancellationToken ct = default)
+    {
+        if (!HasCookie) return Array.Empty<(string, string, string)>();
+
+        var users = new List<(string, string, string)>();
+        var lastId = string.Empty;
+        for (var page = 0; page < 3; page++)
+        {
+            var query = $"gids=2&last_id={Uri.EscapeDataString(lastId)}&page_size=50";
+            var url = $"{UserApi}/following?{query}";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            AddX4Headers(request, query, string.Empty);
+            try
+            {
+                using var response = await _http.SendAsync(request, ct);
+                if (!response.IsSuccessStatusCode) break;
+                using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+                var data = Obj(doc.RootElement, "data");
+                foreach (var relation in Items(Obj(data, "result")))
+                {
+                    var user = Obj(relation, "user");
+                    var uid = Str(user, "uid");
+                    if (string.IsNullOrWhiteSpace(uid)) continue;
+                    users.Add((uid, Str(user, "nickname"), Str(user, "avatar_url")));
+                }
+
+                var next = Str(data, "last_id");
+                if (Obj(data, "is_last")?.ValueKind == JsonValueKind.True || string.IsNullOrEmpty(next) || next == lastId)
+                    break;
+                lastId = next;
+            }
+            catch
+            {
+                break;
+            }
+        }
+
+        return users;
+    }
+
+    /// <summary>某个用户发布的帖子（公开），用于动态页按关注用户聚合。</summary>
+    public async Task<IReadOnlyList<FeedItem>> GetUserPostsAsync(string uid, int gids, int size = 20,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return Array.Empty<FeedItem>();
+        try
+        {
+            var url = $"{PostApi}/userPost?uid={Uri.EscapeDataString(uid)}&gids={gids}&size={size}";
+            var root = await GetJsonAsync(url, ct);
+            var list = Obj(Obj(root, "data"), "list");
+            var items = new List<FeedItem>();
+            foreach (var element in Items(list))
+            {
+                var item = ParseHomeItem(element);
+                if (item is not null) items.Add(item);
+            }
+
+            return items;
+        }
+        catch
+        {
+            return Array.Empty<FeedItem>();
+        }
+    }
+
+    /// <summary>关注 / 取消关注用户（timeline/wapi/follow）。</summary>
+    public async Task<bool> SetFollowAsync(string uid, bool follow, CancellationToken ct = default)
+    {
+        if (!HasCookie || string.IsNullOrWhiteSpace(uid)) return false;
+        var body = $"{{\"entity_id\":\"{uid}\"}}";
+        var url = $"https://bbs-api.miyoushe.com/timeline/wapi/{(follow ? "follow" : "unfollow")}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+        AddX4Headers(request, string.Empty, body);
+        try
+        {
+            using var response = await _http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode) return false;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            return doc.RootElement.TryGetProperty("retcode", out var code)
+                   && code.ValueKind == JsonValueKind.Number
+                   && code.GetInt32() == 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
     public async Task<IReadOnlyList<FeedItem>> GetForumPostsAsync(int gids, int forumId, int size = 24,
         CancellationToken ct = default, int sortType = 2, string? lastId = null)
     {
@@ -335,6 +478,11 @@ public sealed class MiyousheApi
                 .Select(b => b.Text));
             if (!string.IsNullOrWhiteSpace(body)) detail.Body = body;
         }
+        else if (!string.IsNullOrWhiteSpace(detail.Body))
+        {
+            // 部分老帖没有 structured_content，用纯文本兜底，避免正文空白
+            detail.Blocks.Add(new PostBlock { Kind = "text", Text = detail.Body });
+        }
 
         var vodList = Obj(post, "vod_list");
         if (Items(vodList).Any())
@@ -454,10 +602,12 @@ public sealed class MiyousheApi
             ReplyText = FormatCount(Num(stat, "reply_num")),
             LikeText = FormatCount(Num(stat, "like_num")),
             TagText = TagOf(Num(stat, "like_num")),
-            IsOfficial = Obj(Obj(post, "post_status"), "is_official")?.ValueKind == JsonValueKind.True,
+            IsOfficial = Obj(Obj(post, "post_status"), "is_official")?.ValueKind == JsonValueKind.True
+                         || Num(Obj(user, "certification"), "type") == 1,
             IsFollowing = Obj(user, "is_following")?.ValueKind == JsonValueKind.True,
             ForumName = Str(Obj(element, "forum"), "name"),
             IsVideo = Items(vodList).Any(),
+            CreatedAt = Num(post, "created_at"),
             WebUrl = WebUrl(post),
         };
 
@@ -593,8 +743,25 @@ public sealed class MiyousheApi
     private static string TagOf(long likeCount)
         => likeCount >= 10_000 ? $"{FormatCount(likeCount)}点赞" : string.Empty;
 
-    private static string DurationText(long milliseconds)
+    /// <summary>为关注 / 关注列表接口补 X4 签名头（与 TeyvatGuide 一致）。</summary>
+    private static void AddX4Headers(HttpRequestMessage request, string query, string body)
     {
+        var time = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var random = Random.Shared.Next(100000, 200000).ToString();
+        var hash = $"salt={X4Salt}&t={time}&r={random}&b={body}&q={query}";
+        var ds = $"{time},{random},{Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(hash))).ToLowerInvariant()}";
+
+        request.Headers.TryAddWithoutValidation("User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) miHoYoBBS/2.119.0");
+        request.Headers.TryAddWithoutValidation("x-rpc-app_version", "2.119.0");
+        request.Headers.TryAddWithoutValidation("x-rpc-client_type", "5");
+        request.Headers.TryAddWithoutValidation("x-rpc-device_id", DeviceId);
+        request.Headers.TryAddWithoutValidation("x-requested-with", "com.mihoyo.hyperion");
+        request.Headers.TryAddWithoutValidation("Referer", "https://www.miyoushe.com/");
+        request.Headers.TryAddWithoutValidation("ds", ds);
+    }
+
+    private static string DurationText(long milliseconds)    {
         if (milliseconds <= 0) return string.Empty;
         var span = TimeSpan.FromMilliseconds(milliseconds);
         return span.TotalHours >= 1
@@ -632,6 +799,8 @@ public sealed class MiyousheApi
             foreach (var op in document.RootElement.EnumerateArray())
             {
                 if (!op.TryGetProperty("insert", out var insert)) continue;
+                var attrs = Obj(op, "attributes");
+                var linkUrl = Str(attrs, "link");
                 if (insert.ValueKind == JsonValueKind.String)
                 {
                     var text = insert.GetString() ?? string.Empty;
@@ -639,11 +808,29 @@ public sealed class MiyousheApi
                     {
                         var clean = line.Trim();
                         if (clean.Length == 0) continue;
-                        result.Add(new PostBlock { Kind = "text", Text = clean });
+                        result.Add(new PostBlock { Kind = "text", Text = clean, Url = linkUrl });
                     }
                 }
                 else if (insert.ValueKind == JsonValueKind.Object)
                 {
+                    // 新版 delta 也可能把文本与链接一起放在 insert 对象里
+                    var inlineText = Str(insert, "text");
+                    if (!string.IsNullOrWhiteSpace(inlineText))
+                    {
+                        foreach (var line in inlineText.Split('\n'))
+                        {
+                            var clean = line.Trim();
+                            if (clean.Length == 0) continue;
+                            result.Add(new PostBlock
+                            {
+                                Kind = "text",
+                                Text = clean,
+                                Url = string.IsNullOrEmpty(linkUrl) ? Str(insert, "link") : linkUrl,
+                            });
+                        }
+                        continue;
+                    }
+
                     var image = Str(insert, "image");
                     if (!string.IsNullOrEmpty(image))
                     {

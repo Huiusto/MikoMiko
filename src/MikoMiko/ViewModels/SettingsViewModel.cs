@@ -27,7 +27,6 @@ public sealed partial class SettingsViewModel : ObservableObject
             new("Playback", Loc.Instance["S.Playback"]),
             new("Cache", Loc.Instance["S.Cache"]),
             new("Window", Loc.Instance["S.Window"]),
-            new("Shortcuts", Loc.Instance["S.Shortcuts"]),
             new("Common", Loc.Instance["S.Common"]),
             new("Maintain", Loc.Instance["S.Maintain"]),
             new("AppInfo", Loc.Instance["S.AppInfo"]),
@@ -271,21 +270,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         UpdateStatus = Loc.Instance["S.Checking"];
         try
         {
-            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("MikoMiko/1.0.0");
-            var json = await http.GetStringAsync(AppInfo.ReleasesApi);
-            using var doc = System.Text.Json.JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("tag_name", out var tag))
-            {
-                var latest = tag.GetString()?.TrimStart('v') ?? string.Empty;
-                UpdateStatus = latest == AppInfo.Version
-                    ? Loc.Instance["S.UpToDate"]
-                    : $"{Loc.Instance["S.UpdateFound"]}v{latest}";
-            }
-            else
-            {
-                UpdateStatus = Loc.Instance["S.UpToDate"];
-            }
+            var found = await UpdateService.PromptIfAvailableAsync(
+                System.Windows.Application.Current?.MainWindow, Settings, manual: true);
+            UpdateStatus = found ? "已检查到可用更新" : Loc.Instance["S.UpToDate"];
         }
         catch
         {
@@ -472,7 +459,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         var sectionKeys = new[]
         {
-            "S.General", "S.Playback", "S.Cache", "S.Window", "S.Shortcuts", "S.Common",
+            "S.General", "S.Playback", "S.Cache", "S.Window", "S.Common",
             "S.Maintain", "S.AppInfo", "S.About", "S.OpenSource", "S.Disclaimer", "S.Changelog",
         };
         for (var i = 0; i < Sections.Count && i < sectionKeys.Length; i++)

@@ -40,15 +40,14 @@ public sealed partial class ShellViewModel : ObservableObject
         _settingsVm = new SettingsViewModel(settingsService, content);
         _settingsVm.LanguageChanged = RefreshLocalization;
 
-        Navigation.Add(new NavItem("Home", "Nav.Home", "M3.4 10.2 L12 3.6 L20.6 10.2 M5.6 9.2 V20.4 H18.4 V9.2"));
-        Navigation.Add(new NavItem("Video", "Nav.Video", "M3.4 5.2 H20.6 V18.8 H3.4 Z M8.8 8.6 L16.4 12 L8.8 15.4 Z"));
-        Navigation.Add(new NavItem("Moment", "Nav.Moment", "M12 3.2 C12.9 7.9 16.1 11.1 20.8 12 C16.1 12.9 12.9 16.1 12 20.8 C11.1 16.1 7.9 12.9 3.2 12 C7.9 11.1 11.1 7.9 12 3.2 Z"));
-        Navigation.Add(new NavItem("Mine", "Nav.Mine", "M4.4 7.4 H19.6 V17.6 H4.4 Z M9 4.4 L11.6 7.4 M15 4.4 L12.4 7.4"));
-        FooterNavigation.Add(new NavItem("Settings", "Nav.Settings",
-            "M12 7.7 A4.3 4.3 0 1 0 12 16.3 A4.3 4.3 0 1 0 12 7.7 M17.5 12 H19.6 M12 6.5 V4.4 M6.5 12 H4.4 M12 17.5 V19.6 M16 8 L17.5 6.5 M8 8 L6.5 6.5 M16 16 L17.5 17.5 M8 16 L6.5 17.5"));
+        Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
+        Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
+        Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
+        Navigation.Add(new NavItem("Mine", "Nav.Mine", "mine"));
+        FooterNavigation.Add(new NavItem("Settings", "Nav.Settings", "settings"));
 
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
-        HomeTabs.Add(new TabOption("Latest", "Home.Latest"));
+        HomeTabs.Add(new TabOption("Official", "Home.Official"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -96,7 +95,8 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (tab is null) return;
         foreach (var option in HomeTabs) option.IsSelected = option == tab;
-        await _home.LoadAsync(tab.Key == "Latest");
+        if (tab.Key == "Official") await _home.LoadOfficialAsync();
+        else await _home.LoadAsync(false);
         Navigate("Home");
     }
 
@@ -104,10 +104,17 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_currentKey == key)
         {
-            if (key == "Home") _ = _home.LoadAsync(_home.IsLatest);
+            if (key == "Home")
+            {
+                if (IsReaderOpen) CloseReader();
+                _ = _home.IsOfficialTab ? _home.LoadOfficialAsync() : _home.LoadAsync(_home.IsLatest);
+            }
             if (key == "Video") _ = _video.RefreshAsync();
             return;
         }
+
+        // 首页打开帖子后切到视频 / 动态等页面时，自动关闭阅读器
+        if (IsReaderOpen) CloseReader();
 
         // 离开视频页时暂停播放与特效，避免在别的页面继续出声
         if (_currentKey == "Video") VideoPage?.PausePlayback();
@@ -173,7 +180,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        var start = _settings.StartOnHome || !_settings.RememberLastPage ? "Home" : _settings.LastPage;
+        var start = _settings.StartOnVideo
+            ? "Video"
+            : _settings.StartOnHome || !_settings.RememberLastPage ? "Home" : _settings.LastPage;
         if (Navigation.Concat(FooterNavigation).All(i => i.Key != start)) start = "Home";
         Navigate(start, pushHistory: false);
         await EnsureLoadedAsync(start);
