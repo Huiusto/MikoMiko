@@ -8,7 +8,9 @@ public sealed class PostDetail
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
+    public string AuthorUid { get; set; } = string.Empty;
     public string AuthorAvatar { get; set; } = string.Empty;
+    public bool IsFollowingAuthor { get; set; }
     public string ForumName { get; set; } = string.Empty;
     public string TimeText { get; set; } = string.Empty;
     public string WebUrl { get; set; } = string.Empty;
@@ -76,8 +78,13 @@ public sealed class CommentItem : System.ComponentModel.INotifyPropertyChanged
     private bool _isDisliked;
     private string _likeText = "0";
     private string _dislikeText = "0";
+    private bool _isReplyInputOpen;
+    private string _replyInput = string.Empty;
+    private bool _isPostingReply;
+    private string _inlineStatus = string.Empty;
 
     public string ReplyId { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Avatar { get; set; } = string.Empty;
     public int Level { get; set; }
@@ -86,12 +93,60 @@ public sealed class CommentItem : System.ComponentModel.INotifyPropertyChanged
     public string TimeText { get; set; } = string.Empty;
     public bool IsAuthor { get; set; }
 
+    /// <summary>评论里附带的图片（米游社 structured_content / images）。</summary>
+    public List<string> Images { get; set; } = new();
+    public bool HasImages => Images.Count > 0;
+
     /// <summary>回复到根楼（点击楼中楼的回复时仍挂到一级评论，保证对方能收到通知）。</summary>
     public string RootReplyId { get; set; } = string.Empty;
 
     /// <summary>楼中楼显示「回复 @某人：」。</summary>
     public string ReplyToName { get; set; } = string.Empty;
     public bool HasReplyTo => !string.IsNullOrWhiteSpace(ReplyToName);
+
+    public bool IsReplyInputOpen
+    {
+        get => _isReplyInputOpen;
+        set
+        {
+            if (_isReplyInputOpen == value) return;
+            _isReplyInputOpen = value;
+            OnPropertyChanged(nameof(IsReplyInputOpen));
+        }
+    }
+
+    public string ReplyInput
+    {
+        get => _replyInput;
+        set
+        {
+            if (_replyInput == value) return;
+            _replyInput = value;
+            OnPropertyChanged(nameof(ReplyInput));
+        }
+    }
+
+    public bool IsPostingReply
+    {
+        get => _isPostingReply;
+        set
+        {
+            if (_isPostingReply == value) return;
+            _isPostingReply = value;
+            OnPropertyChanged(nameof(IsPostingReply));
+        }
+    }
+
+    public string InlineStatus
+    {
+        get => _inlineStatus;
+        set
+        {
+            if (_inlineStatus == value) return;
+            _inlineStatus = value;
+            OnPropertyChanged(nameof(InlineStatus));
+        }
+    }
 
     public string LikeText
     {

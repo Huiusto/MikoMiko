@@ -310,6 +310,112 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- 我的发布 -->
+                    <StackPanel Orientation="Horizontal" Margin="4,20,0,12">
+                        <TextBlock Text="我的发布" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="你自己发布过的内容" FontSize="12"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,2,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding MyPosts}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                        HorizontalContentAlignment="Stretch" Margin="0,0,12,12"
+                                        Command="{Binding DataContext.OpenMyPostCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10" ClipToBounds="True">
+                                        <StackPanel>
+                                            <Grid Height="118">
+                                                <Image controls:AsyncImage.Url="{Binding Cover}" Stretch="UniformToFill" />
+                                                <Border Height="26" VerticalAlignment="Bottom" Background="{DynamicResource Brush.CoverMask}" />
+                                            </Grid>
+                                            <TextBlock Text="{Binding Title}" FontSize="12.5" Margin="10,9,10,5"
+                                                       TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding MetaText}" FontSize="10.5" Margin="10,0,10,10"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}" />
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="还没有发布过内容" Foreground="{DynamicResource Brush.TextTertiary}"
+                               FontSize="12.5" Margin="4,0,0,0"
+                               Visibility="{Binding HasNoMyPosts, Converter={StaticResource BoolToVis}}" />
+
+                    <!-- 我的评论 -->
+                    <StackPanel Orientation="Horizontal" Margin="4,14,0,12">
+                        <TextBlock Text="我的评论" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="你自己发布过的评论" FontSize="12"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,2,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding MyReplies}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                        HorizontalContentAlignment="Stretch" Margin="0,0,12,12"
+                                        Command="{Binding DataContext.OpenMyReplyCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10" Padding="13,11">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Content}" FontSize="12.5" LineHeight="19"
+                                                       TextWrapping="Wrap" MaxHeight="58" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding PostTitle}" FontSize="10.5" Margin="0,7,0,0"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding TimeText, StringFormat=发布 {0}}" FontSize="10.5"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="还没有发布过评论" Foreground="{DynamicResource Brush.TextTertiary}"
+                               FontSize="12.5" Margin="4,0,0,0"
+                               Visibility="{Binding HasNoReplies, Converter={StaticResource BoolToVis}}" />
+
+                    <!-- 我的合集 -->
+                    <StackPanel Orientation="Horizontal" Margin="4,14,0,12">
+                        <TextBlock Text="我的合集" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="你自己创建过的合集" FontSize="12"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,2,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding MyCollections}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10" Margin="0,0,12,12"
+                                        ClipToBounds="True">
+                                    <StackPanel>
+                                        <Grid Height="108">
+                                            <Image controls:AsyncImage.Url="{Binding Cover}" Stretch="UniformToFill" />
+                                            <Border Height="28" VerticalAlignment="Bottom" Background="{DynamicResource Brush.CoverMask}" />
+                                        </Grid>
+                                        <TextBlock Text="{Binding Title}" FontSize="12.5" Margin="10,8,10,4"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding CountText}" FontSize="10.5" Margin="10,0,10,10"
+                                                   Foreground="{DynamicResource Brush.TextTertiary}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="还没有创建过合集" Foreground="{DynamicResource Brush.TextTertiary}"
+                               FontSize="12.5" Margin="4,0,0,0"
+                               Visibility="{Binding HasNoCollections, Converter={StaticResource BoolToVis}}" />
+
                     <!-- 我的收藏 -->
                     <StackPanel Orientation="Horizontal" Margin="4,20,0,12">
                         <TextBlock Text="我的收藏" FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -326,8 +432,11 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10" Margin="0,0,12,12"
-                                        ClipToBounds="True">
+                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                        HorizontalContentAlignment="Stretch" Margin="0,0,12,12"
+                                        Command="{Binding DataContext.OpenMyPostCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10" ClipToBounds="True">
                                     <StackPanel>
                                         <Grid Height="118">
                                             <Image controls:AsyncImage.Url="{Binding Cover}" Stretch="UniformToFill" />
@@ -338,7 +447,8 @@
                                         <TextBlock Text="{Binding Title}" FontSize="12.5" Margin="10,9,10,10"
                                                    TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
-                                </Border>
+                                    </Border>
+                                </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -350,9 +460,72 @@
             </StackPanel>
         </ScrollViewer>
 
+        <!-- 更换背景：选图后自己选择要显示的区域（软件内裁剪，不新开窗口） -->
+        <Grid Background="#CC000000" Visibility="{Binding IsCropOpen, Converter={StaticResource BoolToVis}}">
+            <Border Width="760" Background="{DynamicResource Brush.WindowBg}" CornerRadius="14" Padding="24,20">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Text="选择背景显示区域" FontSize="18" FontWeight="SemiBold" />
+                        <Button HorizontalAlignment="Right" Style="{StaticResource LinkButton}"
+                                Content="关闭" Command="{Binding CancelBackgroundCropCommand}" />
+                    </Grid>
+                    <TextBlock Text="拖动下方滑块，决定这张图在主页横幅里显示哪一块；确认后按所选区域裁切保存。"
+                               FontSize="11.5" Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,6,0,14"
+                               TextWrapping="Wrap" />
+
+                    <Border Height="300" CornerRadius="12" ClipToBounds="True" Background="#101418">
+                        <Image Source="{Binding CropPreview}" Stretch="UniformToFill" />
+                    </Border>
+
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="54" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="44" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="34" />
+                            <RowDefinition Height="34" />
+                            <RowDefinition Height="34" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="水平位置" FontSize="11.5" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.TextSecondary}" />
+                        <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding CropOffsetX}"
+                                VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="{Binding CropOffsetX, StringFormat={}{0:P0}}"
+                                   FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" />
+
+                        <TextBlock Grid.Row="1" Text="垂直位置" FontSize="11.5" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.TextSecondary}" />
+                        <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding CropOffsetY}"
+                                VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding CropOffsetY, StringFormat={}{0:P0}}"
+                                   FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" />
+
+                        <TextBlock Grid.Row="2" Text="缩放区域" FontSize="11.5" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.TextSecondary}" />
+                        <Slider Grid.Row="2" Grid.Column="1" Minimum="0.35" Maximum="1" Value="{Binding CropZoom}"
+                                VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding CropZoom, StringFormat={}{0:P0}}"
+                                   FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" />
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                        <Button Content="取消" Style="{StaticResource SoftButton}" Height="36" Padding="20,0"
+                                Command="{Binding CancelBackgroundCropCommand}" />
+                        <Button Content="使用此区域" Style="{StaticResource AccentButton}" Height="36" Padding="24,0"
+                                Margin="10,0,0,0" Command="{Binding ConfirmBackgroundCropCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
         <!-- 游戏角色详情（点击角色卡打开） -->
         <Grid Background="#CC000000" Visibility="{Binding IsGameDetailOpen, Converter={StaticResource BoolToVis}}">
-            <Border Width="780" MaxHeight="660" Background="{DynamicResource Brush.WindowBg}" CornerRadius="14"
+            <Border Width="860" MaxHeight="700" Background="{DynamicResource Brush.WindowBg}" CornerRadius="14"
                     Padding="24,20">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -363,7 +536,7 @@
 
                     <Grid Grid.Row="0">
                         <StackPanel Orientation="Horizontal">
-                            <Border Width="6" Height="34" CornerRadius="3" Background="{Binding SelectedGame.Accent}" />
+                            <Border Width="6" Height="44" CornerRadius="3" Background="{Binding SelectedGame.Accent}" />
                             <StackPanel Margin="12,0,0,0">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{Binding SelectedGame.GameName}" FontSize="19" FontWeight="SemiBold" />
@@ -372,9 +545,18 @@
                                         <TextBlock Text="{Binding SelectedGame.Badge}" FontSize="10"
                                                    Foreground="{DynamicResource Brush.TextTertiary}" />
                                     </Border>
+                                    <Border Background="{DynamicResource Brush.AccentSoft}" CornerRadius="4" Padding="7,1"
+                                            Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding GameLevelText}" FontSize="10.5"
+                                                   Foreground="{DynamicResource Brush.Accent}" />
+                                    </Border>
                                 </StackPanel>
-                                <TextBlock Text="{Binding SelectedGame.RoleName}" FontSize="12"
-                                           Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,4,0,0" />
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                    <TextBlock Text="{Binding GameRoleName}" FontSize="12.5" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Brush.TextSecondary}" />
+                                    <TextBlock Text="{Binding GameUidText}" FontSize="11.5" Margin="12,0,0,0"
+                                               Foreground="{DynamicResource Brush.TextTertiary}" />
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                         <Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="32" Height="32"
@@ -396,28 +578,45 @@
                         </Button>
                     </Grid>
 
-                    <Border Grid.Row="1" Background="{DynamicResource Brush.Surface}" CornerRadius="10"
-                            Padding="16,12" Margin="0,16,0,16">
-                        <UniformGrid Columns="4">
-                            <StackPanel>
-                                <TextBlock Text="UID" FontSize="11" Foreground="{DynamicResource Brush.TextTertiary}" />
-                                <TextBlock Text="{Binding SelectedGame.Uid}" FontSize="13" FontWeight="SemiBold" Margin="0,4,0,0" />
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="服务器" FontSize="11" Foreground="{DynamicResource Brush.TextTertiary}" />
-                                <TextBlock Text="{Binding SelectedGame.Server}" FontSize="13" FontWeight="SemiBold" Margin="0,4,0,0" />
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="{Binding SelectedGame.LevelLabel}" FontSize="11"
-                                           Foreground="{DynamicResource Brush.TextTertiary}" />
-                                <TextBlock Text="{Binding SelectedGame.Level}" FontSize="13" FontWeight="SemiBold" Margin="0,4,0,0" />
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="{Binding SelectedGame.ExtraLabel}" FontSize="11"
-                                           Foreground="{DynamicResource Brush.TextTertiary}" />
-                                <TextBlock Text="{Binding SelectedGame.Extra}" FontSize="13" FontWeight="SemiBold" Margin="0,4,0,0" />
-                            </StackPanel>
-                        </UniformGrid>
+                    <Border Grid.Row="1" Background="{DynamicResource Brush.Surface}" CornerRadius="12"
+                            Padding="14,12" Margin="0,14,0,14">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <TextBlock Text="战绩详情" FontSize="13.5" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding GameSummary}" FontSize="10.5"
+                                               Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
+                                    <Border Background="{DynamicResource Brush.AccentSoft}" CornerRadius="4" Padding="6,1"
+                                            Margin="8,0,0,0" Visibility="{Binding GameDataPublic, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="公开" FontSize="10" Foreground="{DynamicResource Brush.Accent}" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                            <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding GameStats}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource Brush.Card}" CornerRadius="9"
+                                                    Padding="11,10" Margin="0,0,9,9">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Label}" FontSize="10.5"
+                                                               Foreground="{DynamicResource Brush.TextTertiary}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Value}" FontSize="18" FontWeight="SemiBold"
+                                                               Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                            <TextBlock Text="官方战绩卡片只返回公开统计；未公开的宝箱、神瞳等扩展数据不会伪造显示。"
+                                       FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                       Margin="0,8,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
                     </Border>
 
                     <Grid Grid.Row="2">

@@ -36,8 +36,8 @@ public sealed partial class ShellViewModel : ObservableObject
         // 正文中的链接统一交给软件内浏览器 / 阅读器处理，绝不打开系统浏览器
         Controls.LinkTextBlock.LinkRequested = OpenLink;
 
-        _home = new HomeViewModel(content, OpenItem);
-        _video = new VideoViewModel(content);
+        _home = new HomeViewModel(content, OpenItem, user => OpenUserProfile(user.Uid));
+        _video = new VideoViewModel(content, OpenUserProfile);
         _moment = new MomentViewModel(content, OpenMoment);
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
@@ -72,6 +72,10 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _isReaderOpen;
     [ObservableProperty] private Views.VideoView? _videoPage;
 
+    /// <summary>其他用户的「我的」主页覆盖面（不新开窗口）。</summary>
+    [ObservableProperty] private Views.UserProfileView? _profileView;
+    [ObservableProperty] private bool _isProfileOpen;
+
     /// <summary>软件内网页视图（正文里的外部链接），不打开系统浏览器。</summary>
     [ObservableProperty] private Views.BrowserView? _browserView;
     [ObservableProperty] private bool _isBrowserOpen;
@@ -101,6 +105,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private async Task SelectTab(TabOption? tab)
     {
         if (tab is null) return;
+        // 在推荐 / 帖子之间切换时，任何已打开的帖子阅读器都先自动关闭。
+        if (IsReaderOpen) CloseReader();
+        CloseProfile();
         foreach (var option in HomeTabs) option.IsSelected = option == tab;
         if (tab.Key == "Posts")
         {
@@ -120,6 +127,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (_currentKey == key)
         {
+            CloseProfile();
             if (key == "Home")
             {
                 if (IsReaderOpen) CloseReader();
@@ -133,6 +141,7 @@ public sealed partial class ShellViewModel : ObservableObject
         // 首页打开帖子后切到视频 / 动态等页面时，自动关闭阅读器与浏览器
         if (IsReaderOpen) CloseReader();
         if (IsBrowserOpen) CloseBrowser();
+        CloseProfile();
 
         // 离开视频页时暂停播放与特效，避免在别的页面继续出声
         if (_currentKey == "Video") VideoPage?.PausePlayback();
@@ -254,12 +263,27 @@ public sealed partial class ShellViewModel : ObservableObject
         VideoPage?.PausePlayback();
         CloseReader();
         CloseBrowser();
+        CloseProfile();
 
         var reader = new PostReaderViewModel(_content, _settings, item);
         reader.CloseRequested = CloseReader;
+        reader.OpenAuthorProfile = OpenUserProfile;
         ReaderView = new Views.PostReaderView(reader);
         IsReaderOpen = true;
         _ = reader.LoadAsync();
+    }
+
+    /// <summary>打开其他用户主页（软件内覆盖层，不新开窗口）。</summary>
+    public void OpenUserProfile(string uid)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return;
+        VideoPage?.PausePlayback();
+        CloseProfile();
+        var vm = new UserProfileViewModel(_content, uid, OpenItem);
+        vm.CloseRequested = CloseProfile;
+        ProfileView = new Views.UserProfileView(vm);
+        IsProfileOpen = true;
+        _ = vm.LoadAsync();
     }
 
     private void OpenMoment(MomentItem moment)
@@ -321,6 +345,15 @@ public sealed partial class ShellViewModel : ObservableObject
         if (ReaderView is null) return;
         ReaderView = null;
         IsReaderOpen = false;
+    }
+
+    /// <summary>收起用户主页覆盖层。</summary>
+    [RelayCommand]
+    public void CloseProfile()
+    {
+        if (ProfileView is null) return;
+        ProfileView = null;
+        IsProfileOpen = false;
     }
 
     /// <summary>开发期截图用：打开首页第一条内容的阅读器。</summary>

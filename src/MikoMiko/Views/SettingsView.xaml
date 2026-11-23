@@ -119,10 +119,27 @@
                     </Grid>
                 </Border>
 
-                <StackPanel x:Name="SectionsPanel">
+                <Grid x:Name="SectionsPanel">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
                 <!-- 常规设置 -->
-                <Border Style="{StaticResource SectionCard}" Margin="0,14,0,14" Tag="General">
+                <Border Grid.Row="0" Grid.ColumnSpan="6" Style="{StaticResource SectionCard}" Margin="0,14,0,14" Tag="General">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.General], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -253,7 +270,8 @@
                 </Border>
 
                 <!-- 播放选项 -->
-                <Border Style="{StaticResource SectionCard}" Tag="Playback">
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Height="320"
+                        Style="{StaticResource SectionCard}" Tag="Playback">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Playback], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -287,7 +305,8 @@
                 </Border>
 
                 <!-- 缓存管理 -->
-                <Border Style="{StaticResource SectionCard}" Tag="Cache">
+                <Border Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Height="320"
+                        Style="{StaticResource SectionCard}" Tag="Cache">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Cache], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -312,7 +331,8 @@
                 </Border>
 
                 <!-- 窗口设置 -->
-                <Border Style="{StaticResource SectionCard}" Tag="Window">
+                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Height="320"
+                        Style="{StaticResource SectionCard}" Tag="Window">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Window], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -343,7 +363,8 @@
                 </Border>
 
                 <!-- 通用设置 -->
-                <Border Style="{StaticResource SectionCard}" Tag="Common">
+                <Border Grid.Row="1" Grid.Column="3" Grid.ColumnSpan="3" Height="320"
+                        Style="{StaticResource SectionCard}" Tag="Common">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Common], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -356,7 +377,8 @@
                 </Border>
 
                 <!-- 应用维护 -->
-                <Border Style="{StaticResource SectionCard}" Tag="Maintain">
+                <Border Grid.Row="2" Grid.Column="4" Grid.ColumnSpan="2" Height="320"
+                        Style="{StaticResource SectionCard}" Tag="Maintain">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Maintain], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -373,12 +395,17 @@
                         </StackPanel>
 
                         <TextBlock Text="{Binding [S.MaintainHint], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource RowHint}" Margin="0,12,0,0" />
+                                   Style="{StaticResource RowHint}" Margin="0,12,0,0" TextWrapping="Wrap" />
+
+                        <Button Content="{Binding [S.Changelog], Source={x:Static loc:Loc.Instance}}"
+                                Style="{StaticResource SoftButton}" Height="32" Padding="14,0"
+                                HorizontalAlignment="Left" Margin="0,12,0,0"
+                                Command="{Binding ToggleChangelogCommand}" />
                     </StackPanel>
                 </Border>
 
                 <!-- 应用信息 -->
-                <Border Style="{StaticResource SectionCard}" Tag="AppInfo">
+                <Border Grid.Row="3" Grid.ColumnSpan="6" Style="{StaticResource SectionCard}" Tag="AppInfo">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.AppInfo], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -427,7 +454,7 @@
                 </Border>
 
                 <!-- 关于 -->
-                <Border Style="{StaticResource SectionCard}" Tag="About">
+                <Border Grid.Row="4" Grid.ColumnSpan="6" Style="{StaticResource SectionCard}" Tag="About">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.About], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -462,7 +489,7 @@
 
 
                 <!-- 免责说明 -->
-                <Border Style="{StaticResource SectionCard}" Tag="Disclaimer">
+                <Border Grid.Row="5" Grid.ColumnSpan="6" Style="{StaticResource SectionCard}" Tag="Disclaimer">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Disclaimer], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -472,40 +499,9 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 更新日志（抽屉式） -->
-                <Border Style="{StaticResource SectionCard}" Tag="Changelog">
-                    <StackPanel>
-                        <Button Command="{Binding ToggleChangelogCommand}" Background="Transparent"
-                                BorderThickness="0" Cursor="Hand" HorizontalContentAlignment="Stretch"
-                                Focusable="False" Padding="0">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding [S.Changelog], Source={x:Static loc:Loc.Instance}}"
-                                               FontSize="15.5" FontWeight="SemiBold" />
-                                    <TextBlock Text="  (｡･ω･｡)ﾉ♡" FontSize="12"
-                                               Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <TextBlock Grid.Column="1" Text="展开 / 收起" FontSize="11.5"
-                                           Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
-                            </Grid>
-                        </Button>
+                <!-- 更新日志入口已放入「应用维护」，点击打开右侧抽屉弹窗 -->
 
-                        <Border Margin="0,14,0,0" Visibility="{Binding IsChangelogOpen, Converter={StaticResource BoolToVis}}">
-                            <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto">
-                                <TextBlock Text="{Binding ChangelogText}" FontSize="12.5"
-                                           Foreground="{DynamicResource Brush.TextSecondary}"
-                                           TextWrapping="Wrap" LineHeight="23" MaxWidth="640"
-                                           HorizontalAlignment="Left" />
-                            </ScrollViewer>
-                        </Border>
-                    </StackPanel>
-                </Border>
-
-            </StackPanel>
+            </Grid>
             </StackPanel>
         </ScrollViewer>
 
@@ -525,5 +521,30 @@
                 </ItemsControl>
             </StackPanel>
         </Border>
+        <!-- 更新日志抽屉：点击任何弹窗外位置关闭 -->
+        <Grid x:Name="ChangelogOverlay" Grid.ColumnSpan="2" Background="#66000000"
+              Visibility="{Binding IsChangelogOpen, Converter={StaticResource BoolToVis}}"
+              MouseLeftButtonDown="ChangelogOverlay_Click">
+            <Border Width="430" HorizontalAlignment="Right" Background="{DynamicResource Brush.WindowBg}"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1,0,0,0" Padding="20,18">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" Margin="0,0,0,14">
+                        <TextBlock Text="{Binding [S.Changelog], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="17" FontWeight="SemiBold" />
+                        <Button HorizontalAlignment="Right" Style="{StaticResource LinkButton}" Content="关闭"
+                                Command="{Binding ToggleChangelogCommand}" />
+                    </Grid>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <TextBlock Text="{Binding ChangelogText}" FontSize="12.5"
+                                   Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" LineHeight="23" />
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

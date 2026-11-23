@@ -81,7 +81,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="Bd" Background="Transparent" CornerRadius="10" Margin="9,3" Padding="0,8">
+                    <Border x:Name="Bd" Background="Transparent" CornerRadius="10" Margin="8,2" Padding="0,5">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                             <Grid Width="36" Height="36" HorizontalAlignment="Center">
                                 <Image x:Name="IconDefault" Source="{Binding IconDefault}"
@@ -96,7 +96,7 @@
                             </Grid>
                             <TextBlock x:Name="Label" Text="{Binding Title}" FontSize="12"
                                        Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center"
-                                       Margin="0,5,0,0" />
+                                       Margin="0,3,0,0" />
                         </StackPanel>
                     </Border>
                     <ControlTemplate.Triggers>

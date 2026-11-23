@@ -105,6 +105,10 @@ public partial class VideoView : UserControl
         if (FindAncestor<Slider>(e.OriginalSource as DependencyObject) is not null) return;
         if (FindAncestor<Thumb>(e.OriginalSource as DependencyObject) is not null) return;
         if (FindAncestor<System.Windows.Controls.TextBox>(e.OriginalSource as DependencyObject) is not null) return;
+        // 评论区 / 滚动区 / 列表项内的任何点击都不控制视频播放
+        if (FindAncestor<ScrollViewer>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindAncestor<System.Windows.Controls.ItemsControl>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindAncestor<System.Windows.Controls.Primitives.Selector>(e.OriginalSource as DependencyObject) is not null) return;
         TogglePlay();
     }
 
@@ -318,7 +322,7 @@ public partial class VideoView : UserControl
     private void OnMediaOpened(object sender, RoutedEventArgs e)
     {
         _retriedRemote = false;
-        MediaLog($"opened duration={Media.NaturalDuration.TimeSpan} size={Media.NaturalVideoWidth}x{Media.NaturalVideoHeight}");
+        MediaLog($"opened duration={(Media.NaturalDuration.HasTimeSpan ? Media.NaturalDuration.TimeSpan.ToString() : "auto")} size={Media.NaturalVideoWidth}x{Media.NaturalVideoHeight}");
         CoverHost.Visibility = Visibility.Collapsed;
         _vm.StatusText = string.Empty;
         if (Media.NaturalDuration.HasTimeSpan)
@@ -416,7 +420,7 @@ public partial class VideoView : UserControl
         if (!_updatePositionLogged && Media.Position.TotalMilliseconds > 0)
         {
             _updatePositionLogged = true;
-            MediaLog($"progress pos={Media.Position} duration={Media.NaturalDuration.TimeSpan} w={Media.NaturalVideoWidth} h={Media.NaturalVideoHeight}");
+            MediaLog($"progress pos={Media.Position} duration={(Media.NaturalDuration.HasTimeSpan ? Media.NaturalDuration.TimeSpan.ToString() : "auto")} w={Media.NaturalVideoWidth} h={Media.NaturalVideoHeight}");
         }
         _updatingSlider = true;
         ProgressSlider.Value = Math.Clamp(Media.Position.TotalSeconds, 0, ProgressSlider.Maximum);

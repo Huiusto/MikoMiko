@@ -64,15 +64,19 @@
                 </Grid>
 
                 <!-- 播放时常驻的信息层：左下 UP 信息 + 标题 -->
-                <StackPanel VerticalAlignment="Bottom" Margin="24,0,0,70" HorizontalAlignment="Left" IsHitTestVisible="False">
+                <StackPanel VerticalAlignment="Bottom" Margin="24,0,0,70" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
-                            <Image controls:AsyncImage.Url="{Binding Selected.AuthorAvatar}" Stretch="UniformToFill" />
-                        </Border>
+                        <Button Style="{StaticResource LinkButton}" Padding="0" Command="{Binding OpenAuthorCommand}" Cursor="Hand">
+                            <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                                <Image controls:AsyncImage.Url="{Binding Selected.AuthorAvatar}" Stretch="UniformToFill" />
+                            </Border>
+                        </Button>
                         <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Selected.Author}" Foreground="White" FontSize="14"
-                                           FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <Button Style="{StaticResource LinkButton}" Padding="0" Command="{Binding OpenAuthorCommand}" Cursor="Hand">
+                                    <TextBlock Text="{Binding Selected.Author}" Foreground="White" FontSize="14"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </Button>
                                 <Button Command="{Binding FollowAuthorCommand}" Cursor="Hand" Margin="10,0,0,0"
                                         Background="{DynamicResource Brush.Accent}" BorderThickness="0"
                                         Padding="9,3" VerticalAlignment="Center">
@@ -318,11 +322,24 @@
                         <ItemsControl ItemsSource="{Binding QualityOptions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding}" Height="30" Padding="10,0" Cursor="Hand"
-                                            HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0"
-                                            Foreground="#E8FFFFFF" FontSize="12"
+                                    <Button Height="30" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0"
+                                            HorizontalContentAlignment="Stretch"
                                             Command="{Binding DataContext.PickQualityCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}" />
+                                            CommandParameter="{Binding}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="{x:Type Button}">
+                                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="10,0">
+                                                    <TextBlock Text="{Binding}" Foreground="#FFFFFFFF" FontSize="12"
+                                                               VerticalAlignment="Center" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#334EA4DD" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -338,11 +355,24 @@
                         <ItemsControl ItemsSource="{Binding SpeedOptions}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Content="{Binding}" Height="30" Padding="10,0" Cursor="Hand"
-                                            HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0"
-                                            Foreground="#E8FFFFFF" FontSize="12"
+                                    <Button Height="30" Padding="0" Cursor="Hand" Background="Transparent" BorderThickness="0"
+                                            HorizontalContentAlignment="Stretch"
                                             Command="{Binding DataContext.PickSpeedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}" />
+                                            CommandParameter="{Binding}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="{x:Type Button}">
+                                                <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="10,0">
+                                                    <TextBlock Text="{Binding}" Foreground="#FFFFFFFF" FontSize="12"
+                                                               VerticalAlignment="Center" />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bd" Property="Background" Value="#334EA4DD" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                    </Button>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -428,7 +458,7 @@
                                                             </TextBlock>
                                                         </Button>
                                                         <Button Content="回复" Style="{StaticResource LinkButton}" Height="18" Padding="0"
-                                                                Margin="12,0,0,0" FontSize="10.5" Foreground="#8FD0FF"
+                                                                Margin="12,0,0,0" FontSize="10.5" Foreground="#99FFFFFF"
                                                                 Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                                 CommandParameter="{Binding}" />
                                                     </StackPanel>
@@ -441,23 +471,20 @@
                                                         <Border BorderBrush="#33FFFFFF" BorderThickness="1,0,0,0"
                                                                 Padding="8,0,0,0" Margin="0,0,0,7">
                                                             <StackPanel>
-                                                                <TextBlock Text="{Binding ReplyToName, StringFormat=回复 @{0}：}"
-                                                                           Foreground="#8FD0FF" FontSize="10.5" Margin="0,0,0,3"
-                                                                           Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}" />
                                                                 <StackPanel Orientation="Horizontal">
                                                                     <TextBlock Text="{Binding Author}" Foreground="#FF9AC8"
                                                                                FontSize="11" FontWeight="SemiBold" />
                                                                     <TextBlock Text="{Binding TimeText}" Foreground="#66FFFFFF"
                                                                                FontSize="9.5" Margin="7,1,0,0" />
                                                                 </StackPanel>
-                                                                <TextBlock FontSize="10.5" Foreground="#80FFFFFF" Margin="0,3,0,0"
+                                                                <TextBlock FontSize="10.5" Foreground="#99FFFFFF" Margin="0,3,0,0"
                                                                            Visibility="{Binding HasReplyTo, Converter={StaticResource BoolToVis}}">
                                                                     <Run Text="回复 @" /><Run Text="{Binding ReplyToName, Mode=OneWay}" /><Run Text="：" />
                                                                 </TextBlock>
                                                                 <TextBlock Text="{Binding Content}" Foreground="#DDFFFFFF"
                                                                            FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
                                                                 <Button Content="回复" Style="{StaticResource LinkButton}" Height="18"
-                                                                        Padding="0" Margin="0,4,0,0" FontSize="10" Foreground="#8FD0FF"
+                                                                        Padding="0" Margin="0,4,0,0" FontSize="10" Foreground="#99FFFFFF"
                                                                         HorizontalAlignment="Left"
                                                                         Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                                         CommandParameter="{Binding}" />
@@ -479,7 +506,7 @@
                                     HorizontalAlignment="Left"
                                     Visibility="{Binding HasReplyTarget, Converter={StaticResource BoolToVis}}">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding ReplyTargetName, StringFormat=回复 @{0}}" Foreground="#8FD0FF"
+                                    <TextBlock Text="{Binding ReplyTargetName, StringFormat=回复 @{0}}" Foreground="#99FFFFFF"
                                                FontSize="10.5" VerticalAlignment="Center" />
                                     <Button Content="取消" Style="{StaticResource LinkButton}" Height="16" Padding="0"
                                             Margin="8,0,0,0" FontSize="10" Foreground="#CCFFFFFF"
@@ -491,13 +518,23 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBox Text="{Binding CommentInput, UpdateSourceTrigger=PropertyChanged}"
-                                         MinHeight="64" MaxHeight="110" Background="#26FFFFFF" Foreground="White"
-                                         BorderThickness="0" AcceptsReturn="True" TextWrapping="Wrap"
-                                         VerticalContentAlignment="Top" Padding="10,7" FontSize="12" />
-                                <Button Grid.Column="1" Content="发送" Height="64" Padding="16,0" Margin="8,0,0,0"
+                                <Border CornerRadius="16" Background="#26FFFFFF" Padding="10,4" VerticalAlignment="Center">
+                                    <TextBox Text="{Binding CommentInput, UpdateSourceTrigger=PropertyChanged}"
+                                             Height="40" MinHeight="36" MaxHeight="80" Background="Transparent" Foreground="White"
+                                             BorderThickness="0" AcceptsReturn="True" TextWrapping="Wrap"
+                                             VerticalContentAlignment="Center" Padding="0" FontSize="12" />
+                                </Border>
+                                <Button Grid.Column="1" Content="发送" Height="40" Width="62" Padding="0" Margin="8,0,0,0"
                                         Background="#4EA4DD" Foreground="White" BorderThickness="0" Cursor="Hand"
-                                        Command="{Binding SendCommentCommand}" />
+                                        Command="{Binding SendCommentCommand}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="16">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
                             </Grid>
                         </StackPanel>
                     </Grid>

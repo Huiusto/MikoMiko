@@ -15,7 +15,12 @@ public sealed class UserProfile
     public string Uid { get; set; } = string.Empty;
     public string IpRegion { get; set; } = "未知";
     public string Posts { get; set; } = "0";
+    public string Certification { get; set; } = string.Empty;
+    public bool IsFollowing { get; set; }
 
-    public string LevelText => $"Lv.{Level}";
+    public bool HasIntroduce => !string.IsNullOrWhiteSpace(Signature);
+    public bool HasCertification => !string.IsNullOrWhiteSpace(Certification);
+
+    public string LevelText => Level > 0 ? $"Lv.{Level}" : string.Empty;
     public string IpText => string.IsNullOrWhiteSpace(IpRegion) ? "IP 未知" : $"IP {IpRegion}";
 }

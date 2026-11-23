@@ -13,6 +13,7 @@ public sealed partial class HomeViewModel : ObservableObject
 
     private readonly ContentService _content;
     private readonly Action<FeedItem> _openItem;
+    private readonly Action<SearchUser>? _openUser;
     private readonly HashSet<string> _seen = new();
     private readonly List<FeedItem> _feed = new();
 
@@ -21,10 +22,11 @@ public sealed partial class HomeViewModel : ObservableObject
     private bool _suppressFilterLoad;
     private int _forumRequest;
 
-    public HomeViewModel(ContentService content, Action<FeedItem> openItem)
+    public HomeViewModel(ContentService content, Action<FeedItem> openItem, Action<SearchUser>? openUser = null)
     {
         _content = content;
         _openItem = openItem;
+        _openUser = openUser;
 
         SortOptions = new ObservableCollection<ChoiceOption>
         {
@@ -40,6 +42,7 @@ public sealed partial class HomeViewModel : ObservableObject
     public ObservableCollection<ForumSection> Sections { get; } = new();
     public ObservableCollection<ForumBoard> Boards { get; } = new();
     public ObservableCollection<ChoiceOption> SortOptions { get; }
+    public ObservableCollection<SearchUser> SearchUsers { get; } = new();
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isLoadingMore;
@@ -60,6 +63,7 @@ public sealed partial class HomeViewModel : ObservableObject
     [ObservableProperty] private bool _isForumReady;
 
     public bool IsRecommendTab => !IsPostsTab;
+    public bool HasSearchUsers => SearchUsers.Count > 0;
 
     partial void OnIsPostsTabChanged(bool value) => OnPropertyChanged(nameof(IsRecommendTab));
 
@@ -100,18 +104,20 @@ public sealed partial class HomeViewModel : ObservableObject
 
     // ---------------------------------------------------------------- 「帖子」分区流
 
-    /// <summary>切到「帖子」页：首次进入时拉取官方分区 / 版块目录。</summary>
+    /// <summary>切到「帖子」页：首次进入拉目录，随后每次点击都强制刷新当前帖子流。</summary>
     public async Task ActivatePostsAsync()
     {
         IsPostsTab = true;
         IsOfficialTab = false;
         IsSearchMode = false;
+        SearchUsers.Clear();
         if (Sections.Count == 0)
         {
             await LoadForumCatalogAsync();
         }
-        else if (Items.Count == 0)
+        else
         {
+            IsForumReady = Sections.Count > 0 && Boards.Count > 0;
             await LoadForumAsync(reset: true);
         }
     }
@@ -248,19 +254,31 @@ public sealed partial class HomeViewModel : ObservableObject
         IsSearchMode = true;
         SearchKeyword = value;
         IsLoading = true;
-        StatusText = "正在米游社全站搜索…";
+        StatusText = "正在米游社搜索用户与内容…";
         try
         {
-            var results = await _content.SearchPostsAsync(value, 30);
+            var usersTask = _content.Api.SearchUsersAsync(value, 12);
+            var resultsTask = _content.SearchPostsAsync(value, 30);
+            await Task.WhenAll(usersTask, resultsTask);
+
+            SearchUsers.Clear();
+            foreach (var user in usersTask.Result) SearchUsers.Add(user);
+            OnPropertyChanged(nameof(HasSearchUsers));
+
             Items.Clear();
-            foreach (var item in results) Items.Add(item);
+            foreach (var item in resultsTask.Result) Items.Add(item);
             IsEmpty = Items.Count == 0;
-            StatusText = Items.Count == 0 ? "没有找到相关内容" : $"米游社搜索结果 · {Items.Count} 条";
+            var userPart = SearchUsers.Count > 0 ? $"用户 {SearchUsers.Count} 位 · " : string.Empty;
+            StatusText = Items.Count == 0 && SearchUsers.Count == 0
+                ? "没有找到相关用户或内容"
+                : $"{userPart}内容 {Items.Count} 条";
             HasMore = false;
         }
         catch
         {
             Items.Clear();
+            SearchUsers.Clear();
+            OnPropertyChanged(nameof(HasSearchUsers));
             IsEmpty = true;
             StatusText = "搜索失败，请稍后重试";
         }
@@ -276,6 +294,8 @@ public sealed partial class HomeViewModel : ObservableObject
         if (!IsSearchMode) return;
         IsSearchMode = false;
         SearchKeyword = string.Empty;
+        SearchUsers.Clear();
+        OnPropertyChanged(nameof(HasSearchUsers));
         Items.Clear();
         foreach (var item in _feed) Items.Add(item);
         IsEmpty = Items.Count == 0;
@@ -337,6 +357,12 @@ public sealed partial class HomeViewModel : ObservableObject
     private void Open(FeedItem? item)
     {
         if (item is not null) _openItem(item);
+    }
+
+    [RelayCommand]
+    private void OpenUser(SearchUser? user)
+    {
+        if (user is not null) _openUser?.Invoke(user);
     }
 
     /// <summary>兼容旧调用：官方聚合页已替换为「帖子」分区流。</summary>

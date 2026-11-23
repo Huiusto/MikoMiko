@@ -164,11 +164,11 @@ public partial class App : Application
                 MainWindow!.Width = Math.Min(1624, workArea.Width);
                 MainWindow.Height = Math.Min(1000, workArea.Height);
                 Log(path, "resized");
-                var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" ? "Home"
-                    : page == "VideoPlay" ? "Video"
-                    : page is "SettingsBottom" or "SettingsChangelog" ? "Settings"
+                var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" or "UserProfile" ? "Home"
+                    : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? "Video"
+                    : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
-                    : page == "MineProfile" ? "Mine"
+                    : page is "MineProfile" or "MineGame" ? "Mine"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
                 if (page == "Posts" && Shell.HomeTabs.Count > 1)
@@ -180,7 +180,7 @@ public partial class App : Application
                 {
                     Shell.MineViewModel.LoginCommand.Execute(null);
                 }
-                if (page == "MineProfile")
+                if (page is "MineProfile" or "MineGame")
                 {
                     // 仅开发期截图：用示例资料检查个人主页版式，不写入设置
                     Shell.MineViewModel.IsLoggedIn = true;
@@ -201,7 +201,7 @@ public partial class App : Application
                     Shell.MineViewModel.Games.Clear();
                     Shell.MineViewModel.Games.Add(new Models.GameAccount
                     {
-                        GameName = "原神", Uid = "176516224", Server = "天空岛", Level = "60",
+                        GameId = 2, GameName = "原神", Uid = "508927439", Server = "世界树", Level = "60",
                         LevelLabel = "冒险等级", Extra = "派蒙", ExtraLabel = "角色", AccentHex = "#4EA4DD", Badge = "已绑定",
                     });
                     Shell.MineViewModel.Games.Add(new Models.GameAccount
@@ -214,18 +214,26 @@ public partial class App : Application
                         GameName = "绝区零", Uid = "26341207", Server = "新艾利都", Level = "55",
                         LevelLabel = "绳网等级", Extra = "哲", ExtraLabel = "角色", AccentHex = "#F5B94A", Badge = "已绑定",
                     });
+                    if (page == "MineGame")
+                    {
+                        _ = Shell.MineViewModel.OpenGameCommand.ExecuteAsync(Shell.MineViewModel.Games[0]);
+                    }
                 }
                 if (page == "Search")
                 {
                     Shell.SearchText = "原神";
                     _ = Shell.SearchAsync();
                 }
+                if (page == "UserProfile")
+                {
+                    Shell.OpenUserProfile("310621322");
+                }
                 if (page is "Reader" or "ReaderComments")
                 {
                     Shell.OpenReaderForCapture();
                     if (page == "ReaderComments") Shell.ReaderView!.ScrollToComments();
                 }
-                if (page is "SettingsBottom" or "SettingsChangelog")
+                if (page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups")
                 {
                     var settingsView = FindChild<Views.SettingsView>(MainWindow!);
                     if (settingsView is not null)
@@ -235,13 +243,17 @@ public partial class App : Application
                             Shell.SettingsViewModel.IsChangelogOpen = true;
                             settingsView.ScrollToSection("Changelog");
                         }
+                        else if (page == "SettingsGroups")
+                        {
+                            settingsView.ScrollToSection("Playback");
+                        }
                         else
                         {
                             settingsView.ScrollToSection("AppInfo");
                         }
                     }
                 }
-                if (page == "VideoPlay")
+                if (page is "VideoPlay" or "VideoOptions" or "VideoComments")
                 {
                     var startDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
                     startDelay.Tick += (_, _) =>
@@ -252,20 +264,32 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" ? 12 : page is "Search" or "MineQr" or "Posts" ? 5 : page == "Moment" ? 12 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page == "Moment" ? 12 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();
                     Log(path, "capturing");
-                    if (page is "SettingsBottom" or "SettingsChangelog")
+                    if (page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups")
                     {
                         var view = FindChild<Views.SettingsView>(MainWindow!);
                         if (view is not null)
                         {
                             if (page == "SettingsChangelog") Shell.SettingsViewModel.IsChangelogOpen = true;
-                            view.ScrollToSection(page == "SettingsChangelog" ? "Changelog" : "AppInfo");
+                            view.ScrollToSection(page == "SettingsGroups" ? "Playback" : page == "SettingsChangelog" ? "Changelog" : "AppInfo");
                             MainWindow!.UpdateLayout();
                         }
+                    }
+                    if (page == "VideoOptions")
+                    {
+                        Shell.Video.IsQualityOpen = true;
+                        Shell.Video.IsCommentsOpen = false;
+                        MainWindow!.UpdateLayout();
+                    }
+                    if (page == "VideoComments")
+                    {
+                        Shell.Video.IsCommentsOpen = true;
+                        Shell.Video.IsQualityOpen = false;
+                        MainWindow!.UpdateLayout();
                     }
                     if (page == "ReaderComments")
                     {
@@ -273,7 +297,7 @@ public partial class App : Application
                         Shell.ReaderView?.ScrollToCommentBox();
                         MainWindow!.UpdateLayout();
                     }
-                    if (page != "VideoPlay") Shell.Video.IsPlaying = false; // 截图时停在封面，避免抓到解码中的黑帧
+                    if (page is not ("VideoPlay" or "VideoOptions" or "VideoComments")) Shell.Video.IsPlaying = false; // 截图时停在封面，避免抓到解码中的黑帧
                     var settle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
                     settle.Tick += (_, _) =>
                     {

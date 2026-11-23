@@ -1,0 +1,158 @@
+<UserControl x:Class="MikoMiko.Views.UserProfileView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:MikoMiko.Controls"
+             xmlns:conv="clr-namespace:MikoMiko.Converters"
+             FontFamily="{DynamicResource Font.Ui}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis" />
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource Brush.WindowBg}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+            <Grid Margin="18,0,18,0">
+                <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Left" VerticalAlignment="Center"
+                        Command="{Binding CloseCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M9 1 L2 7 L9 13" Stroke="{DynamicResource Brush.TextSecondary}"
+                              StrokeThickness="1.5" Width="9" Height="13" Stretch="Uniform" VerticalAlignment="Center" />
+                        <TextBlock Text="返回" FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="用户主页" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+                <TextBlock Text="{Binding StatusText}" FontSize="11.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVis}}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="26,22,26,34">
+                <Border CornerRadius="14" ClipToBounds="True" Background="{DynamicResource Brush.Card}">
+                    <Grid Height="210">
+                        <Border>
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#FF4EA4DD" Offset="0" />
+                                    <GradientStop Color="#FF8FC9E8" Offset="0.55" />
+                                    <GradientStop Color="#FFF4E8D8" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Border VerticalAlignment="Bottom" Height="120">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#00000000" Offset="0" />
+                                    <GradientStop Color="#99000000" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Grid Margin="18,-46,18,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="82" Height="82" CornerRadius="41" BorderThickness="4" BorderBrush="White"
+                            ClipToBounds="True" Background="{DynamicResource Brush.Card}">
+                        <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="14,28,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Nickname}" FontSize="19" FontWeight="SemiBold" />
+                            <Border Background="#EAF6FD" CornerRadius="4" Padding="5,1" Margin="7,2,0,0"
+                                    VerticalAlignment="Center" Visibility="{Binding LevelText, Converter={StaticResource NotEmptyToVis}}">
+                                <TextBlock Text="{Binding LevelText}" FontSize="10.5" Foreground="#2B8CC4" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding IpRegion}" FontSize="11.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                   Margin="0,4,0,0" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="{Binding FollowText}" Style="{StaticResource AccentButton}"
+                            Height="34" Padding="18,0" VerticalAlignment="Center" Margin="12,20,0,0"
+                            Command="{Binding ToggleFollowCommand}" />
+                </Grid>
+
+                <Border Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="16,12" Margin="0,14,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Introduce}" FontSize="12.5" LineHeight="20" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Brush.TextSecondary}"
+                                   Visibility="{Binding HasIntroduce, Converter={StaticResource BoolToVis}}" />
+                        <Border Background="{DynamicResource Brush.AccentSoft}" CornerRadius="4" Padding="6,2"
+                                HorizontalAlignment="Left" Margin="0,8,0,0"
+                                Visibility="{Binding HasCertification, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding Certification}" FontSize="10.5" Foreground="{DynamicResource Brush.Accent}" />
+                        </Border>
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding PostText}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="发布" FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           HorizontalAlignment="Center" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding FansText}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="粉丝" FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           HorizontalAlignment="Center" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{Binding FollowingText}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="关注" FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           HorizontalAlignment="Center" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="3">
+                                <TextBlock Text="{Binding LikeText}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                <TextBlock Text="获赞" FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           HorizontalAlignment="Center" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="TA 的发布" FontSize="15" FontWeight="SemiBold" Margin="2,22,0,12" />
+
+                <ItemsControl ItemsSource="{Binding Posts}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:AdaptiveGridPanel MinItemWidth="290" Gap="16" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource CardButton}"
+                                    Command="{Binding DataContext.OpenPostCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}">
+                                <StackPanel>
+                                    <Border Height="170" CornerRadius="9" ClipToBounds="True" Background="{DynamicResource Brush.Surface}">
+                                        <Image controls:AsyncImage.Url="{Binding CardCover}" Stretch="UniformToFill" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Title}" FontSize="14" LineHeight="20" TextWrapping="Wrap"
+                                               MaxHeight="42" TextTrimming="CharacterEllipsis" Margin="1,9,0,0" />
+                                    <TextBlock Text="{Binding MetaText}" FontSize="11.5"
+                                               Foreground="{DynamicResource Brush.TextTertiary}" Margin="1,6,0,0"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

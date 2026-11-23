@@ -9,6 +9,7 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+        <conv:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis" />
 
         <Style x:Key="FilterCombo" TargetType="{x:Type ComboBox}">
             <Setter Property="Height" Value="36" />
@@ -217,6 +218,50 @@
                                FontSize="12" VerticalAlignment="Center" HorizontalAlignment="Right"
                                TextTrimming="CharacterEllipsis" Margin="14,0,0,0" />
                 </Grid>
+
+                <!-- 搜索优先展示用户，再展示内容 -->
+                <StackPanel Margin="0,0,0,16" Visibility="{Binding IsSearchMode, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="相关用户" FontSize="14" FontWeight="SemiBold" Margin="2,0,0,10"
+                               Visibility="{Binding HasSearchUsers, Converter={StaticResource BoolToVis}}" />
+                    <ItemsControl ItemsSource="{Binding SearchUsers}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource CardButton}" Width="248" Margin="0,0,12,12" Padding="12,10"
+                                        Command="{Binding DataContext.OpenUserCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="48" Height="48" CornerRadius="24" ClipToBounds="True"
+                                                Background="{DynamicResource Brush.Card}" VerticalAlignment="Top">
+                                            <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                            <TextBlock Text="{Binding Nickname}" FontSize="13.5" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Certification}" FontSize="10.5"
+                                                       Foreground="{DynamicResource Brush.Accent}" Margin="0,3,0,0"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Visibility="{Binding Certification, Converter={StaticResource NotEmptyToVis}}" />
+                                            <TextBlock Text="{Binding Introduce}" FontSize="11" LineHeight="16"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,3,0,0"
+                                                       MaxHeight="32" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding FansText, StringFormat=粉丝 {0}}" FontSize="10.5"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,3,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
 
                 <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource FeedCard}">
                     <ItemsControl.ItemsPanel>

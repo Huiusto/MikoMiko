@@ -68,22 +68,36 @@
                       Padding="0,0,6,0">
             <StackPanel MaxWidth="900" HorizontalAlignment="Center" Margin="24,20,16,34">
 
-                <!-- 作者 -->
-                <StackPanel Orientation="Horizontal">
-                    <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
-                            Background="{DynamicResource Brush.Card}">
-                        <Image controls:AsyncImage.Url="{Binding AuthorAvatar}" Stretch="UniformToFill" />
-                    </Border>
-                    <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Author}" FontSize="13.5" FontWeight="SemiBold" />
-                        <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                            <TextBlock Text="{Binding TimeText}" FontSize="11.5"
-                                       Foreground="{DynamicResource Brush.TextTertiary}" />
-                            <TextBlock Text="{Binding ViewText, StringFormat={}{0} 浏览}" FontSize="11.5"
-                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,0,0,0" />
+                <!-- 作者：头像 / 昵称可点击进入用户主页，右侧关注同步官方 -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Style="{StaticResource LinkButton}" Padding="0" Command="{Binding OpenAuthorCommand}">
+                        <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True"
+                                Background="{DynamicResource Brush.Card}">
+                            <Image controls:AsyncImage.Url="{Binding AuthorAvatar}" Stretch="UniformToFill" />
+                        </Border>
+                    </Button>
+                    <Button Grid.Column="1" Style="{StaticResource LinkButton}" HorizontalContentAlignment="Left"
+                            Margin="10,0,0,0" Padding="0" Command="{Binding OpenAuthorCommand}">
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Author}" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Brush.TextPrimary}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding TimeText}" FontSize="11.5"
+                                           Foreground="{DynamicResource Brush.TextTertiary}" />
+                                <TextBlock Text="{Binding ViewText, StringFormat={}{0} 浏览}" FontSize="11.5"
+                                           Foreground="{DynamicResource Brush.TextTertiary}" Margin="10,0,0,0" />
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
-                </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Content="{Binding FollowText}" Style="{StaticResource AccentButton}"
+                            Height="30" Padding="16,0" VerticalAlignment="Center" FontSize="11.5"
+                            Command="{Binding FollowAuthorCommand}" />
+                </Grid>
 
                 <TextBlock Text="{Binding Title}" FontSize="21" FontWeight="SemiBold" TextWrapping="Wrap"
                            LineHeight="30" Margin="0,16,0,0" />
@@ -265,42 +279,34 @@
                            FontSize="12.5" Foreground="{DynamicResource Brush.TextTertiary}" Margin="2,0,0,10"
                            Visibility="{Binding HasComments, Converter={StaticResource InverseBoolToVis}}" />
 
-                <!-- 评论输入：多行输入，保证文字完整可见（B 站式） -->
-                <Border x:Name="CommentComposer" Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="14,12" Margin="0,4,0,12">
+                <!-- 评论输入：更矮更圆润的单行/多行输入框 -->
+                <Border x:Name="CommentComposer" Background="{DynamicResource Brush.Surface}" CornerRadius="18" Padding="10,9" Margin="0,4,0,12">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Text="{Binding ReplyTargetName, StringFormat=回复 @{0}：}" FontSize="11.5"
-                                   Foreground="{DynamicResource Brush.Accent}" Margin="2,0,0,7"
-                                   Visibility="{Binding HasReplyTarget, Converter={StaticResource BoolToVis}}" />
-
-                        <Grid Grid.Row="1">
+                        <Grid Grid.Row="0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="0" Text="{Binding CommentInput, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="96" MinHeight="72" MaxHeight="150" Padding="12,8"
-                                     AcceptsReturn="True" TextWrapping="Wrap"
-                                     VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
-                                     FontSize="13.5" Background="{DynamicResource Brush.Card}"
-                                     BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="10,0,0,0">
-                                <Button Content="取消回复" Height="28" Padding="8,0" Margin="0,0,0,6"
-                                        Command="{Binding CancelReplyCommand}"
-                                        Visibility="{Binding HasReplyTarget, Converter={StaticResource BoolToVis}}"
-                                        Style="{StaticResource LinkButton}" />
-                                <Button Content="发送" Style="{StaticResource AccentButton}" Height="36" Padding="22,0"
-                                        Command="{Binding SendCommentCommand}" />
-                            </StackPanel>
+                            <Border Grid.Column="0" CornerRadius="16" Background="{DynamicResource Brush.Card}"
+                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="12,4">
+                                <TextBox Text="{Binding CommentInput, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="58" MinHeight="52" MaxHeight="96" Padding="0"
+                                         AcceptsReturn="True" TextWrapping="Wrap"
+                                         VerticalContentAlignment="Center" VerticalScrollBarVisibility="Auto"
+                                         FontSize="13" Background="Transparent" BorderThickness="0" />
+                            </Border>
+                            <Button Grid.Column="1" Content="发送" Style="{StaticResource AccentButton}" Height="34"
+                                    Width="64" Margin="9,0,0,0" VerticalAlignment="Center"
+                                    Command="{Binding SendCommentCommand}" />
                         </Grid>
 
-                        <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding CommentStatus}" FontSize="11.5"
-                                   Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,8,0,0" TextWrapping="Wrap"
+                        <TextBlock Grid.Row="1" Text="{Binding CommentStatus}" FontSize="11.5"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" Margin="6,6,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding CommentStatus, Converter={StaticResource NotEmptyToVis}}" />
                     </Grid>
                 </Border>
@@ -341,6 +347,24 @@
 
                                             <TextBlock Text="{Binding Content}" FontSize="13" LineHeight="21"
                                                        TextWrapping="Wrap" Margin="0,7,0,0" />
+
+                                            <ItemsControl ItemsSource="{Binding Images}" Margin="0,8,0,0"
+                                                          Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="112" Height="112" CornerRadius="8" ClipToBounds="True"
+                                                                Background="{DynamicResource Brush.Card}" Margin="0,0,8,8"
+                                                                Cursor="Hand" Tag="{Binding}" MouseLeftButtonUp="InlineImage_Click">
+                                                            <Image controls:AsyncImage.Url="{Binding}" Stretch="UniformToFill" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
                                     </Grid>
 
@@ -394,6 +418,37 @@
                                                 CommandParameter="{Binding}" />
                                     </StackPanel>
 
+                                    <!-- 楼内回复：点“回复”后直接在该评论下面输入 -->
+                                    <Border Background="{DynamicResource Brush.Card}" CornerRadius="14" Padding="10,8"
+                                            Margin="41,8,0,0"
+                                            Visibility="{Binding IsReplyInputOpen, Converter={StaticResource BoolToVis}}">
+                                        <StackPanel>
+                                            <Border CornerRadius="12" Background="{DynamicResource Brush.Surface}"
+                                                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="10,3">
+                                                <TextBox Text="{Binding ReplyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                         Height="46" MinHeight="42" MaxHeight="80" Padding="0"
+                                                         AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Center"
+                                                         FontSize="12.5" Background="Transparent" BorderThickness="0"
+                                                         IsVisibleChanged="InlineReplyBox_IsVisibleChanged" />
+                                            </Border>
+                                            <Grid Margin="0,7,0,0">
+                                                <TextBlock Text="{Binding InlineStatus}" FontSize="10.5"
+                                                           Foreground="{DynamicResource Brush.TextTertiary}"
+                                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                           Margin="2,0,74,0" />
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                    <Button Content="取消" Style="{StaticResource LinkButton}" FontSize="11"
+                                                            Height="28" Padding="8,0" Margin="0,0,8,0"
+                                                            Command="{Binding DataContext.CancelReplyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                    <Button Content="回复" Style="{StaticResource AccentButton}" Height="28"
+                                                            Padding="14,0" FontSize="11"
+                                                            Command="{Binding DataContext.SendInlineReplyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
                                     <ItemsControl ItemsSource="{Binding Children}" Margin="41,10,0,0">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
@@ -418,6 +473,25 @@
                                                         </TextBlock>
                                                         <TextBlock Text="{Binding Content}" FontSize="12" LineHeight="19"
                                                                    TextWrapping="Wrap" Margin="29,2,0,0" />
+
+                                                        <ItemsControl ItemsSource="{Binding Images}" Margin="29,6,0,0"
+                                                                      Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel />
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate>
+                                                                    <Border Width="92" Height="92" CornerRadius="7" ClipToBounds="True"
+                                                                            Background="{DynamicResource Brush.Card}" Margin="0,0,7,7"
+                                                                            Cursor="Hand" Tag="{Binding}" MouseLeftButtonUp="InlineImage_Click">
+                                                                        <Image controls:AsyncImage.Url="{Binding}" Stretch="UniformToFill" />
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+
                                                         <StackPanel Orientation="Horizontal" Margin="29,6,0,0">
                                                             <Button Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                                     CommandParameter="{Binding}" Style="{StaticResource LinkButton}"
@@ -427,6 +501,36 @@
                                                                     Command="{Binding DataContext.ReplyToCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                                     CommandParameter="{Binding}" />
                                                         </StackPanel>
+
+                                                        <Border Background="{DynamicResource Brush.Card}" CornerRadius="12" Padding="8,6"
+                                                                Margin="29,6,0,0"
+                                                                Visibility="{Binding IsReplyInputOpen, Converter={StaticResource BoolToVis}}">
+                                                            <StackPanel>
+                                                                <Border CornerRadius="10" Background="{DynamicResource Brush.Surface}"
+                                                                        BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Padding="8,2">
+                                                                    <TextBox Text="{Binding ReplyInput, UpdateSourceTrigger=PropertyChanged}"
+                                                                             Height="42" MinHeight="38" Padding="0"
+                                                                             AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Center"
+                                                                             FontSize="12" Background="Transparent" BorderThickness="0"
+                                                                             IsVisibleChanged="InlineReplyBox_IsVisibleChanged" />
+                                                                </Border>
+                                                                <Grid Margin="0,6,0,0">
+                                                                    <TextBlock Text="{Binding InlineStatus}" FontSize="10"
+                                                                               Foreground="{DynamicResource Brush.TextTertiary}"
+                                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                               Margin="2,0,70,0" />
+                                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                                        <Button Content="取消" Style="{StaticResource LinkButton}" FontSize="10.5"
+                                                                                Height="25" Padding="6,0" Margin="0,0,7,0"
+                                                                                Command="{Binding DataContext.CancelReplyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                                                                        <Button Content="回复" Style="{StaticResource AccentButton}" Height="25"
+                                                                                Padding="12,0" FontSize="10.5"
+                                                                                Command="{Binding DataContext.SendInlineReplyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                                CommandParameter="{Binding}" />
+                                                                    </StackPanel>
+                                                                </Grid>
+                                                            </StackPanel>
+                                                        </Border>
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
@@ -504,11 +608,18 @@
         <Grid x:Name="ImageLightbox" Grid.Row="1" Background="#DD000000" Visibility="Collapsed">
             <ScrollViewer x:Name="LightboxScroll" HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Center"
-                          VerticalContentAlignment="Center" Padding="56" PreviewMouseWheel="Lightbox_PreviewMouseWheel">
+                          VerticalContentAlignment="Center" Padding="56" Cursor="Hand"
+                          PreviewMouseWheel="Lightbox_PreviewMouseWheel"
+                          PreviewMouseLeftButtonDown="Lightbox_PreviewMouseLeftButtonDown"
+                          PreviewMouseMove="Lightbox_PreviewMouseMove"
+                          PreviewMouseLeftButtonUp="Lightbox_PreviewMouseLeftButtonUp">
                 <Image x:Name="LightboxImage" Stretch="Uniform" MaxWidth="1600" MaxHeight="1200"
                        RenderTransformOrigin="0.5,0.5">
                     <Image.RenderTransform>
-                        <ScaleTransform x:Name="LightboxScale" ScaleX="1" ScaleY="1" />
+                        <TransformGroup>
+                            <ScaleTransform x:Name="LightboxScale" ScaleX="1" ScaleY="1" />
+                            <TranslateTransform x:Name="LightboxTranslate" X="0" Y="0" />
+                        </TransformGroup>
                     </Image.RenderTransform>
                 </Image>
             </ScrollViewer>

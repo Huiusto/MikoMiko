@@ -23,7 +23,12 @@ public partial class SettingsView : UserControl
         }
     }
 
-    /// <summary>滚动到指定设置分区（也供截图模式使用）。</summary>
+    /// <summary>点击抽屉遮罩层（弹窗外任意位置）自动关闭更新日志。</summary>
+    private void ChangelogOverlay_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, ChangelogOverlay) && DataContext is SettingsViewModel vm)
+            vm.CloseChangelog();
+    }
     public void ScrollToSection(string key)
     {
         foreach (var child in SectionsPanel.Children)

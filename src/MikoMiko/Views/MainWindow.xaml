@@ -51,7 +51,7 @@
                     <ItemsControl ItemsSource="{Binding Navigation}" Margin="0,18,0,0" VerticalAlignment="Top">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource NavButton}" Height="64"
+                                <Button Style="{StaticResource NavButton}" Height="76"
                                         Command="{Binding DataContext.NavigateToCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                         CommandParameter="{Binding}" />
                             </DataTemplate>
@@ -63,7 +63,7 @@
                         <ItemsControl ItemsSource="{Binding FooterNavigation}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Button Style="{StaticResource NavButton}" Height="64"
+                                    <Button Style="{StaticResource NavButton}" Height="76"
                                             Command="{Binding DataContext.NavigateToCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                             CommandParameter="{Binding}" />
                                 </DataTemplate>
@@ -188,6 +188,12 @@
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             Focusable="False"
                             Visibility="{Binding IsReaderOpen, Converter={StaticResource BoolToVis}}" />
+
+            <!-- ==================== 用户主页（软件内覆盖，不新开窗口） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding ProfileView}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False"
+                            Visibility="{Binding IsProfileOpen, Converter={StaticResource BoolToVis}}" />
 
             <!-- ==================== 软件内网页（正文外链，不跳系统浏览器） ==================== -->
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding BrowserView}"

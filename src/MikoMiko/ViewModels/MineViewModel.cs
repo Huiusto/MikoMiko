@@ -33,9 +33,16 @@ public sealed partial class MineViewModel : ObservableObject
 
     public ObservableCollection<GameAccount> Games { get; } = new();
     public ObservableCollection<FeedItem> Favorites { get; } = new();
+    public ObservableCollection<FeedItem> MyPosts { get; } = new();
+    public ObservableCollection<UserReplyItem> MyReplies { get; } = new();
+    public ObservableCollection<UserCollectionItem> MyCollections { get; } = new();
+    public ObservableCollection<GameStatItem> GameStats { get; } = new();
     public ObservableCollection<FeedItem> GamePosts { get; } = new();
 
     public bool HasNoFavorites => Favorites.Count == 0;
+    public bool HasNoMyPosts => MyPosts.Count == 0;
+    public bool HasNoReplies => MyReplies.Count == 0;
+    public bool HasNoCollections => MyCollections.Count == 0;
     public bool IsGuest => !IsLoggedIn;
 
     [ObservableProperty] private UserProfile _profile;
@@ -53,6 +60,20 @@ public sealed partial class MineViewModel : ObservableObject
     [ObservableProperty] private bool _isGameDetailOpen;
     [ObservableProperty] private bool _isGamePostsLoading;
     [ObservableProperty] private string _gameStatus = string.Empty;
+    [ObservableProperty] private string _gameSummary = string.Empty;
+    [ObservableProperty] private string _gameLevelText = string.Empty;
+    [ObservableProperty] private string _gameUidText = string.Empty;
+    [ObservableProperty] private string _gameRoleName = string.Empty;
+    [ObservableProperty] private bool _gameDataPublic = true;
+
+    // 背景裁剪：选图后先预览，用户调水平/垂直位置与缩放，确认后才写入设置
+    private BitmapSource? _cropSource;
+    private string _cropFilePath = string.Empty;
+    [ObservableProperty] private bool _isCropOpen;
+    [ObservableProperty] private ImageSource? _cropPreview;
+    [ObservableProperty] private double _cropOffsetX = 0.5;
+    [ObservableProperty] private double _cropOffsetY = 0.5;
+    [ObservableProperty] private double _cropZoom = 1.0;
 
     /// <summary>自定义个人页背景；为空时显示默认蓝色渐变。</summary>
     public bool HasCustomBackground => BackgroundImage is not null;
@@ -89,7 +110,7 @@ public sealed partial class MineViewModel : ObservableObject
         OnPropertyChanged(nameof(HasCustomBackground));
     }
 
-    /// <summary>选择本地图片作为「我的」页面背景，每次使用独立文件名后立即生效。</summary>
+    /// <summary>选图后进入裁剪预览：用户自己选择图片要显示的区域。</summary>
     [RelayCommand]
     private void ChangeBackground()
     {
@@ -102,16 +123,78 @@ public sealed partial class MineViewModel : ObservableObject
 
         try
         {
-            var extension = Path.GetExtension(dialog.FileName);
+            var image = new BitmapImage();
+            using var stream = File.OpenRead(dialog.FileName);
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            _cropSource = image;
+            _cropFilePath = dialog.FileName;
+            CropOffsetX = 0.5;
+            CropOffsetY = 0.5;
+            CropZoom = 1.0;
+            IsCropOpen = true;
+            UpdateCropPreview();
+        }
+        catch (Exception ex)
+        {
+            BindStatus = $"背景读取失败：{ex.Message}";
+        }
+    }
+
+    partial void OnCropOffsetXChanged(double value) => UpdateCropPreview();
+    partial void OnCropOffsetYChanged(double value) => UpdateCropPreview();
+    partial void OnCropZoomChanged(double value) => UpdateCropPreview();
+
+    private void UpdateCropPreview()
+    {
+        if (_cropSource is null) return;
+        try
+        {
+            CropPreview = BuildCrop(_cropSource, CropOffsetX, CropOffsetY, CropZoom, 1200);
+        }
+        catch
+        {
+            // 预览失败不阻断确认
+        }
+    }
+
+    /// <summary>按主页背景比例（约 2.2:1）裁出可见区域。</summary>
+    private static CroppedBitmap BuildCrop(BitmapSource source, double offsetX, double offsetY, double zoom, int targetWidth)
+    {
+        const double aspect = 2.2;
+        var maxWidth = Math.Min(source.PixelWidth, source.PixelHeight * aspect);
+        var width = Math.Max(2, maxWidth * Math.Clamp(zoom, 0.35, 1.0));
+        var height = width / aspect;
+        var maxX = Math.Max(0, source.PixelWidth - width);
+        var maxY = Math.Max(0, source.PixelHeight - height);
+        var x = (int)Math.Round(Math.Clamp(offsetX, 0, 1) * maxX);
+        var y = (int)Math.Round(Math.Clamp(offsetY, 0, 1) * maxY);
+        return new CroppedBitmap(source, new Int32Rect(x, y, Math.Max(2, (int)width), Math.Max(2, (int)height)));
+    }
+
+    [RelayCommand]
+    private void ConfirmBackgroundCrop()
+    {
+        if (_cropSource is null) return;
+        try
+        {
+            var crop = BuildCrop(_cropSource, CropOffsetX, CropOffsetY, CropZoom, 1);
             var destination = Path.Combine(SettingsService.DataDirectory,
-                $"profile-background-{DateTime.Now:yyyyMMddHHmmssfff}{extension}");
-            File.Copy(dialog.FileName, destination, overwrite: true);
+                $"profile-background-{DateTime.Now:yyyyMMddHHmmssfff}.png");
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(crop));
+            using (var output = File.Create(destination)) encoder.Save(output);
 
             var old = _settings.ProfileBackground;
             _settings.ProfileBackground = destination;
             LoadBackgroundSource();
+            IsCropOpen = false;
+            CropPreview = null;
+            _cropSource = null;
 
-            // 清理上一张自定义背景；旧图已 Freeze 在内存中，不影响当前显示。
             try
             {
                 if (!string.IsNullOrWhiteSpace(old) && File.Exists(old) && old != destination) File.Delete(old);
@@ -120,13 +203,20 @@ public sealed partial class MineViewModel : ObservableObject
             {
                 // 旧图被占用时忽略
             }
-
-
+            BindStatus = "背景已按所选区域更新";
         }
         catch (Exception ex)
         {
-            BindStatus = $"背景设置失败：{ex.Message}";
+            BindStatus = $"背景保存失败：{ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    private void CancelBackgroundCrop()
+    {
+        IsCropOpen = false;
+        CropPreview = null;
+        _cropSource = null;
     }
 
     /// <summary>恢复默认渐变背景。</summary>
@@ -156,11 +246,40 @@ public sealed partial class MineViewModel : ObservableObject
         if (game is null) return;
         SelectedGame = game;
         IsGameDetailOpen = true;
-        GameStatus = "正在读取该游戏内容…";
+        GameStatus = "正在读取该游戏战绩…";
         GamePosts.Clear();
+        GameStats.Clear();
+        GameSummary = string.Empty;
+        GameLevelText = string.Empty;
+        GameUidText = string.Empty;
         IsGamePostsLoading = true;
         try
         {
+            var recordUid = CookieValue("ltuid_v2") is { Length: > 0 } v2
+                ? v2
+                : CookieValue("ltuid") is { Length: > 0 } v1 ? v1 : CookieValue("account_id");
+            var cards = await _login.GetRecordCardsAsync(_settings.Cookie, recordUid);
+            var card = cards.FirstOrDefault(c => c.GameId == game.GameId);
+            if (card is not null)
+            {
+                GameRoleName = string.IsNullOrWhiteSpace(card.Nickname) ? game.RoleName : card.Nickname;
+                GameLevelText = card.Level > 0 ? $"Lv.{card.Level}" : game.Level;
+                GameUidText = $"UID {card.RoleUid} · {card.RegionName}";
+                GameDataPublic = card.IsPublic;
+                GameSummary = card.Stats.Count > 0 ? $"共 {card.Stats.Count} 项公开战绩" : "该游戏暂未公开战绩";
+                foreach (var item in card.Stats)
+                {
+                    GameStats.Add(new GameStatItem { Label = item.Label, Value = item.Value });
+                }
+            }
+            else
+            {
+                GameRoleName = game.RoleName;
+                GameLevelText = game.Level;
+                GameUidText = $"UID {game.Uid} · {game.Server}";
+                GameSummary = "该角色暂无可读取的公开战绩";
+            }
+
             var posts = await _content.GetGamePostsAsync(game.GameId);
             foreach (var post in posts) GamePosts.Add(post);
             GameStatus = GamePosts.Count == 0 ? "暂无该游戏的最新帖子" : string.Empty;
@@ -404,6 +523,7 @@ public sealed partial class MineViewModel : ObservableObject
             {
                 ApplyStat(stat);
                 await LoadGamesAsync();
+                await LoadMineContentAsync(uid);
                 return;
             }
 
@@ -413,6 +533,7 @@ public sealed partial class MineViewModel : ObservableObject
                 _settings.Avatar);
             BindStatus = "已登录，账号资料同步失败，可点刷新重试";
             await LoadGamesAsync();
+            await LoadMineContentAsync(uid);
         }
         catch
         {
@@ -449,6 +570,65 @@ public sealed partial class MineViewModel : ObservableObject
         {
             // 角色接口失败不影响主页资料
         }
+    }
+
+    /// <summary>「我的」页四个内容入口：发布 / 评论 / 合集 / 收藏，全部读取官方接口。</summary>
+    private async Task LoadMineContentAsync(string uid)
+    {
+        try
+        {
+            var postsTask = _content.Api.GetUserPostsAsync(uid, 2, 20);
+            var repliesTask = _content.Api.GetUserRepliesAsync(uid, 20);
+            var collectionsTask = _content.Api.GetUserCollectionsAsync();
+            var favoritesTask = _content.Api.GetFavoritePostsAsync(uid, 20);
+            await Task.WhenAll(postsTask, repliesTask, collectionsTask, favoritesTask);
+
+            MyPosts.Clear();
+            foreach (var post in postsTask.Result) MyPosts.Add(post);
+            MyReplies.Clear();
+            foreach (var reply in repliesTask.Result) MyReplies.Add(reply);
+            MyCollections.Clear();
+            foreach (var collection in collectionsTask.Result) MyCollections.Add(collection);
+            Favorites.Clear();
+            foreach (var favorite in favoritesTask.Result) Favorites.Add(favorite);
+
+            OnPropertyChanged(nameof(HasNoMyPosts));
+            OnPropertyChanged(nameof(HasNoReplies));
+            OnPropertyChanged(nameof(HasNoCollections));
+            OnPropertyChanged(nameof(HasNoFavorites));
+        }
+        catch
+        {
+            BindStatus = "「我的」内容同步失败，可点刷新重试";
+        }
+    }
+
+    [RelayCommand]
+    private void OpenMyPost(FeedItem? post)
+    {
+        if (post is not null) _openPost?.Invoke(post);
+    }
+
+    [RelayCommand]
+    private void OpenMyReply(UserReplyItem? reply)
+    {
+        if (reply is null || string.IsNullOrWhiteSpace(reply.PostId)) return;
+        var post = MyPosts.FirstOrDefault(p => p.PostId == reply.PostId);
+        if (post is not null)
+        {
+            _openPost?.Invoke(post);
+            return;
+        }
+
+        // 评论所在帖子不在“我的发布”里时，构造最小 FeedItem 交给阅读器按 post_id 拉全文。
+        _openPost?.Invoke(new FeedItem
+        {
+            PostId = reply.PostId,
+            Title = string.IsNullOrWhiteSpace(reply.PostTitle) ? "我评论过的帖子" : reply.PostTitle,
+            Author = Profile.Nickname,
+            AuthorUid = Profile.Uid,
+            AuthorAvatar = Profile.Avatar,
+        });
     }
 
     private void ApplyStat(MiHoYoLoginService.UserStat stat)
@@ -499,7 +679,14 @@ public sealed partial class MineViewModel : ObservableObject
         Profile = BuildGuestProfile();
         Games.Clear();
         Favorites.Clear();
+        MyPosts.Clear();
+        MyReplies.Clear();
+        MyCollections.Clear();
+        GameStats.Clear();
         OnPropertyChanged(nameof(HasNoFavorites));
+        OnPropertyChanged(nameof(HasNoMyPosts));
+        OnPropertyChanged(nameof(HasNoReplies));
+        OnPropertyChanged(nameof(HasNoCollections));
     }
 
     private static UserProfile BuildGuestProfile() => new()

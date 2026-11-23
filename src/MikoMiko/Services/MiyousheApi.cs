@@ -569,7 +569,9 @@ public sealed class MiyousheApi
             Title = Str(content, "subject"),
             Body = ParseBody(content),
             Author = Str(Obj(post, "user"), "nickname"),
+            AuthorUid = Str(Obj(post, "user"), "uid"),
             AuthorAvatar = Str(Obj(post, "user"), "avatar_url"),
+            IsFollowingAuthor = Obj(Obj(post, "user"), "is_following")?.ValueKind == JsonValueKind.True,
             ForumName = Str(Obj(post, "forum"), "name"),
             TimeText = RelativeTime(Num(content, "created_at")),
             WebUrl = WebUrl(content),
@@ -605,6 +607,21 @@ public sealed class MiyousheApi
         var blocks = ParseStructuredBlocks(content);
         if (blocks.Count > 0)
         {
+            // COS / 长文帖的 structured_content 常只保留部分图片，纯文本里却是 [图片]。
+            // 把 detail.Images 中尚未被 block 覆盖的图片按原顺序补到正文末尾，避免帖子“没有图片”。
+            var used = blocks.Where(b => b.IsImage).Select(b => b.Url).Where(u => !string.IsNullOrWhiteSpace(u))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missing = detail.Images.Where(url => !used.Contains(url)).ToList();
+            if (missing.Count > 0)
+            {
+                if (blocks.Count > 0 && !blocks[^1].IsImage)
+                {
+                    blocks.Add(new PostBlock { Kind = "image", Url = missing[0] });
+                    missing.RemoveAt(0);
+                }
+                foreach (var imageUrl in missing) blocks.Add(new PostBlock { Kind = "image", Url = imageUrl });
+            }
+
             detail.Blocks.AddRange(blocks);
             var body = string.Join("\n", blocks.Where(b => b.IsText && !string.IsNullOrWhiteSpace(b.Text))
                 .Select(b => b.Text));
@@ -646,6 +663,37 @@ public sealed class MiyousheApi
         return replies;
     }
 
+    private static void CollectCommentImages(JsonElement element, CommentItem item)
+    {
+        foreach (var image in Items(Obj(element, "images")))
+        {
+            var src = image.ValueKind == JsonValueKind.String ? image.GetString() : Str(image, "url");
+            if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src!)) item.Images.Add(src!);
+        }
+
+        var structured = Obj(Obj(element, "reply"), "struct_content");
+        var raw = structured?.ValueKind == JsonValueKind.String ? structured.Value.GetString() : null;
+        if (string.IsNullOrWhiteSpace(raw)) return;
+        try
+        {
+            using var doc = JsonDocument.Parse(raw);
+            foreach (var op in Items(doc.RootElement))
+            {
+                var insert = Obj(op, "insert");
+                if (insert is null) continue;
+                if (insert.Value.ValueKind == JsonValueKind.Object)
+                {
+                    var src = Str(insert.Value, "image");
+                    if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src)) item.Images.Add(src);
+                }
+            }
+        }
+        catch
+        {
+            // 评论图片解析失败不影响文字评论
+        }
+    }
+
     private static CommentItem? ParseComment(JsonElement element)
     {
         var reply = Obj(element, "reply");
@@ -656,6 +704,7 @@ public sealed class MiyousheApi
         {
             ReplyId = Str(reply, "reply_id"),
             RootReplyId = Str(reply, "reply_id"),
+            UserId = Str(user, "uid"),
             Author = Str(user, "nickname"),
             Avatar = Str(user, "avatar_url"),
             Level = (int)Num(Obj(user, "level_exp"), "level"),
@@ -673,6 +722,8 @@ public sealed class MiyousheApi
         var parentName = Str(Obj(element, "reply_to_user"), "nickname");
         if (!string.IsNullOrWhiteSpace(parentName)) item.ReplyToName = parentName;
         else if (!string.IsNullOrWhiteSpace(replyToUid)) item.ReplyToName = replyToUid;
+
+        CollectCommentImages(element, item);
 
         foreach (var sub in Items(Obj(element, "sub_replies")))
         {
@@ -698,6 +749,185 @@ public sealed class MiyousheApi
 
         return (true, Str(user, "nickname"), (int)Num(Obj(user, "level_exp"), "level"),
             Str(user, "avatar_url"), Str(user, "uid"));
+    }
+
+    /// <summary>搜索用户（优先于帖子结果展示）。</summary>
+    public async Task<IReadOnlyList<SearchUser>> SearchUsersAsync(string keyword, int size = 12,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(keyword)) return Array.Empty<SearchUser>();
+        var url = $"{UserApi}/searchUser?keyword={Uri.EscapeDataString(keyword)}&size={size}";
+        var root = await GetJsonAsync(url, ct);
+        var list = Obj(Obj(root, "data"), "users");
+        var users = new List<SearchUser>();
+        foreach (var item in Items(list))
+        {
+            var uid = Str(item, "uid");
+            if (string.IsNullOrWhiteSpace(uid)) continue;
+            users.Add(new SearchUser
+            {
+                Uid = uid,
+                Nickname = Str(item, "nickname"),
+                Avatar = Str(item, "avatar_url"),
+                Introduce = Str(item, "introduce"),
+                Certification = Str(Obj(item, "certification"), "label"),
+                FansText = FormatCount(long.TryParse(Str(Obj(item, "achieve"), "followed_cnt"), out var fans) ? fans : 0),
+            });
+        }
+
+        return users;
+    }
+
+    /// <summary>用户完整资料（公开，带 Cookie 时可读取关注状态）。</summary>
+    public async Task<UserProfile?> GetUserProfileAsync(string uid, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return null;
+        try
+        {
+            var root = await GetJsonAsync($"{UserApi}/getUserFullInfo?uid={Uri.EscapeDataString(uid)}", ct);
+            var user = Obj(Obj(root, "data"), "user_info");
+            if (user is null) return null;
+            var achieve = Obj(user, "achieve");
+            var profile = new UserProfile
+            {
+                Uid = Str(user, "uid"),
+                Nickname = Str(user, "nickname"),
+                Avatar = Str(user, "avatar_url"),
+                Signature = Str(user, "introduce"),
+                Level = (int)Math.Max(Num(Obj(user, "level_exp"), "level"), Num(user, "level")),
+                IpRegion = Str(user, "ip_region"),
+                Certification = Str(Obj(user, "certification"), "label"),
+                Fans = FormatCount(long.TryParse(Str(achieve, "followed_cnt"), out var fans) ? fans : 0),
+                Following = FormatCount(long.TryParse(Str(achieve, "follow_cnt"), out var follow) ? follow : 0),
+                Likes = FormatCount(long.TryParse(Str(achieve, "like_num"), out var likes) ? likes : 0),
+                Posts = FormatCount(long.TryParse(Str(achieve, "post_num"), out var posts) ? posts : 0),
+                IsFollowing = Obj(user, "is_following")?.ValueKind == JsonValueKind.True,
+            };
+            return profile;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>我发布过的评论（post/wapi/userReply）。</summary>
+    public async Task<IReadOnlyList<UserReplyItem>> GetUserRepliesAsync(string uid, int size = 20,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return Array.Empty<UserReplyItem>();
+        try
+        {
+            var root = await GetJsonAsync($"{PostApi}/userReply?uid={Uri.EscapeDataString(uid)}&size={size}", ct);
+            var list = Obj(Obj(root, "data"), "list");
+            var items = new List<UserReplyItem>();
+            foreach (var element in Items(list))
+            {
+                var reply = Obj(element, "reply");
+                if (reply is null) continue;
+                items.Add(new UserReplyItem
+                {
+                    PostId = Str(reply, "post_id"),
+                    ReplyId = Str(reply, "reply_id"),
+                    PostTitle = Str(Obj(element, "r_post"), "subject"),
+                    Content = Str(reply, "content"),
+                    TimeText = RelativeTime(Num(reply, "created_at")),
+                    LikeText = FormatCount(Num(Obj(element, "stat"), "like_num")),
+                });
+            }
+
+            return items;
+        }
+        catch
+        {
+            return Array.Empty<UserReplyItem>();
+        }
+    }
+
+    /// <summary>我创建的合集（collection/wapi/collection/list，需网页端 2.102 DS）。</summary>
+    public async Task<IReadOnlyList<UserCollectionItem>> GetUserCollectionsAsync(CancellationToken ct = default)
+    {
+        if (!HasCookie) return Array.Empty<UserCollectionItem>();
+        try
+        {
+            const string url = "https://bbs-api.miyoushe.com/collection/wapi/collection/list?gids=2&size=30";
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            AddCollectionHeaders(request, "gids=2&size=30");
+            using var response = await _http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode) return Array.Empty<UserCollectionItem>();
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            if (doc.RootElement.TryGetProperty("retcode", out var code) && code.GetInt32() != 0)
+                return Array.Empty<UserCollectionItem>();
+            var list = Obj(Obj(doc.RootElement, "data"), "list");
+            var items = new List<UserCollectionItem>();
+            foreach (var element in Items(list))
+            {
+                var id = Str(element, "id");
+                if (string.IsNullOrWhiteSpace(id)) continue;
+                items.Add(new UserCollectionItem
+                {
+                    Id = id,
+                    Title = Str(element, "title"),
+                    Cover = Str(element, "cover"),
+                    PostCount = (int)Num(element, "post_num"),
+                });
+            }
+
+            return items;
+        }
+        catch
+        {
+            return Array.Empty<UserCollectionItem>();
+        }
+    }
+
+    /// <summary>我收藏的帖子（post/wapi/userFavouritePost）。</summary>
+    public async Task<IReadOnlyList<FeedItem>> GetFavoritePostsAsync(string uid, int size = 20,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(uid)) return Array.Empty<FeedItem>();
+        try
+        {
+            var root = await GetJsonAsync($"{PostApi}/userFavouritePost?uid={Uri.EscapeDataString(uid)}&size={size}", ct);
+            var list = Obj(Obj(root, "data"), "list");
+            var items = new List<FeedItem>();
+            foreach (var element in Items(list))
+            {
+                var item = ParseHomeItem(element);
+                if (item is not null) items.Add(item);
+            }
+
+            return items;
+        }
+        catch
+        {
+            return Array.Empty<FeedItem>();
+        }
+    }
+
+    /// <summary>网页端合集签名：salt / 版本线固定为 2.102，DS 只对 t/r 计算。</summary>
+    private void AddCollectionHeaders(HttpRequestMessage request, string query)
+    {
+        const string salt = "r3KppdID2yT6ht6P7MxzQykauJj0Cmtg";
+        var time = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var random = RandomString(6);
+        var raw = $"salt={salt}&t={time}&r={random}";
+        var md5 = Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(raw))).ToLowerInvariant();
+        request.Headers.TryAddWithoutValidation("DS", $"{time},{random},{md5}");
+        request.Headers.TryAddWithoutValidation("x-rpc-app_version", "2.102.0");
+        request.Headers.TryAddWithoutValidation("x-rpc-client_type", "4");
+        request.Headers.TryAddWithoutValidation("x-rpc-device_id", DeviceId);
+        request.Headers.TryAddWithoutValidation("x-rpc-device_fp", DeviceId[..16]);
+    }
+
+    private static string RandomString(int length)
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var buffer = new byte[length];
+        RandomNumberGenerator.Fill(buffer);
+        var builder = new StringBuilder(length);
+        foreach (var value in buffer) builder.Append(chars[value % chars.Length]);
+        return builder.ToString();
     }
 
     // ---------------------------------------------------------------- helpers
@@ -763,11 +993,10 @@ public sealed class MiyousheApi
 
         foreach (var image in Items(Obj(post, "images")))
         {
-            if (image.ValueKind == JsonValueKind.String)
-            {
-                var src = image.GetString();
-                if (!string.IsNullOrWhiteSpace(src)) item.Images.Add(src!);
-            }
+            var src = image.ValueKind == JsonValueKind.String
+                ? image.GetString()
+                : Str(image, "url");
+            if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src!)) item.Images.Add(src!);
         }
 
         // 搜索结果把封面图放在顶层 image_list 里，帖子内 images 可能为空
@@ -779,6 +1008,15 @@ public sealed class MiyousheApi
                     ? image.GetString()
                     : Str(image, "url");
                 if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src!)) item.Images.Add(src!);
+            }
+        }
+
+        // COS / 长文帖：images 为空时从 structured_content 的 insert.image 补齐
+        if (item.Images.Count == 0)
+        {
+            foreach (var src in StructuredImages(post))
+            {
+                if (!string.IsNullOrWhiteSpace(src) && !item.Images.Contains(src)) item.Images.Add(src);
             }
         }
 

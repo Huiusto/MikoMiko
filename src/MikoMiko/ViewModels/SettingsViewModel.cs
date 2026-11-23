@@ -32,7 +32,6 @@ public sealed partial class SettingsViewModel : ObservableObject
             new("AppInfo", Loc.Instance["S.AppInfo"]),
             new("About", Loc.Instance["S.About"]),
             new("Disclaimer", Loc.Instance["S.Disclaimer"]),
-            new("Changelog", Loc.Instance["S.Changelog"]),
         };
         Sections[0].IsSelected = true;
 
@@ -131,6 +130,9 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleChangelog() => IsChangelogOpen = !IsChangelogOpen;
+
+    /// <summary>点击抽屉外任意位置关闭更新日志。</summary>
+    public void CloseChangelog() => IsChangelogOpen = false;
 
     public Action? LanguageChanged { get; set; }
 

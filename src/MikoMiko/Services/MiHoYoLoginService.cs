@@ -325,6 +325,79 @@ public sealed class MiHoYoLoginService
         return result;
     }
 
+    /// <summary>游戏战绩卡片：官方稳定的通用统计（原神活跃/成就/深渊等）。</summary>
+    public async Task<List<GameRecordCard>> GetRecordCardsAsync(string cookie, string uid)
+    {
+        var result = new List<GameRecordCard>();
+        if (string.IsNullOrWhiteSpace(uid)) return result;
+        var query = $"uid={Uri.EscapeDataString(uid)}";
+        const string salt = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs";
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var r = RandomNumberGenerator.GetInt32(100000, 200000).ToString();
+        var raw = $"salt={salt}&t={t}&r={r}&b=&q={query}";
+        var ds = $"{t},{r},{Md5(raw)}";
+        var url = $"https://api-takumi-record.mihoyo.com/game_record/card/wapi/getGameRecordCard?{query}";
+        var res = await SendAsync(HttpMethod.Get, url, null, new Dictionary<string, string>
+        {
+            ["user-agent"] = $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) miHoYoBBS/{BbsVersion}",
+            ["x-rpc-app_version"] = BbsVersion,
+            ["x-rpc-client_type"] = "5",
+            ["x-requested-with"] = "com.mihoyo.hyperion",
+            ["referer"] = "https://webstatic.mihoyo.com",
+            ["DS"] = ds,
+            ["cookie"] = cookie,
+        }).ConfigureAwait(false);
+        if (res is null || GetInt(res, "retcode") != 0) return result;
+
+        var data = GetObject(res, "data");
+        if (!data.TryGetProperty("list", out var list) || list.ValueKind != JsonValueKind.Array) return result;
+        foreach (var card in list.EnumerateArray())
+        {
+            if (!card.TryGetProperty("has_role", out var hasRole) || hasRole.ValueKind != JsonValueKind.True) continue;
+            var item = new GameRecordCard
+            {
+                GameId = GetInt(card, "game_id"),
+                GameName = GetString(card, "game_name"),
+                Nickname = GetString(card, "nickname"),
+                RoleUid = GetString(card, "game_role_id"),
+                RegionName = GetString(card, "region_name"),
+                Level = GetInt(card, "level"),
+                IsPublic = card.TryGetProperty("is_public", out var pub) && pub.ValueKind == JsonValueKind.True,
+            };
+            if (card.TryGetProperty("data", out var stats) && stats.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var stat in stats.EnumerateArray())
+                {
+                    var label = GetString(stat, "name");
+                    var value = GetString(stat, "value");
+                    if (string.IsNullOrWhiteSpace(label)) continue;
+                    item.Stats.Add(new GameRecordStat { Label = label, Value = value });
+                }
+            }
+            result.Add(item);
+        }
+
+        return result;
+    }
+
+    public sealed class GameRecordCard
+    {
+        public int GameId { get; set; }
+        public string GameName { get; set; } = "";
+        public string Nickname { get; set; } = "";
+        public string RoleUid { get; set; } = "";
+        public string RegionName { get; set; } = "";
+        public int Level { get; set; }
+        public bool IsPublic { get; set; }
+        public List<GameRecordStat> Stats { get; } = new();
+    }
+
+    public sealed class GameRecordStat
+    {
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
     public sealed class UserStat
     {
         public string Uid { get; set; } = "";

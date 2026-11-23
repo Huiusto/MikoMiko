@@ -19,7 +19,9 @@ public sealed partial class PostReaderViewModel : ObservableObject
         Item = item;
         Title = item.Title;
         Author = item.Author;
+        AuthorUid = item.AuthorUid;
         AuthorAvatar = item.AuthorAvatar;
+        IsFollowingAuthor = item.IsFollowing;
         TimeText = item.TimeText;
         ForumName = item.ForumName;
         Cover = item.Cover;
@@ -40,8 +42,17 @@ public sealed partial class PostReaderViewModel : ObservableObject
     /// <summary>由 Shell 接手关闭（收起阅读器覆盖层）。</summary>
     public Action? CloseRequested { get; set; }
 
+    /// <summary>由 Shell 接手打开作者主页。</summary>
+    public Action<string>? OpenAuthorProfile { get; set; }
+
     [RelayCommand]
     private void Close() => CloseRequested?.Invoke();
+
+    [RelayCommand]
+    private void OpenAuthor()
+    {
+        if (!string.IsNullOrWhiteSpace(AuthorUid)) OpenAuthorProfile?.Invoke(AuthorUid);
+    }
 
     public ObservableCollection<string> Images { get; }
     public ObservableCollection<string> Topics { get; } = new();
@@ -64,6 +75,12 @@ public sealed partial class PostReaderViewModel : ObservableObject
 
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private string _author = string.Empty;
+    [ObservableProperty] private string _authorUid = string.Empty;
+    [ObservableProperty] private bool _isFollowingAuthor;
+
+    public string FollowText => IsFollowingAuthor ? "已关注" : "关注";
+
+    partial void OnIsFollowingAuthorChanged(bool value) => OnPropertyChanged(nameof(FollowText));
     [ObservableProperty] private string _authorAvatar = string.Empty;
     [ObservableProperty] private string _timeText = string.Empty;
     [ObservableProperty] private string _forumName = string.Empty;
@@ -120,6 +137,8 @@ public sealed partial class PostReaderViewModel : ObservableObject
                 {
                     Title = string.IsNullOrWhiteSpace(detail.Title) ? Title : detail.Title;
                     Author = string.IsNullOrWhiteSpace(detail.Author) ? Author : detail.Author;
+                    AuthorUid = string.IsNullOrWhiteSpace(detail.AuthorUid) ? AuthorUid : detail.AuthorUid;
+                    IsFollowingAuthor = detail.IsFollowingAuthor;
                     AuthorAvatar = string.IsNullOrWhiteSpace(detail.AuthorAvatar) ? AuthorAvatar : detail.AuthorAvatar;
                     ForumName = string.IsNullOrWhiteSpace(detail.ForumName) ? ForumName : detail.ForumName;
                     TimeText = string.IsNullOrWhiteSpace(detail.TimeText) ? TimeText : detail.TimeText;
@@ -295,10 +314,60 @@ public sealed partial class PostReaderViewModel : ObservableObject
     private void ReplyTo(CommentItem? comment)
     {
         if (comment is null) return;
-        var target = !string.IsNullOrWhiteSpace(comment.RootReplyId) ? comment.RootReplyId : comment.ReplyId;
-        ReplyTargetId = string.IsNullOrWhiteSpace(target) ? "0" : target;
-        ReplyTargetName = comment.Author;
-        CommentStatus = $"正在回复 {comment.Author}";
+        var open = !comment.IsReplyInputOpen;
+        foreach (var root in Comments)
+        {
+            root.IsReplyInputOpen = false;
+            foreach (var child in root.Children) child.IsReplyInputOpen = false;
+        }
+        comment.IsReplyInputOpen = open;
+    }
+
+    /// <summary>在评论下方直接发送回复：挂到该楼根评论，同步米游社。</summary>
+    [RelayCommand]
+    private async Task SendInlineReplyAsync(CommentItem? comment)
+    {
+        if (comment is null || comment.IsPostingReply) return;
+        var text = comment.ReplyInput?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(text))
+        {
+            comment.InlineStatus = "先写点什么再发送吧";
+            return;
+        }
+        if (!CanSync)
+        {
+            comment.InlineStatus = "请先在「我的」扫码登录米游社";
+            return;
+        }
+
+        comment.IsPostingReply = true;
+        comment.InlineStatus = "正在发布…";
+        try
+        {
+            var target = string.IsNullOrWhiteSpace(comment.RootReplyId) ? comment.ReplyId : comment.RootReplyId;
+            var result = await _content.Api.ReleaseReplyAsync(Item.PostId, text, target);
+            if (result.Ok)
+            {
+                comment.ReplyInput = string.Empty;
+                comment.IsReplyInputOpen = false;
+                comment.InlineStatus = string.Empty;
+                ReplyText = BumpCount(ReplyText, true);
+                Toast = "回复已同步到米游社";
+                await LoadCommentsAsync();
+            }
+            else
+            {
+                comment.InlineStatus = result.Message;
+            }
+        }
+        catch
+        {
+            comment.InlineStatus = "发布失败，请稍后重试";
+        }
+        finally
+        {
+            comment.IsPostingReply = false;
+        }
     }
 
     [RelayCommand]
@@ -307,6 +376,11 @@ public sealed partial class PostReaderViewModel : ObservableObject
         ReplyTargetId = "0";
         ReplyTargetName = string.Empty;
         CommentStatus = string.Empty;
+        foreach (var root in Comments)
+        {
+            root.IsReplyInputOpen = false;
+            foreach (var child in root.Children) child.IsReplyInputOpen = false;
+        }
     }
 
     private async Task LoadCommentsAsync()
@@ -328,6 +402,28 @@ public sealed partial class PostReaderViewModel : ObservableObject
         finally
         {
             IsLoadingComments = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task FollowAuthorAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AuthorUid)) return;
+        if (!CanSync)
+        {
+            Toast = "请先在「我的」扫码登录米游社";
+            return;
+        }
+
+        var target = !IsFollowingAuthor;
+        if (await _content.Api.SetFollowAsync(AuthorUid, target))
+        {
+            IsFollowingAuthor = target;
+            Toast = target ? "已关注，数据与官方同步" : "已取消关注";
+        }
+        else
+        {
+            Toast = "关注失败，请稍后重试";
         }
     }
 

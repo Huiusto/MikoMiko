@@ -10,12 +10,14 @@ namespace MikoMiko.ViewModels;
 public sealed partial class VideoViewModel : ObservableObject
 {
     private readonly ContentService _content;
+    private readonly Action<string>? _openUser;
     private List<FeedItem> _all = new();
     private readonly HashSet<string> _seen = new();
 
-    public VideoViewModel(ContentService content)
+    public VideoViewModel(ContentService content, Action<string>? openUser = null)
     {
         _content = content;
+        _openUser = openUser;
     }
 
     public ObservableCollection<FeedItem> Videos { get; } = new();
@@ -491,6 +493,13 @@ public sealed partial class VideoViewModel : ObservableObject
     private void PreviousVideo() => Previous();
 
     /// <summary>关注 / 取消关注视频作者（同步米游社）。</summary>
+    [RelayCommand]
+    private void OpenAuthor()
+    {
+        if (Selected is not null && !string.IsNullOrWhiteSpace(Selected.AuthorUid))
+            _openUser?.Invoke(Selected.AuthorUid);
+    }
+
     [RelayCommand]
     private async Task FollowAuthor()
     {

@@ -15,6 +15,8 @@ public partial class PostReaderView : UserControl
     private bool _localApplied;
     private bool _updatingInlineSlider;
     private bool _draggingInline;
+    private bool _lightboxPanning;
+    private Point _lightboxLastPoint;
 
     public PostReaderView(PostReaderViewModel vm)
     {
@@ -178,8 +180,46 @@ public partial class PostReaderView : UserControl
         if (sender is not Border { Tag: string url } || string.IsNullOrWhiteSpace(url)) return;
         LightboxImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(url, UriKind.Absolute));
         LightboxScale.ScaleX = LightboxScale.ScaleY = 1;
+        LightboxTranslate.X = LightboxTranslate.Y = 0;
         ImageLightbox.Visibility = Visibility.Visible;
         e.Handled = true;
+    }
+
+    /// <summary>灯箱左键拖动：按住图片平移，不依赖滚动条。</summary>
+    private void Lightbox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (ImageLightbox.Visibility != Visibility.Visible) return;
+        _lightboxPanning = true;
+        _lightboxLastPoint = e.GetPosition(LightboxScroll);
+        LightboxScroll.CaptureMouse();
+        LightboxScroll.Cursor = System.Windows.Input.Cursors.SizeAll;
+        e.Handled = true;
+    }
+
+    private void Lightbox_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_lightboxPanning || e.LeftButton != MouseButtonState.Pressed) return;
+        var point = e.GetPosition(LightboxScroll);
+        LightboxTranslate.X += point.X - _lightboxLastPoint.X;
+        LightboxTranslate.Y += point.Y - _lightboxLastPoint.Y;
+        _lightboxLastPoint = point;
+        e.Handled = true;
+    }
+
+    private void Lightbox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_lightboxPanning) return;
+        _lightboxPanning = false;
+        LightboxScroll.ReleaseMouseCapture();
+        LightboxScroll.Cursor = System.Windows.Input.Cursors.Hand;
+        e.Handled = true;
+    }
+
+    /// <summary>评论内回复框出现时自动聚焦。</summary>
+    private void InlineReplyBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.TextBox box && box.IsVisible)
+            Dispatcher.BeginInvoke(new Action(() => box.Focus()), DispatcherPriority.Input);
     }
 
     /// <summary>灯箱滚轮缩放（0.5×–6×），放大后可拖动滚动查看。</summary>
