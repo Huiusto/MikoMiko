@@ -1,4 +1,4 @@
-﻿; MikoMiko 0.1.12 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
+﻿; MikoMiko 0.1.13 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
 Unicode true
 SetCompressor /SOLID lzma
 
@@ -6,7 +6,7 @@ SetCompressor /SOLID lzma
 !include "FileFunc.nsh"
 
 !define APP_NAME "MikoMiko"
-!define APP_VERSION "0.1.12"
+!define APP_VERSION "0.1.13"
 !define APP_EXE "MikoMiko.exe"
 !define APP_PUBLISHER "MikoMiko Contributors"
 !define APP_URL "https://github.com/Huiusto/MikoMiko"
@@ -17,7 +17,7 @@ InstallDir "$LOCALAPPDATA\Programs\MikoMiko"
 InstallDirRegKey HKCU "Software\MikoMiko" "InstallDir"
 RequestExecutionLevel user
 
-VIProductVersion "0.1.12.0"
+VIProductVersion "0.1.13.0"
 VIAddVersionKey /LANG=2052 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=2052 "CompanyName" "${APP_PUBLISHER}"
 VIAddVersionKey /LANG=2052 "FileDescription" "${APP_NAME} 安装程序"
@@ -49,6 +49,9 @@ Section "MikoMiko 主程序" SecMain
   SetOverwrite on
 
   File "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\dist\app\MikoMiko.exe"
+  SetOutPath "$INSTDIR\Assets\Anime"
+  File "/nonfatal" "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\dist\app\Assets\Anime\anime-module.zip"
+  SetOutPath "$INSTDIR"
   File /nonfatal "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\README.md"
   File /nonfatal "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\LICENSE"
 
@@ -81,6 +84,7 @@ Section "Uninstall"
   Delete "$INSTDIR\${APP_EXE}"
   Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\LICENSE"
+  RMDir /r "$INSTDIR\Assets"
   RMDir "$INSTDIR"
 
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\MikoMiko"

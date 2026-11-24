@@ -285,13 +285,14 @@
                 <ControlTemplate TargetType="{x:Type Button}">
                     <Grid Background="Transparent" Margin="0,0,26,0">
                         <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"
-                                          TextElement.FontFamily="{DynamicResource Font.Ui}" Margin="0,0,0,4" />
+                                          TextElement.FontFamily="{DynamicResource Font.Ui}"
+                                          TextElement.Foreground="{TemplateBinding Foreground}" Margin="0,0,0,4" />
                         <Border x:Name="Underline" Height="3" Width="18" CornerRadius="2" VerticalAlignment="Bottom"
                                 Background="{DynamicResource Brush.Accent}" Visibility="Collapsed" />
                     </Grid>
                     <ControlTemplate.Triggers>
                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+                            <Setter Property="Foreground" Value="#4EA4DD" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                             <Setter TargetName="Underline" Property="Visibility" Value="Visible" />
                         </DataTrigger>

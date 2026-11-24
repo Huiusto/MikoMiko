@@ -162,8 +162,8 @@ public sealed partial class VideoViewModel : ObservableObject
 
     public void Select(FeedItem item)
     {
-        // 真正展示给用户时才写入后台记录，7 天内不再推送同一作者。
-        _authorHistory.Remember(item.AuthorUid, item.Author);
+        // 真正展示给用户时才写入后台记录，3 天内不再推送同一作者；官方视频不限。
+        if (!item.IsOfficial) _authorHistory.Remember(item.AuthorUid, item.Author);
         _batchAuthors.Add(AuthorKeyOf(item));
         Selected = item;
         HasSource = !string.IsNullOrWhiteSpace(item.VideoUrl);
@@ -290,9 +290,10 @@ public sealed partial class VideoViewModel : ObservableObject
         if (comment.IsDisliked) comment.IsLiked = false;
     }
 
-    /// <summary>同一作者 7 天内只推送一次；同一批次内也不重复。</summary>
+    /// <summary>同一作者 3 天内只推送一次；同一批次内也不重复，官方视频始终放行。</summary>
     private bool CanPushAuthor(FeedItem item)
     {
+        if (item.IsOfficial) return true;
         var key = AuthorKeyOf(item);
         if (key.Length == 0) return true;
         if (_batchAuthors.Contains(key)) return false;

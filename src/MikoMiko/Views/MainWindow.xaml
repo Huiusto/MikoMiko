@@ -106,15 +106,31 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Style="{StaticResource TabButton}" Content="{Binding Title}"
+                            <Button Style="{StaticResource TabButton}"
                                     Command="{Binding DataContext.SelectTabCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                    CommandParameter="{Binding}" />
+                                    CommandParameter="{Binding}">
+                                <TextBlock Text="{Binding Title}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+                                            <Setter Property="FontSize" Value="16" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Foreground" Value="#4EA4DD" />
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
                 <Border Grid.Column="4" Width="340" Height="36" CornerRadius="8"
-                        Background="{DynamicResource Brush.SearchBg}" VerticalAlignment="Center" Margin="10,0,14,0">
+                        Background="{DynamicResource Brush.SearchBg}" VerticalAlignment="Center" Margin="10,0,14,0"
+                        Visibility="{Binding ShowGlobalSearch, Converter={StaticResource BoolToVis}}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -182,6 +198,12 @@
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding CurrentView}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             Focusable="False" />
+
+            <!-- ==================== 追番/影视（首页第三页签，独立模块页） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding AnimePage}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False"
+                            Visibility="{Binding IsAnimePageOpen, Converter={StaticResource BoolToVis}}" />
 
             <!-- ==================== 帖子阅读器（软件内打开，覆盖内容区） ==================== -->
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding ReaderView}"

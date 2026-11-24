@@ -10,7 +10,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
-    <Version>0.1.12</Version>
+    <Version>0.1.13</Version>
     <Product>MikoMiko</Product>
     <AssemblyTitle>MikoMiko</AssemblyTitle>
     <Company>Huiusto</Company>
@@ -37,6 +37,13 @@
     <Resource Include="Assets\Profile\*.png" />
     <Resource Include="Assets\Demo\*.jpg" />
     <Resource Include="Assets\Demo\*.png" />
+    <Resource Include="Assets\Anime\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Anime\anime-module.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

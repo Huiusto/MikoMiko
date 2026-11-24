@@ -4,12 +4,12 @@ using System.Text.Json;
 namespace MikoMiko.Services;
 
 /// <summary>
-/// 视频随机流的作者冷却记录：同一作者（优先按 UID）展示过后 7 天内不再推送，
+/// 视频随机流的作者冷却记录：同一作者（优先按 UID）展示过后 3 天内不再推送，
 /// 过期记录在启动和写入时自动清理。持久化到应用数据目录，重启后继续生效。
 /// </summary>
 public sealed class VideoAuthorHistory
 {
-    private static readonly TimeSpan Cooldown = TimeSpan.FromDays(7);
+    private static readonly TimeSpan Cooldown = TimeSpan.FromDays(3);
     private readonly string _filePath;
     private readonly object _gate = new();
     private Dictionary<string, Entry> _entries = new();
@@ -27,7 +27,7 @@ public sealed class VideoAuthorHistory
         public DateTime ShownAtUtc { get; set; }
     }
 
-    /// <summary>作者是否仍在 7 天冷却期。空作者不拦截。</summary>
+    /// <summary>作者是否仍在 3 天冷却期。空作者不拦截。</summary>
     public bool IsBlocked(string? uid, string? name)
     {
         var key = KeyOf(uid, name);

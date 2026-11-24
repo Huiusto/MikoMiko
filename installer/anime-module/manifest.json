@@ -1,0 +1,79 @@
+{
+  "name": "追番/影视",
+  "version": "1.0.0",
+  "description": "聚合九个追番与影视站点的独立模块，可单独下载和卸载。",
+  "providers": [
+    {
+      "name": "樱花TV",
+      "home": "https://www.yhdmtv.cc/",
+      "kind": "动漫",
+      "region": "日本",
+      "parser": "module-poster",
+      "search": "https://www.yhdmtv.cc/om-search/api?q={q}&page=1"
+    },
+    {
+      "name": "PIDEC",
+      "home": "https://superpix.com.cn/",
+      "kind": "动漫",
+      "region": "日本",
+      "parser": "stui",
+      "search": ""
+    },
+    {
+      "name": "樱花动漫1",
+      "home": "https://yinghdm.org.cn/",
+      "kind": "动漫",
+      "region": "日本",
+      "parser": "none",
+      "search": ""
+    },
+    {
+      "name": "樱花动漫2",
+      "home": "https://www.zhuidm.net/",
+      "kind": "动漫",
+      "region": "日本",
+      "parser": "module-poster",
+      "search": "https://www.zhuidm.net/vodsearch/{q}-------------.html"
+    },
+    {
+      "name": "南瓜电影",
+      "home": "https://v.vcinema.cn/filtrate",
+      "kind": "电影",
+      "region": "国产",
+      "parser": "none",
+      "search": ""
+    },
+    {
+      "name": "七猫视频",
+      "home": "https://milace.cn/",
+      "kind": "电影",
+      "region": "国产",
+      "parser": "none",
+      "search": ""
+    },
+    {
+      "name": "电影先生",
+      "home": "https://silidm.com/",
+      "kind": "电视剧",
+      "region": "国产",
+      "parser": "none",
+      "search": ""
+    },
+    {
+      "name": "漫漫看",
+      "home": "https://www.manmankan.com/dy2013/dianshiju/dalu/",
+      "kind": "电视剧",
+      "region": "国产",
+      "parser": "none",
+      "search": ""
+    },
+    {
+      "name": "麻花影视",
+      "home": "https://mh-ys.cc/",
+      "kind": "电影",
+      "region": "国产",
+      "parser": "none",
+      "search": ""
+    }
+  ]
+}

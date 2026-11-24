@@ -160,11 +160,13 @@ public partial class App : Application
             timer.Stop();
             try
             {
-                var workArea = SystemParameters.WorkArea;
-                MainWindow!.Width = Math.Min(1624, workArea.Width);
-                MainWindow.Height = Math.Min(1000, workArea.Height);
+                MainWindow!.Width = 1614;
+                MainWindow.Height = 940;
+                MainWindow.Left = 0;
+                MainWindow.Top = 0;
                 Log(path, "resized");
                 var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" or "UserProfile" or "UserGame" ? "Home"
+                    : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeDownload" or "AnimeSearch" ? "Home"
                     : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
@@ -172,6 +174,36 @@ public partial class App : Application
                     : page is "Upload" or "UploadType" ? "Home"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
+                if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeDownload" or "AnimeSearch")
+                {
+                    var animeTab = Shell.HomeTabs.FirstOrDefault(t => t.Key == "Anime");
+                    if (animeTab is not null) Shell.SelectTabCommand.Execute(animeTab);
+                    if (page is "AnimeDownload" or "AnimeSearch")
+                    {
+                        var downloadDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+                        downloadDelay.Tick += (_, _) =>
+                        {
+                            downloadDelay.Stop();
+                            if (page == "AnimeDownload") Shell.Anime.DownloadModuleCommand.Execute(null);
+                            else
+                            {
+                                Shell.Anime.SearchText = "凡人";
+                                Shell.Anime.SearchCommand.Execute(null);
+                            }
+                        };
+                        downloadDelay.Start();
+                    }
+                    if (page == "AnimeMore")
+                    {
+                        var moreDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+                        moreDelay.Tick += (_, _) =>
+                        {
+                            moreDelay.Stop();
+                            Shell.Anime.ShowMoreCommand.Execute(null);
+                        };
+                        moreDelay.Start();
+                    }
+                }
                 if (page == "Posts" && Shell.HomeTabs.Count > 1)
                 {
                     foreach (var tab in Shell.HomeTabs) tab.IsSelected = tab.Key == "Posts";
@@ -289,7 +321,7 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" ? 10 : page == "Moment" ? 12 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();
@@ -316,6 +348,19 @@ public partial class App : Application
                         Shell.Video.IsQualityOpen = false;
                         MainWindow!.UpdateLayout();
                     }
+                    if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeDownload" or "AnimeSearch")
+                    {
+                        Shell.CloseBrowser();
+                        var animeTab = Shell.HomeTabs.FirstOrDefault(t => t.Key == "Anime");
+                        if (animeTab is not null && !animeTab.IsSelected)
+                            Shell.SelectTabCommand.Execute(animeTab);
+                        if (page is not ("Anime" or "AnimeSearch") && Shell.Anime.IsInstalled)
+                            Shell.Anime.PrepareForCapture(page == "AnimeMore");
+                        MainWindow!.UpdateLayout();
+                        Shell.AnimePage?.ResetScroll();
+                        MainWindow.UpdateLayout();
+                        Shell.AnimePage?.ResetScroll();
+                    }
                     if (page == "ReaderComments")
                     {
                         MainWindow!.UpdateLayout();
@@ -327,6 +372,8 @@ public partial class App : Application
                     settle.Tick += (_, _) =>
                     {
                         settle.Stop();
+                        Shell.AnimePage?.ResetScroll();
+                        MainWindow!.UpdateLayout();
                         CaptureWindow(path);
                         Log(path, "saved");
                         Shutdown();

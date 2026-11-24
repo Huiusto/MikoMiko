@@ -18,6 +18,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private readonly HomeViewModel _home;
     private readonly VideoViewModel _video;
+    private readonly AnimeViewModel _anime;
 
     /// <summary>视频页 ViewModel（截图工具与外部调用用）。</summary>
     public VideoViewModel Video => _video;
@@ -50,6 +51,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         _home = new HomeViewModel(content, OpenItem, user => OpenUserProfile(user.Uid));
         _video = new VideoViewModel(content, OpenUserProfile, _settings);
+        _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), OpenLink);
         _moment = new MomentViewModel(content, OpenMoment);
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
@@ -71,6 +73,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
         HomeTabs.Add(new TabOption("Posts", "Home.Posts"));
+        HomeTabs.Add(new TabOption("Anime", "Home.Anime"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -86,6 +89,11 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private bool _isHome = true;
     [ObservableProperty] private string _brand = string.Empty;
     [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty] private bool _showGlobalSearch = true;
+
+    /// <summary>追番/影视是首页内的独立覆盖页，不占用主导航。</summary>
+    [ObservableProperty] private Views.AnimeView? _animePage;
+    [ObservableProperty] private bool _isAnimePageOpen;
 
     /// <summary>软件内阅读器（帖子 / 视频帖都在这里打开，不跳页、不弹独立窗口）。</summary>
     [ObservableProperty] private Views.PostReaderView? _readerView;
@@ -108,6 +116,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public UploadViewModel Upload => _upload;
     public MineViewModel MineViewModel => _mine;
     public HomeViewModel Home => _home;
+    public AnimeViewModel Anime => _anime;
 
     private string PickSearchPlaceholder()
     {
@@ -144,10 +153,25 @@ public sealed partial class ShellViewModel : ObservableObject
     private async Task SelectTab(TabOption? tab)
     {
         if (tab is null) return;
-        // 在推荐 / 帖子之间切换时，任何已打开的帖子阅读器都先自动关闭。
+        // 在推荐 / 帖子 / 追番影视之间切换时，任何已打开的帖子阅读器都先自动关闭。
         if (IsReaderOpen) CloseReader();
         CloseProfile();
         foreach (var option in HomeTabs) option.IsSelected = option == tab;
+
+        if (tab.Key == "Anime")
+        {
+            _home.DeactivatePosts();
+            if (_currentKey != "Home")
+            {
+                Navigate("Home");
+                if (IsAnimePageOpen) return;
+            }
+            ShowAnimePage();
+            await _anime.InitializeAsync();
+            return;
+        }
+
+        CloseAnimePage();
         if (tab.Key == "Posts")
         {
             _home.IsPostsTab = true;
@@ -162,6 +186,19 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
+    private void ShowAnimePage()
+    {
+        AnimePage ??= new Views.AnimeView(_anime);
+        IsAnimePageOpen = true;
+        ShowGlobalSearch = false;
+    }
+
+    private void CloseAnimePage()
+    {
+        IsAnimePageOpen = false;
+        ShowGlobalSearch = true;
+    }
+
     public void Navigate(string key, bool pushHistory = true)
     {
         if (_currentKey == key)
@@ -170,8 +207,17 @@ public sealed partial class ShellViewModel : ObservableObject
             if (key == "Home")
             {
                 if (IsReaderOpen) CloseReader();
-                if (_home.IsPostsTab) _ = _home.ActivatePostsAsync();
-                else _ = _home.LoadAsync(_home.IsLatest);
+                if (HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key == "Anime")
+                {
+                    ShowAnimePage();
+                    _ = _anime.InitializeAsync();
+                }
+                else
+                {
+                    CloseAnimePage();
+                    if (_home.IsPostsTab) _ = _home.ActivatePostsAsync();
+                    else _ = _home.LoadAsync(_home.IsLatest);
+                }
             }
             if (key == "Video") _ = _video.RefreshAsync();
             return;
@@ -182,6 +228,7 @@ public sealed partial class ShellViewModel : ObservableObject
         if (IsBrowserOpen) CloseBrowser();
         if (IsUploadOpen) CloseUpload();
         CloseProfile();
+        if (key != "Home") CloseAnimePage();
 
         // 离开视频页时暂停播放与特效，避免在别的页面继续出声
         if (_currentKey == "Video") VideoPage?.PausePlayback();
@@ -209,6 +256,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
         CurrentView = view;
         if (view is Views.VideoView videoView) VideoPage = videoView;
+
+        if (key == "Home" && HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key == "Anime")
+            ShowAnimePage();
+        else if (key == "Home")
+            CloseAnimePage();
+
         _settings.LastPage = key;
         _ = EnsureLoadedAsync(key);
     }
@@ -227,7 +280,8 @@ public sealed partial class ShellViewModel : ObservableObject
         switch (key)
         {
             case "Home":
-                if (_home.IsPostsTab) await _home.ActivatePostsAsync();
+                if (IsAnimePageOpen) await _anime.InitializeAsync();
+                else if (_home.IsPostsTab) await _home.ActivatePostsAsync();
                 else if (_home.Items.Count == 0) await _home.LoadAsync(_home.IsLatest);
                 break;
             case "Video":
