@@ -144,6 +144,7 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                 <!-- 常规设置 -->
@@ -440,6 +441,50 @@
                         <TextBlock Text="{Binding [Disclaimer.Desc], Source={x:Static loc:Loc.Instance}}"
                                    FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
                                    TextWrapping="Wrap" LineHeight="20" MaxWidth="620" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </Border>
+
+                <!-- 开源说明 -->
+                <Border Grid.Row="4" Grid.ColumnSpan="2" Style="{StaticResource SectionCard}"
+                        Margin="0,0,0,14" Tag="OpenSource">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <TextBlock Text="开源说明" Style="{StaticResource SectionTitle}" Margin="0" />
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Background="#1A4EA4DD"
+                                    BorderBrush="#4D4EA4DD" BorderThickness="1" CornerRadius="9" Padding="9,3">
+                                <TextBlock Text="MIT License" FontSize="10.5" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource Brush.Accent}" />
+                            </Border>
+                        </Grid>
+                        <TextBlock TextWrapping="Wrap" LineHeight="20" FontSize="12.5" MaxWidth="760"
+                                   HorizontalAlignment="Left" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   Text="MikoMiko 是一个完全开源的米游社第三方桌面客户端，基于 .NET 8 与 WPF 构建。所有源码均公开在 GitHub，欢迎阅读、学习、提交问题与参与改进。" />
+
+                        <Border Background="{DynamicResource Brush.ControlBg}" CornerRadius="9" Padding="14,12"
+                                Margin="0,12,0,0">
+                            <StackPanel>
+                                <TextBlock FontSize="12" LineHeight="21" Foreground="{DynamicResource Brush.TextSecondary}"
+                                           TextWrapping="Wrap"
+                                           Text="• 许可证：MIT License，可自由使用、修改与分发，保留版权与许可声明即可。" />
+                                <TextBlock FontSize="12" LineHeight="21" Foreground="{DynamicResource Brush.TextSecondary}"
+                                           TextWrapping="Wrap"
+                                           Text="• 技术栈：.NET 8 / WPF / WebView2，界面与业务逻辑全部开放，欢迎二次开发。" />
+                                <TextBlock FontSize="12" LineHeight="21" Foreground="{DynamicResource Brush.TextSecondary}"
+                                           TextWrapping="Wrap"
+                                           Text="• 复用说明：转载或基于本项目发布衍生版本时，请注明原仓库地址，并保留原有版权声明。" />
+                                <TextBlock FontSize="12" LineHeight="21" Foreground="{DynamicResource Brush.TextSecondary}"
+                                           TextWrapping="Wrap"
+                                           Text="• 非官方声明：本项目由个人开发者维护，与米哈游及米游社官方无任何关联。" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,13,0,0">
+                            <Button Content="访问 GitHub 仓库" Style="{StaticResource SoftButton}" Height="32"
+                                    Padding="15,0" Command="{Binding OpenProjectPageCommand}" />
+                            <TextBlock Text="github.com/Huiusto/MikoMiko" FontSize="11.5"
+                                       Foreground="{DynamicResource Brush.TextTertiary}"
+                                       VerticalAlignment="Center" Margin="12,0,0,0" />
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

@@ -51,8 +51,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
         _home = new HomeViewModel(content, OpenItem, user => OpenUserProfile(user.Uid));
         _video = new VideoViewModel(content, OpenUserProfile, _settings);
-        _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), OpenLink);
-        _moment = new MomentViewModel(content, OpenMoment);
+        _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), OpenAnimePlayer);
+        _moment = new MomentViewModel(content, OpenMoment, OpenUserProfile);
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
         _settingsVm.LanguageChanged = RefreshLocalization;
@@ -430,6 +430,15 @@ public sealed partial class ShellViewModel : ObservableObject
         if (BrowserView is null) return;
         BrowserView = null;
         IsBrowserOpen = false;
+    }
+
+    /// <summary>追番/影视在软件内播放：隐藏地址栏，只保留后退与关闭。</summary>
+    private void OpenAnimePlayer(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+        CloseBrowser();
+        BrowserView = new Views.BrowserView(url, CloseBrowser, immersivePlayer: true);
+        IsBrowserOpen = true;
     }
 
     /// <summary>打开上传内容弹层；再次打开时回到第一步。</summary>

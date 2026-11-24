@@ -17,7 +17,7 @@ public static class ImageLoader
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36");
-        client.DefaultRequestHeaders.Referrer = new Uri("https://www.miyoushe.com/");
+        // 不携带固定 Referer：追番站的图床会拒绝来自米游社域名的外链请求。
         return client;
     }
 

@@ -11,12 +11,14 @@ public sealed partial class MomentViewModel : ObservableObject
 {
     private readonly ContentService _content;
     private readonly Action<MomentItem> _openMoment;
+    private readonly Action<string> _openUser;
     private List<MomentItem> _all = new();
 
-    public MomentViewModel(ContentService content, Action<MomentItem> openMoment)
+    public MomentViewModel(ContentService content, Action<MomentItem> openMoment, Action<string> openUser)
     {
         _content = content;
         _openMoment = openMoment;
+        _openUser = openUser;
     }
 
     public ObservableCollection<MomentItem> Moments { get; } = new();
@@ -126,6 +128,13 @@ public sealed partial class MomentViewModel : ObservableObject
         SelectedAuthorUid = string.Empty;
         SelectedAuthorName = "全部动态";
         IsAllSelected = true;
+    }
+
+    [RelayCommand]
+    private void OpenMomentAuthor(MomentItem? moment)
+    {
+        if (moment is null || string.IsNullOrWhiteSpace(moment.AuthorUid)) return;
+        _openUser(moment.AuthorUid);
     }
 
     [RelayCommand]

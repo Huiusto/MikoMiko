@@ -1,4 +1,5 @@
 using Microsoft.Web.WebView2.Core;
+using MikoMiko.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,15 +11,24 @@ public partial class BrowserView : UserControl
 {
     private readonly string _url;
     private readonly bool _isUploadPage;
+    private readonly bool _isPlayer;
     private bool _initialized;
 
-    public BrowserView(string url, Action? closeRequested = null)
+    public BrowserView(string url, Action? closeRequested = null, bool immersivePlayer = false)
     {
         InitializeComponent();
         _url = url;
         _isUploadPage = url.Contains("newArticle", StringComparison.OrdinalIgnoreCase);
+        _isPlayer = immersivePlayer;
         CloseRequested = closeRequested;
-        AddressText.Text = url;
+        if (immersivePlayer)
+        {
+            AddressBox.Visibility = Visibility.Collapsed;
+        }
+        else
+        {
+            AddressText.Text = url;
+        }
     }
 
     public Action? CloseRequested { get; set; }
@@ -33,14 +43,17 @@ public partial class BrowserView : UserControl
             Directory.CreateDirectory(dataDir);
             var environment = await CoreWebView2Environment.CreateAsync(null, dataDir);
             await Web.EnsureCoreWebView2Async(environment);
-            InjectAccountCookies();
-            Web.CoreWebView2.NavigationStarting += (_, args) => AddressText.Text = args.Uri;
-            Web.CoreWebView2.NavigationCompleted += async (_, _) =>
+            await InjectAccountCookiesAsync();
+            Web.CoreWebView2.NavigationStarting += (_, args) =>
+            {
+                if (!_isPlayer) AddressText.Text = args.Uri;
+            };
+            Web.CoreWebView2.NavigationCompleted += async (_, args) =>
             {
                 LoadingPanel.Visibility = Visibility.Collapsed;
-                if (_isUploadPage || (Web.Source?.AbsoluteUri.Contains("newArticle", StringComparison.OrdinalIgnoreCase) ?? false))
+                if (_isPlayer)
                 {
-                    try { await Web.CoreWebView2.ExecuteScriptAsync(UploadChromeScript); } catch { }
+                    try { await Web.CoreWebView2.ExecuteScriptAsync(PlayerHelperScript); } catch { }
                 }
             };
             Web.CoreWebView2.NewWindowRequested += (_, args) =>
@@ -50,7 +63,7 @@ public partial class BrowserView : UserControl
             };
             Web.CoreWebView2.Navigate(_url);
         }
-        catch
+        catch (Exception)
         {
             LoadingPanel.Visibility = Visibility.Collapsed;
             AddressText.Text = "网页组件初始化失败，请在设置中检查 WebView2 运行库";
@@ -85,12 +98,34 @@ public partial class BrowserView : UserControl
     private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke();
 
     /// <summary>把软件内已登录的米游社 Cookie 注入 WebView2，发布页无需重复扫码。</summary>
-    private void InjectAccountCookies()
+    private async Task InjectAccountCookiesAsync()
     {
         try
         {
             var raw = App.SettingsService.Current.Cookie;
             if (string.IsNullOrWhiteSpace(raw) || Web.CoreWebView2 is null) return;
+
+            // 发布网页依赖 cookie_token；旧登录态缺失时先用 stoken 补换一次网页 Cookie。
+            if (_isUploadPage &&
+                !raw.Contains("cookie_token", StringComparison.OrdinalIgnoreCase) &&
+                raw.Contains("stoken=", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var refreshed = await new MiHoYoLoginService().RefreshWebCookieAsync(raw);
+                    if (!string.IsNullOrWhiteSpace(refreshed))
+                    {
+                        App.SettingsService.Current.Cookie = refreshed;
+                        App.SettingsService.Save();
+                        raw = refreshed;
+                    }
+                }
+                catch
+                {
+                    // 换取失败时继续用原 Cookie，网页会进入自己的登录引导。
+                }
+            }
+
             foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 var split = part.IndexOf('=');
@@ -102,7 +137,8 @@ public partial class BrowserView : UserControl
                 foreach (var domain in new[] { ".miyoushe.com", "www.miyoushe.com", ".user.miyoushe.com" })
                 {
                     var cookie = Web.CoreWebView2.CookieManager.CreateCookie(name, value, domain, "/");
-                    cookie.IsHttpOnly = true;
+                    // 米游社网页端 SDK 需要读取 ltuid / account_id 等字段，因此不能全部设为 HttpOnly。
+                    cookie.IsHttpOnly = false;
                     cookie.IsSecure = true;
                     Web.CoreWebView2.CookieManager.AddOrUpdateCookie(cookie);
                 }
@@ -115,93 +151,33 @@ public partial class BrowserView : UserControl
     }
 
     /// <summary>
-    /// 上传页精简脚本：隐藏站点 logo、米游社文字、首页/校园/ACG 等导航和搜索框，
-    /// 只保留右上角头像登录；脚本会持续观察 DOM，兼容前端异步渲染。
+    /// 站内播放辅助：关闭常见的浮层广告与下载提示，保证视频区域可获得焦点；
+    /// 只对明显的广告容器生效，不隐藏站点正文或播放器。
     /// </summary>
-    private const string UploadChromeScript = """
+    private const string PlayerHelperScript = """
         (() => {
-          if (!location.pathname.includes('/newArticle/')) return;
-          if (window.__mikoUploadChrome) { window.__mikoUploadChrome(); return; }
-          const navText = /^(米游社|首页|校园|ACG|搜索|关注|推荐|消息|发现|下载|创作中心|我的|首页推荐|游戏中心|话题|活动)$/i;
+          if (window.__mikoPlayerHelper) { window.__mikoPlayerHelper(); return; }
           const hide = el => { if (!el || el.dataset.mikoKeep === '1') return; el.style.setProperty('display','none','important'); };
-          const ghost = el => { if (!el || el.dataset.mikoKeep === '1') return; el.style.setProperty('visibility','hidden','important'); };
-
-          function pickAvatar() {
-            const nodes = [...document.querySelectorAll('a,button,div,img')];
-            const rightEdge = innerWidth * 0.72;
-            for (const el of nodes) {
+          const AD = /(^|[-_\s])(ad|ads|advert|gg|popup|pop|downloadapp|download-app)([-_\s]|$)/i;
+          function clean() {
+            for (const el of document.querySelectorAll('div,section,aside,iframe')) {
+              const idc = ((el.id || '') + ' ' + (el.className || '').toString());
+              if (!AD.test(idc)) continue;
               const r = el.getBoundingClientRect();
-              if (r.width < 18 || r.height < 18 || r.width > 90 || r.height > 90) continue;
-              if (r.top > 150 || r.right < rightEdge) continue;
-              const img = el.tagName === 'IMG' ? el : el.querySelector('img');
-              if (!img) continue;
-              const ir = img.getBoundingClientRect();
-              if (ir.width >= 18 && ir.height >= 18 && ir.top <= 150 && ir.right >= rightEdge) {
-                el.dataset.mikoKeep = '1';
-                return el;
-              }
+              if (r.width < 80 || r.height < 40) continue;
+              if (el.querySelector('video')) continue;
+              hide(el);
             }
-            return null;
+            for (const v of document.querySelectorAll('video')) {
+              v.controls = true;
+              v.style.setProperty('max-width','100%','important');
+            }
           }
-
-          function apply() {
-            const avatar = pickAvatar();
-            const topNodes = [...document.querySelectorAll('a,button,span,div,p,input,svg,img')];
-            for (const el of topNodes) {
-              if (avatar && (el === avatar || el.contains(avatar))) continue;
-              const r = el.getBoundingClientRect();
-              if (r.width === 0 || r.height === 0) continue;
-              const topArea = r.top < 140 && r.height < 150;
-              if (el.tagName === 'INPUT') {
-                if (topArea || /搜索|search/i.test(el.getAttribute('placeholder') || '')) {
-                  let p = el;
-                  for (let i = 0; i < 4 && p; i++) p = p.parentElement;
-                  hide(p || el);
-                }
-                continue;
-              }
-              if (!topArea) continue;
-              if (el.children.length === 0) {
-                const t = (el.textContent || '').trim();
-                if (navText.test(t)) hide(el);
-              }
-              if (el.tagName === 'IMG' || el.tagName === 'SVG') {
-                if (r.left < 260 && r.width < 240 && r.height < 100) ghost(el);
-              }
-              if ((el.tagName === 'A' || el.tagName === 'BUTTON') && r.left < 260 && r.width < 220 && r.height < 60) {
-                const t = (el.textContent || '').trim();
-                if (t === '米游社' || navText.test(t) || /米游社/.test(t)) hide(el);
-              }
-            }
-
-            if (!avatar) return;
-            let node = avatar;
-            while (node && node.parentElement && node.parentElement !== document.body) {
-              const parent = node.parentElement;
-              for (const child of [...parent.children]) {
-                if (child === node || child.contains(node)) continue;
-                if (child.tagName === 'SCRIPT' || child.tagName === 'STYLE') continue;
-                const text = (child.textContent || '').trim();
-                const hasMedia = !!child.querySelector?.('img,svg,input');
-                const cr = child.getBoundingClientRect();
-                if (navText.test(text) || /米游社/.test(text) || (hasMedia && cr.top < 150 && cr.height < 150)) {
-                  child.style.setProperty('display','none','important');
-                }
-              }
-              node = parent;
-              if (node === document.body) break;
-            }
-            avatar.style.setProperty('visibility','visible','important');
-            avatar.style.setProperty('opacity','1','important');
-            avatar.style.setProperty('display','flex','important');
-          }
-
-          window.__mikoUploadChrome = apply;
-          apply();
-          new MutationObserver(() => { clearTimeout(window.__mikoChromeTimer); window.__mikoChromeTimer = setTimeout(apply, 120); })
+          window.__mikoPlayerHelper = clean;
+          clean();
+          new MutationObserver(() => { clearTimeout(window.__mikoPlayerTimer); window.__mikoPlayerTimer = setTimeout(clean, 200); })
             .observe(document.documentElement, { childList: true, subtree: true });
-          addEventListener('resize', apply);
-          setInterval(apply, 2500);
+          setInterval(clean, 2500);
         })();
         """;
 }

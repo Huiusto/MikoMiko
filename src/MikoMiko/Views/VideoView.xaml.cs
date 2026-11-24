@@ -106,6 +106,27 @@ public partial class VideoView : UserControl
         }
     }
 
+    /// <summary>点击评论正文即可回复该评论；头像、昵称、图片和操作按钮保持各自行为。</summary>
+    private void CommentCard_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindAncestor<Border>(e.OriginalSource as DependencyObject) is not null) return;
+        if (FindAncestor<System.Windows.Controls.TextBox>(e.OriginalSource as DependencyObject) is not null) return;
+        if (sender is FrameworkElement { DataContext: CommentItem comment })
+        {
+            _vm.ReplyToCommand.Execute(comment);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>点击评论区以外的任意位置直接关闭评论区。</summary>
+    private void CommentBackdrop_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (!_vm.IsCommentsOpen) return;
+        _vm.ToggleCommentsCommand.Execute(null);
+        e.Handled = true;
+    }
+
     /// <summary>点击画面切换播放 / 暂停；点按钮、滑块时不触发。</summary>
     private void PlayerCard_Click(object sender, MouseButtonEventArgs e)
     {

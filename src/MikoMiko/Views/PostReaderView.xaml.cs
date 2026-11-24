@@ -101,7 +101,7 @@ public partial class PostReaderView : UserControl
         _videoTimer.Start();
     }
 
-    /// <summary>0.1.11：控制栏仅在鼠标进入视频区域时出现，移出后消失。</summary>
+    /// <summary>控制栏在播放期间保持可见，暂停或回到封面后再隐藏。</summary>
     private void VideoHost_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
     {
         if (VideoCover.Visibility == Visibility.Collapsed)
@@ -110,7 +110,8 @@ public partial class PostReaderView : UserControl
 
     private void VideoHost_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        VideoControls.Visibility = Visibility.Collapsed;
+        if (VideoCover.Visibility == Visibility.Visible)
+            VideoControls.Visibility = Visibility.Collapsed;
         VideoCover.Cursor = null;
         VideoHost.Cursor = null;
     }
@@ -200,7 +201,7 @@ public partial class PostReaderView : UserControl
     private void VideoProgress_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_updatingVideoSlider) return;
-        if (_draggingVideo || Mouse.LeftButton == MouseButtonState.Released) TrySeekVideo();
+        TrySeekVideo();
     }
 
     private void TrySeekVideo()
@@ -290,7 +291,7 @@ public partial class PostReaderView : UserControl
     private void InlineProgress_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (_updatingInlineSlider) return;
-        if (_draggingInline || Mouse.LeftButton == MouseButtonState.Released) TrySeekInline();
+        TrySeekInline();
     }
 
     private void TrySeekInline()

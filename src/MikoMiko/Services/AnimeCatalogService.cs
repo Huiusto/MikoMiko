@@ -11,6 +11,7 @@ public sealed class AnimeItem
     public string Title { get; init; } = string.Empty;
     public string Poster { get; init; } = string.Empty;
     public string Url { get; init; } = string.Empty;
+    public string PlayUrl { get; init; } = string.Empty;
     public string Source { get; init; } = string.Empty;
     public string Note { get; init; } = string.Empty;
     public string Kind { get; init; } = "动漫";
@@ -27,10 +28,13 @@ public sealed class AnimeCatalogService
 {
     private static readonly HttpClient Http = CreateHttpClient();
     private static readonly Regex ModuleAnchor = new(
-        @"<a\s+href=""(?<href>[^""]+)""\s+class=""[^""]*module-poster-item[^""]*""[^>]*>(?<body>.*?)</a>",
+        @"<a\b(?<attrs>[^>]*\bclass=""[^""]*module-poster-item[^""]*""[^>]*)>(?<body>.*?)</a>",
         RegexOptions.Singleline | RegexOptions.IgnoreCase);
     private static readonly Regex StuiAnchor = new(
         @"<a\s+(?<tag>[^>]*\bstui-vodlist__thumb\b[^>]*)>(?<body>.*?)</a>",
+        RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    private static readonly Regex AnyAnchor = new(
+        @"<a\b(?<attrs>[^>]*)>(?<body>.*?)</a>",
         RegexOptions.Singleline | RegexOptions.IgnoreCase);
     private static readonly Regex TagPattern = new(@"<[^>]+>", RegexOptions.Singleline);
     private static readonly Regex SpacePattern = new(@"\s+");
@@ -38,8 +42,7 @@ public sealed class AnimeCatalogService
     public async Task<List<AnimeItem>> LoadHomeAsync(IReadOnlyList<AnimeProvider> providers,
         CancellationToken cancellationToken = default)
     {
-        var parseable = providers.Where(p => (p.Parser == "module-poster" || p.Parser == "stui") && !string.IsNullOrWhiteSpace(p.Home))
-            .ToList();
+        var parseable = providers.Where(p => IsParseable(p) && !string.IsNullOrWhiteSpace(p.Home)).ToList();
         if (parseable.Count == 0) return new List<AnimeItem>();
 
         var tasks = parseable.Select(provider => FetchProviderAsync(provider.Home, provider, cancellationToken)).ToList();
@@ -56,7 +59,7 @@ public sealed class AnimeCatalogService
         if (keyword.Length == 0) return new List<AnimeItem>();
 
         var searchable = providers
-            .Where(p => (p.Parser == "module-poster" || p.Parser == "stui") && !string.IsNullOrWhiteSpace(p.Search))
+            .Where(p => IsParseable(p) && !string.IsNullOrWhiteSpace(p.Search))
             .ToList();
         var encoded = Uri.EscapeDataString(keyword);
         var tasks = searchable.Select(provider =>
@@ -101,9 +104,14 @@ public sealed class AnimeCatalogService
                 var html = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                 var items = url.Contains("/om-search/api", StringComparison.OrdinalIgnoreCase)
                     ? ParseJsonSearch(html, provider)
-                    : provider.Parser == "stui"
-                        ? ParseStui(html, provider)
-                        : ParseModulePoster(html, provider);
+                    : provider.Parser switch
+                    {
+                        "stui" => ParseStui(html, provider),
+                        "manmankan" => ParseManmankan(html, provider),
+                        "mhys" => ParseMhys(html, provider),
+                        "generic" => ParseGeneric(html, provider),
+                        _ => ParseModulePoster(html, provider),
+                    };
                 if (items.Count > 0 || attempt == 1) return items.Take(48).ToList();
             }
             catch
@@ -117,26 +125,107 @@ public sealed class AnimeCatalogService
         return new List<AnimeItem>();
     }
 
+    private static bool IsParseable(AnimeProvider provider)
+        => provider.Parser is "module-poster" or "stui" or "manmankan" or "generic" or "mhys";
+
     private static List<AnimeItem> ParseModulePoster(string html, AnimeProvider provider)
     {
         var items = new List<AnimeItem>();
         foreach (Match match in ModuleAnchor.Matches(html))
         {
-            var href = match.Groups["href"].Value.Trim();
+            var attrs = match.Groups["attrs"].Value;
             var body = match.Groups["body"].Value;
+            var href = Attribute(attrs, "href");
             var title = Text(Regex.Match(body, @"<div class=""module-poster-item-title"">(?<v>.*?)</div>",
                 RegexOptions.Singleline).Groups["v"].Value);
+            if (title.Length == 0)
+                title = Attribute(attrs, "title");
             if (title.Length == 0)
                 title = Text(Attribute(body, "alt"));
 
             var poster = Attribute(body, "data-original");
+            if (poster.Length == 0) poster = Attribute(body, "data-src");
             if (poster.Length == 0) poster = Attribute(body, "src");
 
-            var noteMatch = Regex.Match(body, @"<div class=""module-item-note"">(?<v>.*?)</div>",
+            var noteMatch = Regex.Match(body, @"<div class=""module-(?:item|poster-item)-note"">(?<v>.*?)</div>",
                 RegexOptions.Singleline);
             var note = Text(noteMatch.Groups["v"].Value);
 
             Add(items, provider, href, poster, title, note);
+        }
+        return items;
+    }
+
+    /// <summary>漫漫看：详情页是剧情页，真正的在线观看入口在 *_p.shtml。</summary>
+    private static List<AnimeItem> ParseManmankan(string html, AnimeProvider provider)
+    {
+        var items = new List<AnimeItem>();
+        foreach (Match match in AnyAnchor.Matches(html))
+        {
+            var attrs = match.Groups["attrs"].Value;
+            var body = match.Groups["body"].Value;
+            if (!body.Contains("<img", StringComparison.OrdinalIgnoreCase)) continue;
+            var href = Attribute(attrs, "href");
+            var title = Attribute(attrs, "title");
+            if (title.Length == 0) title = Text(Attribute(body, "alt"));
+            var poster = Attribute(body, "data-original");
+            if (poster.Length == 0) poster = Attribute(body, "data-src");
+            if (poster.Length == 0) poster = Attribute(body, "src");
+            if (poster.Contains("loadimg.gif", StringComparison.OrdinalIgnoreCase) &&
+                !body.Contains("data-original", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var play = Regex.Replace(href, @"\.shtml$", "_p.shtml", RegexOptions.IgnoreCase);
+            Add(items, provider, href, poster, title, "在线观看", play);
+            if (items.Count >= 48) break;
+        }
+        return items;
+    }
+
+    /// <summary>麻花影视：海报是懒加载 div 的 data-original，标题在 c1_wz 里。</summary>
+    private static List<AnimeItem> ParseMhys(string html, AnimeProvider provider)
+    {
+        var items = new List<AnimeItem>();
+        foreach (Match match in AnyAnchor.Matches(html))
+        {
+            var attrs = match.Groups["attrs"].Value;
+            var body = match.Groups["body"].Value;
+            if (!body.Contains("data-original", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!body.Contains("img_wrapper", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var href = Attribute(attrs, "href");
+            var title = Text(Regex.Match(body, @"<div class=""c1_wz"">(?<v>.*?)</div>",
+                RegexOptions.Singleline).Groups["v"].Value);
+            if (title.Length == 0) title = Attribute(attrs, "title");
+            var poster = Attribute(body, "data-original");
+            if (poster.Length == 0) poster = Attribute(body, "data-src");
+            Add(items, provider, href, poster, title, "热播");
+            if (items.Count >= 48) break;
+        }
+        return items;
+    }
+
+    /// <summary>结构不固定的站点：从带图片的详情链接里做保守提取。</summary>
+    private static List<AnimeItem> ParseGeneric(string html, AnimeProvider provider)
+    {
+        var items = new List<AnimeItem>();
+        foreach (Match match in AnyAnchor.Matches(html))
+        {
+            var attrs = match.Groups["attrs"].Value;
+            var body = match.Groups["body"].Value;
+            if (!body.Contains("<img", StringComparison.OrdinalIgnoreCase)) continue;
+            var href = Attribute(attrs, "href");
+            if (href.Length == 0 || href.StartsWith('#') || href.StartsWith("javascript", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var title = Attribute(attrs, "title");
+            if (title.Length == 0) title = Text(Attribute(body, "alt"));
+            if (title.Length < 2 || title.Length > 60) continue;
+            var poster = Attribute(body, "data-original");
+            if (poster.Length == 0) poster = Attribute(body, "data-src");
+            if (poster.Length == 0) poster = Attribute(body, "src");
+            if (poster.Contains("load", StringComparison.OrdinalIgnoreCase) ||
+                poster.Contains("logo", StringComparison.OrdinalIgnoreCase)) continue;
+            Add(items, provider, href, poster, title, string.Empty);
+            if (items.Count >= 48) break;
         }
         return items;
     }
@@ -189,18 +278,20 @@ public sealed class AnimeCatalogService
     }
 
     private static void Add(List<AnimeItem> items, AnimeProvider provider, string href, string poster,
-        string title, string note)
+        string title, string note, string playUrl = "")
     {
         if (string.IsNullOrWhiteSpace(href) || string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(poster))
             return;
 
         string absoluteUrl;
         string absolutePoster;
+        string absolutePlay;
         try
         {
             var baseUri = new Uri(provider.Home, UriKind.Absolute);
             absoluteUrl = new Uri(baseUri, href).ToString();
             absolutePoster = new Uri(baseUri, poster).ToString();
+            absolutePlay = string.IsNullOrWhiteSpace(playUrl) ? absoluteUrl : new Uri(baseUri, playUrl).ToString();
         }
         catch
         {
@@ -209,11 +300,15 @@ public sealed class AnimeCatalogService
 
         if (!absoluteUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return;
         if (absolutePoster.StartsWith("data:", StringComparison.OrdinalIgnoreCase)) return;
+        // 追番站的封面常混用 http 图床，升级到 https 可避开明文混合内容拦截。
+        if (absolutePoster.StartsWith("http://lain.bgm.tv/", StringComparison.OrdinalIgnoreCase))
+            absolutePoster = "https://" + absolutePoster[7..];
         items.Add(new AnimeItem
         {
             Title = title,
             Poster = absolutePoster,
             Url = absoluteUrl,
+            PlayUrl = absolutePlay,
             Source = provider.Name,
             Note = note,
             Kind = provider.Kind,
@@ -241,8 +336,10 @@ public sealed class AnimeCatalogService
         {
             AutomaticDecompression = DecompressionMethods.All,
             AllowAutoRedirect = true,
+            // 部分第三方站点证书链不完整，聚合只读取公开页面，不提交任何账号信息。
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true,
         };
-        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(18) };
+        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36");
         return client;

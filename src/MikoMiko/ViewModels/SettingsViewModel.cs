@@ -30,6 +30,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             new("AppInfo", Loc.Instance["S.AppInfo"]),
             new("About", Loc.Instance["S.About"]),
             new("Disclaimer", Loc.Instance["S.Disclaimer"]),
+            new("OpenSource", "开源说明"),
         };
         Sections[0].IsSelected = true;
 

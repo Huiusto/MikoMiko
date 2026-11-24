@@ -291,11 +291,14 @@
                             </Grid>
                         </Border>
 
-                        <Button Grid.Column="3" Content="{Binding [Video.Send], Source={x:Static loc:Loc.Instance}}"
-                                HorizontalAlignment="Left" Margin="8,0,0,0" VerticalAlignment="Center"
-                                Style="{StaticResource PlayerBarButton}" Padding="10,4"
-                                Background="{DynamicResource Brush.Accent}" Foreground="White"
-                                Click="SendDanmaku_Click" />
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                            <Button Content="{Binding [Video.Send], Source={x:Static loc:Loc.Instance}}"
+                                    Style="{StaticResource PlayerBarButton}" Padding="10,4"
+                                    Background="{DynamicResource Brush.Accent}" Foreground="White"
+                                    Click="SendDanmaku_Click" />
+                            <TextBlock Text="弹幕功能仅能自娱自乐。" Foreground="#8CFFFFFF" FontSize="10.5"
+                                       VerticalAlignment="Center" Margin="9,0,0,0" />
+                        </StackPanel>
 
                         <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button x:Name="QualityButton" Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
@@ -426,6 +429,9 @@
                         </ItemsControl>
                     </StackPanel>
                 </Border>
+                <Border Background="Transparent" Cursor="Hand"
+                        Visibility="{Binding IsCommentsOpen, Converter={StaticResource BoolToVis}}"
+                        MouseLeftButtonUp="CommentBackdrop_Click" />
                 <Border Width="390" HorizontalAlignment="Right" Margin="0,0,0,54" Background="#F2181820"
                         Visibility="{Binding IsCommentsOpen, Converter={StaticResource BoolToVis}}">
                     <Grid Margin="16,12,16,14">
@@ -496,7 +502,7 @@
                             <ItemsControl ItemsSource="{Binding Comments}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <StackPanel Margin="0,0,0,14">
+                                        <StackPanel Margin="0,0,0,14" MouseLeftButtonUp="CommentCard_Click">
                                             <StackPanel Orientation="Horizontal">
                                                 <Button Cursor="Hand" Width="28" Height="28" Padding="0" BorderThickness="0"
                                                         Background="Transparent"
@@ -514,8 +520,12 @@
                                                 </Button>
                                                 <StackPanel Margin="8,0,0,0">
                                                     <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding Author}" Foreground="#4EA4DD" FontSize="11.5"
-                                                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                        <Button Cursor="Hand" Padding="0" BorderThickness="0" Background="Transparent"
+                                                                Command="{Binding DataContext.OpenCommentUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}" ToolTip="查看用户主页">
+                                                            <TextBlock Text="{Binding Author}" Foreground="#4EA4DD" FontSize="11.5"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                        </Button>
                                                         <Border Background="#334EA4DD" CornerRadius="3" Padding="4,0"
                                                                 Margin="6,0,0,0" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding Level, StringFormat=Lv.{0}}" FontSize="9.5"
@@ -552,14 +562,15 @@
                                                         <Button Style="{StaticResource LinkButton}" Height="18" Padding="0"
                                                                 Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                 CommandParameter="{Binding}">
-                                                            <TextBlock Text="♡" FontSize="10.5" Foreground="#80FFFFFF">
+                                                            <TextBlock Text="♡" FontSize="10.5">
                                                                 <TextBlock.Style>
                                                                     <Style TargetType="TextBlock">
                                                                         <Setter Property="Text" Value="♡" />
+                                                                        <Setter Property="Foreground" Value="#80FFFFFF" />
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding IsLiked}" Value="True">
                                                                                 <Setter Property="Text" Value="♥" />
-                                                                                <Setter Property="Foreground" Value="#FF5C8A" />
+                                                                                <Setter Property="Foreground" Value="#E4465A" />
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>

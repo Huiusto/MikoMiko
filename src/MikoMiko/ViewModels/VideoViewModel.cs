@@ -412,7 +412,10 @@ public sealed partial class VideoViewModel : ObservableObject
                 ? $"{Selected.Author}_{Selected.PostId}"
                 : Selected.Title;
             var path = await DownloadService.DownloadAsync(Selected.VideoUrl, directory, name, ".mp4");
-            DownloadText = $"已保存到：{path}";
+            var shown = $"已保存到：{path}";
+            DownloadText = shown;
+            await Task.Delay(1000);
+            if (DownloadText == shown) DownloadText = string.Empty;
         }
         catch (Exception ex)
         {

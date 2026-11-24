@@ -17,13 +17,12 @@ public partial class MomentView : UserControl
         DataContext = viewModel;
     }
 
-    /// <summary>点击动态里的头像或昵称：右侧只看该用户发布的全部内容。</summary>
+    /// <summary>点击动态里的头像或昵称：打开该用户的米游社主页。</summary>
     private void MomentAuthor_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: MomentItem moment })
         {
-            _vm.SelectMomentAuthorCommand.Execute(moment);
-            MomentScroll.ScrollToTop();
+            _vm.OpenMomentAuthorCommand.Execute(moment);
             e.Handled = true;
         }
     }

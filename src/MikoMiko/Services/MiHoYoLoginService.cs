@@ -77,6 +77,50 @@ public sealed class MiHoYoLoginService
 
     // ---------------------------------------------------------------- Cookie 组装
 
+    /// <summary>
+    /// 旧登录流程可能只拿到 ltoken 而缺 cookie_token。发布网页需要 cookie_token 才会识别登录态，
+    /// 这里用已保存的 stoken 重新换一次网页 Cookie，失败时保留原值。
+    /// </summary>
+    public async Task<string?> RefreshWebCookieAsync(string cookie)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in cookie.Split(';'))
+        {
+            var index = part.IndexOf('=');
+            if (index <= 0) continue;
+            map[part[..index].Trim()] = part[(index + 1)..].Trim();
+        }
+
+        var aid = map.GetValueOrDefault("account_id") ?? map.GetValueOrDefault("ltuid") ?? map.GetValueOrDefault("stuid");
+        var mid = map.GetValueOrDefault("mid") ?? map.GetValueOrDefault("ltmid_v2") ?? map.GetValueOrDefault("account_mid_v2");
+        var stoken = map.GetValueOrDefault("stoken") ?? string.Empty;
+        if (string.IsNullOrEmpty(aid) || string.IsNullOrEmpty(mid) || string.IsNullOrEmpty(stoken)) return null;
+
+        var stokenV2 = map.GetValueOrDefault("stoken_v2") ?? string.Empty;
+        if (string.IsNullOrEmpty(stokenV2))
+            stokenV2 = await UpgradeStokenAsync(mid, aid, stoken).ConfigureAwait(false);
+
+        var cookieToken = map.GetValueOrDefault("cookie_token") ?? map.GetValueOrDefault("cookie_token_v2") ?? string.Empty;
+        if (string.IsNullOrEmpty(cookieToken))
+            cookieToken = await GetCookieTokenAsync(mid, aid, stoken, stokenV2).ConfigureAwait(false);
+
+        var ltoken = map.GetValueOrDefault("ltoken") ?? map.GetValueOrDefault("ltoken_v2") ?? string.Empty;
+        if (string.IsNullOrEmpty(ltoken))
+            ltoken = await GetLTokenAsync(mid, aid, stoken, stokenV2).ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(cookieToken)) return null;
+
+        var sb = new StringBuilder();
+        sb.Append($"account_id={aid}; stuid={aid}; ltuid={aid}; mid={mid}; stoken={stoken}; ");
+        if (!string.IsNullOrEmpty(ltoken)) sb.Append($"ltoken={ltoken}; ");
+        sb.Append($"cookie_token={cookieToken}; ");
+        sb.Append($"ltuid_v2={aid}; account_id_v2={aid}; account_mid_v2={mid}; ");
+        if (!string.IsNullOrEmpty(stokenV2)) sb.Append($"stoken_v2={stokenV2}; ");
+        if (!string.IsNullOrEmpty(ltoken)) sb.Append($"ltoken_v2={ltoken}; ");
+        sb.Append($"cookie_token_v2={cookieToken}; ltmid_v2={mid}");
+        return sb.ToString();
+    }
+
     private async Task<string?> BuildCookieAsync(JsonElement data)
     {
         var user = GetObject(data, "user_info");

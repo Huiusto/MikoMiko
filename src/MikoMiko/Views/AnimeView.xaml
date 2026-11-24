@@ -10,108 +10,252 @@
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
         <conv:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis" />
 
-        <DataTemplate x:Key="AnimeCard">
-            <Button Style="{StaticResource CardButton}" Width="148" Margin="0,0,14,18"
-                    Command="{Binding DataContext.OpenItemCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+        <DataTemplate x:Key="PosterCard">
+            <Button Style="{StaticResource CardButton}" Width="164" Margin="0,0,18,24"
+                    Command="{Binding DataContext.OpenItemCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                     CommandParameter="{Binding}">
                 <StackPanel>
-                    <Grid Height="198">
-                        <Border CornerRadius="10" ClipToBounds="True" Background="#E8F4FC">
-                            <Grid>
-                                <Image Source="pack://application:,,,/Assets/Demo/placeholder.png" Stretch="UniformToFill" />
-                                <Image controls:AsyncImage.Url="{Binding Poster}" Stretch="UniformToFill"
-                                       RenderOptions.BitmapScalingMode="HighQuality" />
-                            </Grid>
-                        </Border>
-                        <Border Height="52" VerticalAlignment="Bottom" CornerRadius="0,0,10,10" IsHitTestVisible="False">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                    <GradientStop Color="#00000000" Offset="0" />
-                                    <GradientStop Color="#B3001824" Offset="1" />
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                        <Border Background="#E6F4FB" CornerRadius="6" Padding="6,2" Margin="8,8,8,0"
-                                VerticalAlignment="Top" HorizontalAlignment="Left" IsHitTestVisible="False">
-                            <TextBlock Text="{Binding Source}" FontSize="10" Foreground="#2F86B9" />
-                        </Border>
-                        <Border Background="#66000000" CornerRadius="5" Padding="5,2" Margin="0,0,8,8"
-                                VerticalAlignment="Bottom" HorizontalAlignment="Right" IsHitTestVisible="False"
-                                Visibility="{Binding Note, Converter={StaticResource NotEmptyToVis}}">
-                            <TextBlock Text="{Binding Note}" FontSize="9.5" Foreground="White" TextTrimming="CharacterEllipsis"
-                                       MaxWidth="78" />
-                        </Border>
-                    </Grid>
-                    <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" Margin="2,8,2,0"
+                    <Border Height="220" CornerRadius="12" ClipToBounds="True" Background="#E8F3FB">
+                        <Grid>
+                            <Border>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                        <GradientStop Color="#D7ECFA" Offset="0" />
+                                        <GradientStop Color="#BBDDF2" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Foreground="#5E8298"
+                                       TextWrapping="Wrap" Margin="16,0" TextAlignment="Center" VerticalAlignment="Center"
+                                       MaxHeight="90" />
+                            <Image controls:AsyncImage.Url="{Binding Poster}" Stretch="UniformToFill"
+                                   RenderOptions.BitmapScalingMode="HighQuality" />
+                            <Border Height="58" VerticalAlignment="Bottom" IsHitTestVisible="False">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                        <GradientStop Color="#00000000" Offset="0" />
+                                        <GradientStop Color="#B800101B" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <Border Background="#D9000000" CornerRadius="6" Padding="6,2" Margin="8"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False">
+                                <TextBlock Text="{Binding Source}" FontSize="9.5" Foreground="#F2FFFFFF" />
+                            </Border>
+                            <TextBlock Text="{Binding Note}" FontSize="10" Foreground="#E8FFFFFF" Margin="10,0,10,9"
+                                       VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis" IsHitTestVisible="False"
+                                       Visibility="{Binding Note, Converter={StaticResource NotEmptyToVis}}" />
+                        </Grid>
+                    </Border>
+                    <TextBlock Text="{Binding Title}" FontSize="13.5" FontWeight="SemiBold" Margin="2,9,2,0"
                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.TextPrimary}" />
-                    <TextBlock Text="{Binding Kind}" FontSize="10.5" Margin="2,3,2,0"
+                    <TextBlock Text="{Binding Kind}" FontSize="10.5" Margin="2,4,2,0"
                                Foreground="{DynamicResource Brush.TextTertiary}" />
                 </StackPanel>
             </Button>
         </DataTemplate>
 
-        <DataTemplate x:Key="SmallAnimeCard">
-            <Button Style="{StaticResource CardButton}" Width="132" Margin="0,0,12,0"
-                    Command="{Binding DataContext.OpenItemCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+        <DataTemplate x:Key="HeroCard">
+            <Button Style="{StaticResource CardButton}" Width="126" Margin="0,0,10,0"
+                    Command="{Binding DataContext.OpenItemCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
                     CommandParameter="{Binding}">
                 <StackPanel>
-                    <Border Height="172" CornerRadius="9" ClipToBounds="True" Background="#E8F4FC">
+                    <Border Height="80" CornerRadius="8" ClipToBounds="True" Background="#22364A">
                         <Grid>
+                            <TextBlock Text="{Binding Title}" FontSize="10" Foreground="#CFE4F1" TextWrapping="Wrap"
+                                       Margin="8,6" TextAlignment="Center" VerticalAlignment="Center" MaxHeight="46" />
                             <Image controls:AsyncImage.Url="{Binding Poster}" Stretch="UniformToFill"
                                    RenderOptions.BitmapScalingMode="HighQuality" />
-                            <Border Height="36" VerticalAlignment="Bottom" Background="#99001824" />
-                            <TextBlock Text="{Binding Note}" Foreground="White" FontSize="10"
-                                       VerticalAlignment="Bottom" Margin="8,0,8,7" TextTrimming="CharacterEllipsis"
+                            <Border Background="#66000000" Height="22" VerticalAlignment="Bottom" />
+                            <TextBlock Text="{Binding Note}" Foreground="#E8FFFFFF" FontSize="9"
+                                       VerticalAlignment="Bottom" Margin="6,0,6,4" TextTrimming="CharacterEllipsis"
                                        IsHitTestVisible="False" />
                         </Grid>
                     </Border>
-                    <TextBlock Text="{Binding Title}" FontSize="12.5" Margin="1,7,1,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Title}" Foreground="#F2FFFFFF" FontSize="10.5" Margin="1,5,1,0"
+                               TextTrimming="CharacterEllipsis" MaxWidth="120" />
                 </StackPanel>
             </Button>
         </DataTemplate>
 
-        <DataTemplate x:Key="FilterChip">
-            <Button Style="{StaticResource ChipButton}" Content="{Binding Label}"
-                    Command="{Binding DataContext.SelectTypeCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                    CommandParameter="{Binding}" />
-        </DataTemplate>
+        <Style x:Key="SidebarButton" TargetType="Button">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="9" Padding="14,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="5" Height="5" Fill="#8AA3B5" Margin="0,0,11,0" />
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#0F4EA4DD" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#184EA4DD" />
+                                <Setter Property="Foreground" Value="#2F86B9" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource Brush.WindowBg}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
 
-        <!-- 模块内的独立搜索框：进入追番/影视后，页头全局搜索框隐藏。 -->
-        <Border Grid.Row="0" Background="{DynamicResource Brush.Surface}" BorderThickness="0,0,0,1"
-                BorderBrush="{DynamicResource Brush.Border}">
-            <Grid Margin="26,11,20,11">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+        <!-- ==================== 未下载：软萌角色 + 一个下载按钮 ==================== -->
+        <Grid Visibility="{Binding IsInstalled, Converter={StaticResource InverseBoolToVis}}"
+              Background="#FBFDFF" ClipToBounds="True">
+            <!-- 浅蓝软装饰 -->
+            <Canvas>
+                <Ellipse Width="520" Height="380" Canvas.Left="-150" Canvas.Top="-160">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#BFE5FA" Offset="0" />
+                            <GradientStop Color="#EBF7FF" Offset="0.62" />
+                            <GradientStop Color="#00EBF7FF" Offset="1" />
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+                <Ellipse Width="560" Height="420" Canvas.Right="-190" Canvas.Bottom="-190">
+                    <Ellipse.Fill>
+                        <RadialGradientBrush>
+                            <GradientStop Color="#CBE9FB" Offset="0" />
+                            <GradientStop Color="#00E8F6FF" Offset="1" />
+                        </RadialGradientBrush>
+                    </Ellipse.Fill>
+                </Ellipse>
+                <Ellipse Width="26" Height="26" Canvas.Left="250" Canvas.Top="168" Fill="#6DB8E8" Opacity="0.55" />
+                <Ellipse Width="12" Height="12" Canvas.Left="214" Canvas.Top="290" Fill="#A3D6F3" />
+                <Ellipse Width="16" Height="16" Canvas.Left="905" Canvas.Top="236" Fill="#5EADE0" Opacity="0.6" />
+                <Path Data="M8 0 L10.2 6.8 L17 9 L10.2 11.2 L8 18 L5.8 11.2 L-1 9 L5.8 6.8 Z"
+                      Fill="#8ACDF2" Width="26" Height="26" Stretch="Uniform"
+                      Canvas.Left="300" Canvas.Top="132" Opacity="0.9" />
+                <Path Data="M8 0 L10.2 6.8 L17 9 L10.2 11.2 L8 18 L5.8 11.2 L-1 9 L5.8 6.8 Z"
+                      Fill="#B7DFF7" Width="18" Height="18" Stretch="Uniform"
+                      Canvas.Left="838" Canvas.Top="152" Opacity="0.9" />
+                <Path Data="M4 0 H18 M4 6 H18 M4 12 H18" Stroke="#7FC4EC" StrokeThickness="4"
+                      Width="28" Height="20" Stretch="Uniform" Canvas.Left="886" Canvas.Top="134" Opacity="0.5" />
+            </Canvas>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Border Width="460" Height="36" CornerRadius="18" Background="#EEF8FE"
-                            BorderBrush="#D8ECF9" BorderThickness="1">
+            <Grid Width="840" Height="640" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <!-- 下载按钮：白描边 + 浅蓝外圈 + 大圆角 -->
+                <Button Command="{Binding DownloadModuleCommand}" Cursor="Hand"
+                        Width="640" Height="112" VerticalAlignment="Bottom" Margin="0,0,0,146"
+                        Panel.ZIndex="1"
+                        Visibility="{Binding IsDownloading, Converter={StaticResource InverseBoolToVis}}">
+                    <Button.Template>
+                        <ControlTemplate TargetType="{x:Type Button}">
+                            <Border x:Name="Bd" CornerRadius="56" Padding="7" Background="#D9EFFC"
+                                    RenderTransformOrigin="0.5,0.5">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="30" ShadowDepth="10" Opacity="0.18" Color="#5B9BC4" />
+                                </Border.Effect>
+                                <Border CornerRadius="49" Background="#FFFFFF" Padding="5">
+                                    <Border CornerRadius="44">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                <GradientStop Color="#82CBF2" Offset="0" />
+                                                <GradientStop Color="#5AAFE5" Offset="0.5" />
+                                                <GradientStop Color="#4EA4DD" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="下载 追番/影视 板块" Foreground="White" FontSize="28"
+                                                       FontWeight="Bold" VerticalAlignment="Center" />
+                                            <Path Data="M11 2 V16 M5 10 L11 16 L17 10 M3 21 H19"
+                                                  Stroke="White" StrokeThickness="2.6" Width="34" Height="34"
+                                                  Stretch="Uniform" Margin="24,0,0,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                </Border>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="RenderTransform">
+                                        <Setter.Value>
+                                            <ScaleTransform ScaleX="1.02" ScaleY="1.02" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <!-- 下载进度：同样是一个大胶囊 -->
+                <Border Width="640" Height="112" CornerRadius="56" Padding="7" Background="#D9EFFC"
+                        VerticalAlignment="Bottom" Margin="0,0,0,146" Panel.ZIndex="1"
+                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}">
+                    <Border CornerRadius="49" Background="White" Padding="26,16">
+                        <StackPanel VerticalAlignment="Center">
+                            <Grid>
+                                <TextBlock Text="正在下载追番/影视模块…" FontSize="13" Foreground="#2F86B9" />
+                                <TextBlock Text="{Binding DownloadPercentText}" FontSize="13" FontWeight="SemiBold"
+                                           Foreground="#2F86B9" HorizontalAlignment="Right" />
+                            </Grid>
+                            <ProgressBar Height="9" Margin="0,10,0,0" Minimum="0" Maximum="100"
+                                         Value="{Binding DownloadProgress}" Foreground="#4EA4DD"
+                                         Background="#E2F3FD" BorderThickness="0" />
+                        </StackPanel>
+                    </Border>
+                </Border>
+
+                <!-- 角色压在按钮上沿 -->
+                <Image Source="pack://application:,,,/Assets/Anime/anime-mascot.png"
+                       Width="520" Height="520" Stretch="Uniform"
+                       VerticalAlignment="Top" HorizontalAlignment="Center"
+                       Margin="0,10,0,0" Panel.ZIndex="2"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+
+                <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#C05050"
+                           VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,22"
+                           TextWrapping="Wrap" TextAlignment="Center"
+                           Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVis}}" />
+            </Grid>
+        </Grid>
+
+        <!-- ==================== 已下载：原生影视首页 ==================== -->
+        <Grid Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="66" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- 顶栏：只有安装后才出现搜索框 -->
+            <Border Grid.Row="0" Background="{DynamicResource Brush.Surface}"
+                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
+                <Grid Margin="22,0">
+                    <Border HorizontalAlignment="Center" Width="560" Height="38" CornerRadius="19" Background="#F0F8FD"
+                            BorderBrush="#D9ECF9" BorderThickness="1">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Path Grid.Column="0" Data="M3 3 A7 7 0 1 0 3 17 A7 7 0 1 0 3 3 M8.6 8.6 L14 14"
-                                  Stroke="#5AA9D6" StrokeThickness="1.4" Width="16" Height="16"
-                                  Stretch="Uniform" Margin="13,0,8,0" VerticalAlignment="Center" />
+                                  Stroke="#5AA9D6" StrokeThickness="1.4" Width="16" Height="16" Stretch="Uniform"
+                                  Margin="15,0,9,0" VerticalAlignment="Center" />
                             <Grid Grid.Column="1">
                                 <TextBox x:Name="AnimeSearch" Style="{StaticResource SearchBox}"
                                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         KeyDown="AnimeSearch_KeyDown" Margin="0,0,4,0" VerticalAlignment="Center"
-                                         IsEnabled="{Binding IsInstalled}" />
-                                <TextBlock Text="搜索番剧、电影、电视剧" Foreground="{DynamicResource Brush.TextTertiary}"
-                                           FontSize="12.5" VerticalAlignment="Center" IsHitTestVisible="False">
+                                         KeyDown="AnimeSearch_KeyDown" VerticalAlignment="Center" />
+                                <TextBlock Text="搜索番剧、电影、电视剧" Foreground="#94A9B7" FontSize="12.5"
+                                           VerticalAlignment="Center" IsHitTestVisible="False">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -125,417 +269,187 @@
                                 </TextBlock>
                             </Grid>
                             <Button Grid.Column="2" Style="{StaticResource CaptionButton}" Width="26" Height="26"
-                                    Margin="0,0,4,0" Command="{Binding ClearSearchCommand}"
-                                    Visibility="{Binding SearchText, Converter={StaticResource NotEmptyToVis}}"
-                                    ToolTip="清空">
+                                    Margin="0,0,3,0" Command="{Binding ClearSearchCommand}"
+                                    Visibility="{Binding SearchText, Converter={StaticResource NotEmptyToVis}}" ToolTip="清空">
                                 <Path Data="M0 0 L9 9 M9 0 L0 9" Stroke="{DynamicResource Brush.TextTertiary}"
                                       StrokeThickness="1.4" Width="9" Height="9" Stretch="Uniform" />
                             </Button>
+                            <Button Grid.Column="3" Style="{StaticResource LinkButton}" Padding="15,0"
+                                    Command="{Binding SearchCommand}">
+                                <TextBlock Text="搜索" FontSize="12" Foreground="#2F86B9" />
+                            </Button>
                         </Grid>
                     </Border>
-                    <Button Style="{StaticResource ChipButton}" Content="搜索" Height="36" Margin="10,0,0,0"
-                            Padding="18,0" Command="{Binding SearchCommand}" IsEnabled="{Binding IsInstalled}" />
-                </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource LinkButton}" Command="{Binding ShowHomeCommand}" Margin="0,0,14,0"
-                            Visibility="{Binding IsMorePage, Converter={StaticResource BoolToVis}}">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Data="M8 3 L3 8 L8 13" Stroke="#4EA4DD" StrokeThickness="1.4"
-                                  Width="10" Height="14" Stretch="Uniform" VerticalAlignment="Center" />
-                            <TextBlock Text="返回首页" FontSize="12" Foreground="#4EA4DD" Margin="5,0,0,0" />
-                        </StackPanel>
+                    <Button Style="{StaticResource LinkButton}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                            Command="{Binding UninstallModuleCommand}" ToolTip="卸载追番/影视模块">
+                        <TextBlock Text="卸载模块" FontSize="10.5" Foreground="#9AAAB6" />
                     </Button>
+                </Grid>
+            </Border>
 
-                    <Border Background="#E6F4FB" CornerRadius="7" Padding="9,5" Margin="0,0,10,0"
-                            Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
-                        <StackPanel Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="#4EA4DD" VerticalAlignment="Center" />
-                            <TextBlock Text="独立模块已安装" FontSize="10.5" Foreground="#2F86B9" Margin="6,0,0,0" />
-                        </StackPanel>
-                    </Border>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="158" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                    <Button Style="{StaticResource LinkButton}" Command="{Binding UninstallModuleCommand}"
-                            Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}"
-                            ToolTip="删除 modules\anime 下的独立模块，可再次下载">
-                        <TextBlock Text="卸载模块" FontSize="11" Foreground="{DynamicResource Brush.TextTertiary}" />
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-
-        <ScrollViewer x:Name="AnimeScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                      Padding="0,0,6,0">
-            <StackPanel Margin="26,18,18,30">
-
-                <!-- ==================== 未下载：蓝白软萌下载引导页 ==================== -->
-                <StackPanel Visibility="{Binding IsInstalled, Converter={StaticResource InverseBoolToVis}}">
-                    <Border Height="438" CornerRadius="18" ClipToBounds="True" Background="#F8FCFF">
-                        <Grid>
-                            <Image Source="pack://application:,,,/Assets/Anime/anime-hero.png" Height="438"
-                                   Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Top"
-                                   RenderOptions.BitmapScalingMode="HighQuality" />
-                            <Border Width="620" HorizontalAlignment="Left" IsHitTestVisible="False">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#F8FCFF" Offset="0" />
-                                        <GradientStop Color="#E6F6FF" Offset="0.42" />
-                                        <GradientStop Color="#66F2FAFF" Offset="0.74" />
-                                        <GradientStop Color="#00F8FCFF" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                            </Border>
-                            <Border Width="420" HorizontalAlignment="Left" Margin="40,42,0,0" VerticalAlignment="Top">
-                                <StackPanel>
-                                    <Border Background="#E6F4FB" CornerRadius="7" Padding="9,4" HorizontalAlignment="Left">
-                                        <TextBlock Text="可独立下载 / 卸载" FontSize="10.5" Foreground="#2F86B9" />
-                                    </Border>
-                                    <TextBlock Text="追番 / 影视" FontSize="36" FontWeight="Bold" Margin="0,14,0,0"
-                                               Foreground="#1E3A4F" />
-                                    <TextBlock Text="一次下载，聚合樱花TV、PIDEC、南瓜电影等九个站点" FontSize="13"
-                                               LineHeight="21" Foreground="#587183" Margin="0,10,0,0"
-                                               TextWrapping="Wrap" MaxWidth="360" />
-                                </StackPanel>
-                            </Border>
-
-                            <StackPanel Width="380" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,24">
-                                <Button Command="{Binding DownloadModuleCommand}" Cursor="Hand"
-                                        Visibility="{Binding IsDownloading, Converter={StaticResource InverseBoolToVis}}">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="{x:Type Button}">
-                                            <Border x:Name="Bd" Height="52" CornerRadius="26" BorderThickness="1"
-                                                    BorderBrush="#7BC3EA">
-                                                <Border.Background>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#8CCEF3" Offset="0" />
-                                                        <GradientStop Color="#4EA4DD" Offset="1" />
-                                                    </LinearGradientBrush>
-                                                </Border.Background>
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                    <Path Data="M9 1 V13 M4 8 L9 13 L14 8 M2 16 H16"
-                                                          Stroke="White" StrokeThickness="1.8" Width="15" Height="15"
-                                                          Stretch="Uniform" VerticalAlignment="Center" />
-                                                    <TextBlock Text="下载 追番/影视 板块" Foreground="White" FontSize="15"
-                                                               FontWeight="SemiBold" Margin="9,0,0,0" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Opacity" Value="0.9" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-
-                                <Border Background="#EAF6FD" CornerRadius="9" Padding="14,10"
-                                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}">
-                                    <StackPanel>
-                                        <Grid>
-                                            <TextBlock Text="正在下载追番/影视模块…" FontSize="11.5" Foreground="#2F86B9" />
-                                            <TextBlock Text="{Binding DownloadPercentText}" FontSize="11" Foreground="#2F86B9"
-                                                       HorizontalAlignment="Right" />
-                                        </Grid>
-                                        <ProgressBar Height="8" Margin="0,8,0,0" Minimum="0" Maximum="100"
-                                                     Value="{Binding DownloadProgress}" Foreground="#4EA4DD"
-                                                     Background="#D8ECF9" BorderThickness="0" />
-                                    </StackPanel>
-                                </Border>
-
-                                <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#6C8FA5" Margin="0,9,0,0"
-                                           HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
-                                           Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVis}}" />
+                <Border Grid.Column="0" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,1,0"
+                        Background="{DynamicResource Brush.Surface}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="14,20,12,22">
+                            <ItemsControl ItemsSource="{Binding Categories}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource SidebarButton}" Content="{Binding Label}"
+                                                Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Height="1" Background="#E8F0F5" Margin="12,12,12,14" />
+                            <StackPanel Margin="14,0,0,0">
+                                <TextBlock Text="九个站点" FontSize="10.5" Foreground="#9AAAB6" />
+                                <TextBlock Text="全部在软件内打开与播放" FontSize="10.5" Foreground="#9AAAB6"
+                                           Margin="0,5,0,0" TextWrapping="Wrap" Width="112" />
                             </StackPanel>
-                        </Grid>
-                    </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
 
-                    <Grid Margin="2,16,0,10">
-                        <TextBlock Text="九个追番 / 影视数据源" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <TextBlock Text="未下载模块也可以先打开站点" FontSize="11" Foreground="{DynamicResource Brush.TextTertiary}"
-                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding PreviewProviders}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource ChipButton}" Margin="0,0,8,8" Padding="13,7"
-                                        Command="{Binding DataContext.OpenProviderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                        CommandParameter="{Binding}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Data="M2 2 H12 V12 H2 Z M8 2 V12 M2 7 H12" Stroke="{DynamicResource Brush.Accent}"
-                                              StrokeThickness="1" Width="12" Height="12" Stretch="Uniform"
-                                              VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding Name}" FontSize="11.5" Margin="6,0,0,0" />
-                                    </StackPanel>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <ScrollViewer x:Name="AnimeScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="24,20,22,32">
 
-                    <TextBlock Text="模块独立存放在应用数据目录，卸载时整目录删除，不影响推荐、帖子与视频。"
-                               FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}" Margin="2,12,0,0" />
-                </StackPanel>
-
-                <!-- ==================== 已下载：影视首页 ==================== -->
-                <StackPanel Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
-                    <Grid Visibility="{Binding IsMorePage, Converter={StaticResource InverseBoolToVis}}">
-                        <StackPanel>
-                            <Border Height="252" CornerRadius="16" ClipToBounds="True" Background="#DDEFFB">
+                        <!-- 首页 Hero + 今日更新横排 -->
+                        <StackPanel Visibility="{Binding IsMorePage, Converter={StaticResource InverseBoolToVis}}">
+                            <Border Height="382" CornerRadius="18" ClipToBounds="True" Background="#132434">
                                 <Grid>
-                                    <Image Source="pack://application:,,,/Assets/Anime/anime-hero.png" Stretch="UniformToFill"
-                                           Opacity="0.72" RenderOptions.BitmapScalingMode="HighQuality">
-                                        <Image.Effect>
-                                            <BlurEffect Radius="24" />
-                                        </Image.Effect>
-                                    </Image>
                                     <Image controls:AsyncImage.Url="{Binding Hero.Poster}" Stretch="UniformToFill"
-                                           Opacity="0.92" RenderOptions.BitmapScalingMode="HighQuality"
-                                           controls:AsyncImage.Fallback="pack://application:,,,/Assets/Anime/anime-hero.png">
-                                        <Image.Effect>
-                                            <BlurEffect Radius="9" />
-                                        </Image.Effect>
-                                    </Image>
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           controls:AsyncImage.Fallback="pack://application:,,,/Assets/Anime/anime-hero.png" />
                                     <Border>
                                         <Border.Background>
                                             <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
-                                                <GradientStop Color="#F8FCFF" Offset="0" />
-                                                <GradientStop Color="#EDF8FF" Offset="0.36" />
-                                                <GradientStop Color="#CCD2EAF8" Offset="0.7" />
-                                                <GradientStop Color="#59BEDCF0" Offset="1" />
+                                                <GradientStop Color="#E6091420" Offset="0" />
+                                                <GradientStop Color="#B3071422" Offset="0.42" />
+                                                <GradientStop Color="#4D071422" Offset="0.7" />
+                                                <GradientStop Color="#1A071422" Offset="1" />
                                             </LinearGradientBrush>
                                         </Border.Background>
                                     </Border>
-                                    <Grid Margin="36,30,34,26">
-                                        <StackPanel Width="470" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                            <Border Background="#D8ECF9" CornerRadius="7" Padding="9,4"
-                                                    HorizontalAlignment="Left">
-                                                <TextBlock Text="热门追番" FontSize="10.5" Foreground="#2F86B9" />
-                                            </Border>
-                                            <TextBlock Text="{Binding Hero.Title}" FontSize="31" FontWeight="Bold"
-                                                       Foreground="#1E3A4F" Margin="0,13,0,0"
-                                                       TextTrimming="CharacterEllipsis" MaxHeight="46" />
-                                            <TextBlock Text="{Binding Hero.MetaText}" FontSize="12" Foreground="#587183"
-                                                       Margin="0,9,0,0" TextTrimming="CharacterEllipsis" />
-                                            <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
-                                                <Button Command="{Binding OpenItemCommand}" CommandParameter="{Binding Hero}"
-                                                        Cursor="Hand">
-                                                    <Button.Template>
-                                                        <ControlTemplate TargetType="{x:Type Button}">
-                                                            <Border Background="#4EA4DD" CornerRadius="18" Padding="20,9">
-                                                                <StackPanel Orientation="Horizontal">
-                                                                    <Path Data="M0 0 L8 4.6 L0 9.2 Z" Fill="White" Width="8" Height="9"
-                                                                          Stretch="Uniform" VerticalAlignment="Center" />
-                                                                    <TextBlock Text="立即观看" Foreground="White" FontSize="12.5"
-                                                                               Margin="6,0,0,0" />
-                                                                </StackPanel>
-                                                            </Border>
-                                                            <ControlTemplate.Triggers>
-                                                                <Trigger Property="IsMouseOver" Value="True">
-                                                                    <Setter Property="Opacity" Value="0.88" />
-                                                                </Trigger>
-                                                            </ControlTemplate.Triggers>
-                                                        </ControlTemplate>
-                                                    </Button.Template>
-                                                </Button>
-                                                <TextBlock Text="内容来自第三方站点，点击在软件内打开" FontSize="10.5"
-                                                           Foreground="#6C8FA5" VerticalAlignment="Center" Margin="12,0,0,0" />
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </Grid>
+                                    <Border VerticalAlignment="Bottom" Height="190">
+                                        <Border.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Color="#00091420" Offset="0" />
+                                                <GradientStop Color="#E6091420" Offset="0.52" />
+                                                <GradientStop Color="#F5091420" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </Border.Background>
+                                    </Border>
+
+                                    <StackPanel VerticalAlignment="Top" Margin="34,38,0,0" Width="520" HorizontalAlignment="Left">
+                                        <Border Background="#334EA4DD" CornerRadius="7" Padding="9,4" HorizontalAlignment="Left">
+                                            <TextBlock Text="正在热播" FontSize="10.5" Foreground="#DFF4FF" />
+                                        </Border>
+                                        <TextBlock Text="{Binding HeroTitle}" FontSize="34" FontWeight="Bold" Margin="0,14,0,0"
+                                                   Foreground="White" TextTrimming="CharacterEllipsis" MaxHeight="52" />
+                                        <TextBlock Text="{Binding HeroMeta}" FontSize="12" Foreground="#CFE4F1" Margin="0,10,0,0"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <Button Margin="0,20,0,0" HorizontalAlignment="Left" Cursor="Hand"
+                                                Command="{Binding OpenItemCommand}" CommandParameter="{Binding Hero}">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="{x:Type Button}">
+                                                    <Border Background="#E0E9F7" CornerRadius="18" Padding="20,9">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Path Data="M0 0 L8 4.6 L0 9.2 Z" Fill="#2F7BAE" Width="8" Height="9"
+                                                                  Stretch="Uniform" VerticalAlignment="Center" />
+                                                            <TextBlock Text="立即观看" Foreground="#1F4E6B" FontSize="12.5"
+                                                                       FontWeight="SemiBold" Margin="7,0,0,0" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Opacity" Value="0.9" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <StackPanel VerticalAlignment="Bottom" Margin="28,0,0,18">
+                                        <Grid Margin="0,0,20,8">
+                                            <TextBlock Text="今日更新" FontSize="11" Foreground="#B9D5E6" />
+                                            <TextBlock Text="{Binding StatusText}" FontSize="10.5" Foreground="#9FC1D5"
+                                                       HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="520" />
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding Featured}" ItemTemplate="{StaticResource HeroCard}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
+                        </StackPanel>
 
-                            <Grid Margin="2,18,0,10">
-                                <TextBlock Text="今日更新" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Brush.TextTertiary}"
-                                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" MaxWidth="420" />
-                            </Grid>
-                            <ItemsControl ItemsSource="{Binding Featured}" ItemTemplate="{StaticResource SmallAnimeCard}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                            </ItemsControl>
-
-                            <Grid Margin="2,22,0,10">
-                                <TextBlock Text="{Binding SectionTitle}" FontSize="18" FontWeight="SemiBold"
-                                           VerticalAlignment="Center" />
+                        <!-- 内容标题 -->
+                        <Grid Margin="2,24,2,14">
+                            <TextBlock Text="{Binding SectionTitle}" FontSize="18" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CountText}" FontSize="11" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           Margin="0,0,12,0" VerticalAlignment="Center" />
                                 <Button Style="{StaticResource LinkButton}" Command="{Binding ShowMoreCommand}"
-                                        HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand">
+                                        Visibility="{Binding IsMorePage, Converter={StaticResource InverseBoolToVis}}">
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="查看更多" FontSize="11.5" Foreground="#4EA4DD" />
-                                        <Path Data="M0 0 L5 5 L0 10" Stroke="#4EA4DD" StrokeThickness="1.3"
-                                              Width="5" Height="10" Stretch="Uniform" Margin="5,0,0,0"
-                                              VerticalAlignment="Center" />
+                                        <Path Data="M0 0 L5 5 L0 10" Stroke="#4EA4DD" StrokeThickness="1.3" Width="5" Height="10"
+                                              Stretch="Uniform" Margin="5,0,0,0" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
-                            </Grid>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- ==================== 查看更多：多维筛选页 ==================== -->
-                    <StackPanel Visibility="{Binding IsMorePage, Converter={StaticResource BoolToVis}}">
-                        <Border Background="{DynamicResource Brush.Surface}" BorderBrush="#E3F1FA"
-                                BorderThickness="1" CornerRadius="12" Padding="18,15,18,8" Margin="0,0,0,18">
-                            <StackPanel>
-                                <Grid Margin="0,0,0,9">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="54" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="类型" FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                                               VerticalAlignment="Top" Margin="0,7,0,0" />
-                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding TypeFilters}" ItemTemplate="{StaticResource FilterChip}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                    </ItemsControl>
-                                </Grid>
-
-                                <Grid Margin="0,0,0,9">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="54" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="排序" FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                                               VerticalAlignment="Top" Margin="0,7,0,0" />
-                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding SortFilters}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Style="{StaticResource ChipButton}" Content="{Binding Label}"
-                                                        Command="{Binding DataContext.SelectSortCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                                        CommandParameter="{Binding}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
-
-                                <Grid Margin="0,0,0,9">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="54" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="地区" FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                                               VerticalAlignment="Top" Margin="0,7,0,0" />
-                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding RegionFilters}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Style="{StaticResource ChipButton}" Content="{Binding Label}"
-                                                        Command="{Binding DataContext.SelectRegionCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                                        CommandParameter="{Binding}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
-
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="54" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="来源" FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                                               VerticalAlignment="Top" Margin="0,7,0,0" />
-                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding SourceFilters}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Button Style="{StaticResource ChipButton}" Content="{Binding Label}"
-                                                        Command="{Binding DataContext.SelectSourceCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                                        CommandParameter="{Binding}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </Grid>
+                                <Button Style="{StaticResource LinkButton}" Command="{Binding ShowHomeCommand}"
+                                        Visibility="{Binding IsMorePage, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="返回首页" FontSize="11.5" Foreground="#4EA4DD" />
+                                </Button>
                             </StackPanel>
-                        </Border>
-
-                        <Grid Margin="2,0,0,10">
-                            <TextBlock Text="{Binding SectionTitle}" FontSize="18" FontWeight="SemiBold"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding CountText}" FontSize="11.5" Foreground="{DynamicResource Brush.TextTertiary}"
-                                       HorizontalAlignment="Right" VerticalAlignment="Center" />
                         </Grid>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,16"
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14"
                                     Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
                             <ProgressBar Width="120" Height="5" IsIndeterminate="True" Foreground="#4EA4DD"
                                          Background="#D8ECF9" BorderThickness="0" VerticalAlignment="Center" />
-                            <TextBlock Text="正在聚合数据源…" FontSize="11.5" Foreground="#6C8FA5" Margin="10,0,0,0" />
+                            <TextBlock Text="正在聚合九个站点…" FontSize="11.5" Foreground="#6C8FA5" Margin="10,0,0,0" />
                         </StackPanel>
-                    </StackPanel>
 
-                    <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource AnimeCard}"
+                        <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource PosterCard}"
                                   Visibility="{Binding IsEmpty, Converter={StaticResource InverseBoolToVis}}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
 
-                    <Border Background="{DynamicResource Brush.Surface}" BorderBrush="#E3F1FA" BorderThickness="1"
-                            CornerRadius="12" Padding="26,30" Margin="2,5,0,0"
-                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
-                        <StackPanel HorizontalAlignment="Center">
-                            <Path Data="M2 4 H16 V15 H2 Z M2 8 H16 M7 4 V2 H11 V4" Stroke="#7DBFE3"
-                                  StrokeThickness="1.4" Width="30" Height="26" Stretch="Uniform" />
-                            <TextBlock Text="暂时没有匹配的作品" FontSize="14" FontWeight="SemiBold" Margin="0,12,0,0"
-                                       HorizontalAlignment="Center" />
-                            <TextBlock Text="可以切换筛选条件，或直接打开数据源站点。" FontSize="11.5"
-                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,6,0,0"
-                                       HorizontalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-
-                    <Grid Margin="2,24,0,10">
-                        <TextBlock Text="数据源" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <TextBlock Text="点击在软件内打开对应站点" FontSize="10.5"
-                                   Foreground="{DynamicResource Brush.TextTertiary}" HorizontalAlignment="Right"
-                                   VerticalAlignment="Center" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding Providers}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource ChipButton}" Margin="0,0,8,8" Padding="13,7"
-                                        Command="{Binding DataContext.OpenProviderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
-                                        CommandParameter="{Binding}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="6" Height="6" Fill="#4EA4DD" VerticalAlignment="Center" />
-                                        <TextBlock Text="{Binding Name}" FontSize="11.5" Margin="6,0,0,0" />
-                                    </StackPanel>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </StackPanel>
-        </ScrollViewer>
+                        <Border Background="{DynamicResource Brush.Surface}" BorderBrush="#E3F1FA" BorderThickness="1"
+                                CornerRadius="14" Padding="28,34" Margin="0,8,0,0"
+                                Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}">
+                            <StackPanel HorizontalAlignment="Center">
+                                <Path Data="M2 4 H16 V15 H2 Z M2 8 H16 M7 4 V2 H11 V4" Stroke="#7DBFE3"
+                                      StrokeThickness="1.4" Width="30" Height="26" Stretch="Uniform" />
+                                <TextBlock Text="暂时没有匹配的作品" FontSize="14" FontWeight="SemiBold" Margin="0,12,0,0"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="可以换个分类或关键词试试。" FontSize="11.5"
+                                           Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,6,0,0"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
     </Grid>
 </UserControl>
