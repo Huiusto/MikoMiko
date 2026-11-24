@@ -3,38 +3,51 @@ using MikoMiko.Services;
 using System.IO;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace MikoMiko.Views;
 
 /// <summary>
 /// 追番/影视的软件内播放器：左侧视频、右侧详情与线路/选集。
-/// 只接收解析后的视频流，不加载第三方站点网页；切换线路或选集时重新取流并复用同一个 WebView。
+/// 只接收解析后的视频流，不加载第三方站点网页；切换网站、线路或选集时重新取流并复用同一个 WebView。
 /// </summary>
 public partial class AnimePlayerView : UserControl
 {
     private readonly AnimeStreamService _streams = new();
+    private readonly AnimeCatalogService _catalog = new();
+    private readonly AnimeFollowService _follows;
+    private readonly IReadOnlyList<AnimeProvider> _providers;
     private AnimePlayback _playback;
     private string _referer;
+    private string _providerName = string.Empty;
     private bool _initialized;
     private bool _webReady;
     private bool _syncSelection;
+    private bool _syncProvider;
+    private bool _providerReady;
     private bool _switching;
     private bool _isFollowing;
     private bool _disposed;
 
-    public AnimePlayerView(AnimePlayback playback, Action? closeRequested = null)
+    public AnimePlayerView(AnimePlayback playback, IReadOnlyList<AnimeProvider> providers,
+        AnimeFollowService follows, Action? closeRequested = null)
     {
         InitializeComponent();
         _playback = playback;
+        _follows = follows;
+        _providers = providers;
         _referer = playback.Referer;
         CloseRequested = closeRequested;
 
-        FollowText.Text = "追剧";
         UpdateHeader();
         UpdateDetails();
+        InitializeProviderList();
         InitializeSources();
+        UpdateFollowState();
     }
 
     public Action? CloseRequested { get; set; }
@@ -47,12 +60,31 @@ public partial class AnimePlayerView : UserControl
         try { Web.Dispose(); } catch { /* 窗口已关闭时忽略 */ }
     }
 
+    private void InitializeProviderList()
+    {
+        var currentName = _playback.CatalogItem?.Source ?? _playback.Source;
+        _syncProvider = true;
+        ProviderList.ItemsSource = _providers;
+        var current = _providers.FirstOrDefault(p =>
+            string.Equals(p.Name, currentName, StringComparison.OrdinalIgnoreCase));
+        ProviderList.SelectedItem = current;
+        _syncProvider = false;
+        _providerName = current?.Name ?? currentName;
+
+        if (_providers.Count == 0)
+            ProviderSection.Visibility = Visibility.Collapsed;
+        else
+            Loaded += (_, _) => Dispatcher.BeginInvoke(() => _providerReady = true, DispatcherPriority.ApplicationIdle);
+    }
+
     private void InitializeSources()
     {
         var details = _playback.Details;
         var sources = details?.Sources;
         if (sources is null || sources.Count == 0)
         {
+            SourceList.ItemsSource = null;
+            EpisodeList.ItemsSource = null;
             SourceList.Visibility = Visibility.Collapsed;
             EpisodeList.Visibility = Visibility.Collapsed;
             EpisodeInfoText.Text = _playback.Episode;
@@ -64,11 +96,13 @@ public partial class AnimePlayerView : UserControl
         SourceList.ItemsSource = sources;
         var selected = _playback.SelectedSource;
         var index = selected is null ? 0 : Math.Max(0, sources.IndexOf(selected));
+        if (index >= sources.Count) index = 0;
         SourceList.SelectedIndex = index;
         UpdateEpisodes(sources[index], _playback.SelectedEpisode);
         _syncSelection = false;
 
-        if (sources.Count == 1) SourceList.Visibility = Visibility.Collapsed;
+        SourceList.Visibility = sources.Count == 1 ? Visibility.Collapsed : Visibility.Visible;
+        EpisodeList.Visibility = Visibility.Visible;
     }
 
     private void UpdateEpisodes(AnimeSource source, AnimeEpisode? selected)
@@ -87,6 +121,82 @@ public partial class AnimePlayerView : UserControl
         EpisodeInfoText.Text = episode?.Name ?? "选集";
         _syncSelection = false;
     }
+
+    private async void Providers_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_syncProvider || _switching || !_providerReady) return;
+        if (ProviderList.SelectedItem is not AnimeProvider provider) return;
+        if (string.Equals(provider.Name, _providerName, StringComparison.OrdinalIgnoreCase)) return;
+        await SwitchProviderAsync(provider);
+    }
+
+    private async Task SwitchProviderAsync(AnimeProvider provider)
+    {
+        if (_switching || _disposed) return;
+        var item = _playback.CatalogItem;
+        if (item is null)
+        {
+            ProviderList_Select(_providerName);
+            SwitchStatus.Text = "缺少作品信息，暂时无法查询其他网站。";
+            return;
+        }
+
+        _switching = true;
+        SwitchStatus.Text = $"正在从 {provider.Name} 查询《{_playback.Title}》…";
+        LoadingText.Text = $"正在查询 {provider.Name}…";
+        LoadingPanel.Visibility = Visibility.Visible;
+        var previousProvider = _providerName;
+        try
+        {
+            var results = await _catalog.SearchAsync(new[] { provider }, _playback.Title, CancellationToken.None);
+            if (results.Count == 0)
+            {
+                ProviderList_Select(previousProvider);
+                SwitchStatus.Text = $"{provider.Name} 没有查询到这部作品，可以换一个网站。";
+                return;
+            }
+
+            var target = NormalizeTitle(_playback.Title);
+            var best = results.FirstOrDefault(i => NormalizeTitle(i.Title) == target)
+                       ?? results.FirstOrDefault(i =>
+                           NormalizeTitle(i.Title).Contains(target, StringComparison.OrdinalIgnoreCase) ||
+                           target.Contains(NormalizeTitle(i.Title), StringComparison.OrdinalIgnoreCase))
+                       ?? results[0];
+
+            var next = await _streams.ResolveAsync(best);
+            if (next is null || string.IsNullOrWhiteSpace(next.StreamUrl))
+            {
+                ProviderList_Select(previousProvider);
+                SwitchStatus.Text = $"{provider.Name} 找到了《{best.Title}》，但暂时取不到视频，可以换一个网站。";
+                return;
+            }
+
+            _providerName = provider.Name;
+            await ApplyPlaybackAsync(next);
+            SwitchStatus.Text = $"已切换到 {provider.Name} · {best.Title}";
+        }
+        catch
+        {
+            ProviderList_Select(previousProvider);
+            SwitchStatus.Text = "网站查询失败，请稍后重试。";
+        }
+        finally
+        {
+            LoadingPanel.Visibility = Visibility.Collapsed;
+            _switching = false;
+        }
+    }
+
+    private void ProviderList_Select(string providerName)
+    {
+        _syncProvider = true;
+        ProviderList.SelectedItem = _providers.FirstOrDefault(p =>
+            string.Equals(p.Name, providerName, StringComparison.OrdinalIgnoreCase));
+        _syncProvider = false;
+    }
+
+    private static string NormalizeTitle(string title)
+        => Regex.Replace(title ?? string.Empty, @"[\s:：·\.\-—!！?？,，。()（）\[\]【】《》]", string.Empty);
 
     private async void Sources_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -141,17 +251,7 @@ public partial class AnimePlayerView : UserControl
             }
 
             _playback = playback;
-            _referer = string.IsNullOrWhiteSpace(playback.Referer) ? _referer : playback.Referer;
-            UpdateHeader();
-            UpdateDetails();
-
-            if (_webReady)
-            {
-                var caption = $"{playback.Title} · {playback.Episode}";
-                await Web.CoreWebView2.ExecuteScriptAsync(
-                    $"window.mikoPlay({JsonSerializer.Serialize(playback.StreamUrl)}, {JsonSerializer.Serialize(caption)})");
-            }
-
+            await ApplyPlaybackAsync(playback);
             SwitchStatus.Text = string.Empty;
         }
         catch (Exception)
@@ -163,6 +263,40 @@ public partial class AnimePlayerView : UserControl
         {
             LoadingPanel.Visibility = Visibility.Collapsed;
             _switching = false;
+        }
+    }
+
+    /// <summary>切换网站 / 线路 / 选集后统一刷新标题、简介、线路、选集与视频画面。</summary>
+    private async Task ApplyPlaybackAsync(AnimePlayback playback)
+    {
+        _playback = playback;
+        _referer = string.IsNullOrWhiteSpace(playback.Referer) ? _referer : playback.Referer;
+        UpdateHeader();
+        UpdateDetails();
+        InitializeSources();
+        UpdateFollowState();
+        await LoadPosterAsync(playback);
+
+        if (_webReady)
+        {
+            var caption = $"{playback.Title} · {playback.Episode}";
+            await Web.CoreWebView2.ExecuteScriptAsync(
+                $"window.mikoPlay({JsonSerializer.Serialize(playback.StreamUrl)}, {JsonSerializer.Serialize(caption)})");
+        }
+    }
+
+    private async Task LoadPosterAsync(AnimePlayback playback)
+    {
+        var poster = string.IsNullOrWhiteSpace(playback.Poster) ? playback.Details?.Poster : playback.Poster;
+        if (string.IsNullOrWhiteSpace(poster)) return;
+        try
+        {
+            var image = await ImageLoader.LoadAsync(poster, _referer);
+            if (image is not null) PosterImage.Source = image;
+        }
+        catch
+        {
+            // 海报失败不影响视频。
         }
     }
 
@@ -202,11 +336,7 @@ public partial class AnimePlayerView : UserControl
             core.Settings.IsStatusBarEnabled = false;
             core.Settings.AreBrowserAcceleratorKeysEnabled = true;
 
-            if (!string.IsNullOrWhiteSpace(_playback.Poster))
-            {
-                var poster = await ImageLoader.LoadAsync(_playback.Poster, _referer);
-                if (poster is not null) PosterImage.Source = poster;
-            }
+            await LoadPosterAsync(_playback);
 
             // 部分第三方 CDN 会校验 Referer，在软件内请求视频分片时补上对应详情页来源。
             core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
@@ -251,8 +381,28 @@ public partial class AnimePlayerView : UserControl
 
     private void Follow_Click(object sender, RoutedEventArgs e)
     {
-        _isFollowing = !_isFollowing;
+        if (_playback.CatalogItem is null)
+        {
+            SwitchStatus.Text = "缺少作品信息，暂时无法加入追剧。";
+            return;
+        }
+
+        var following = _follows.Toggle(_playback);
+        UpdateFollowState();
+        SwitchStatus.Text = following ? "已同步到「我的追剧」" : "已从「我的追剧」移除";
+    }
+
+    private void UpdateFollowState()
+    {
+        _isFollowing = _follows.Contains(_playback.CatalogItem?.Url);
         FollowText.Text = _isFollowing ? "已追剧" : "追剧";
+        FollowButton.Background = new SolidColorBrush(_isFollowing
+            ? Color.FromRgb(0xDF, 0xF2, 0xFE)
+            : Color.FromRgb(0x2F, 0x86, 0xB9));
+        FollowText.Foreground = new SolidColorBrush(_isFollowing
+            ? Color.FromRgb(0x1F, 0x6E, 0x9D)
+            : Colors.White);
+        FollowIcon.Stroke = FollowText.Foreground;
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke();

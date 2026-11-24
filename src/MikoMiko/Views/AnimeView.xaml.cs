@@ -24,9 +24,20 @@ public partial class AnimeView : UserControl
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(AnimeViewModel.IsMorePage) or nameof(AnimeViewModel.IsInstalled)
-            or nameof(AnimeViewModel.IsSearching))
+            or nameof(AnimeViewModel.IsSearching) or nameof(AnimeViewModel.IsWatchlistPage))
             ScrollToTop();
     }
+
+    private void AnimeScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.ExtentHeightChange > 0 && Math.Abs(e.VerticalChange) < 0.5) return;
+        if (_viewModel.IsMorePage || _viewModel.IsWatchlistPage) return;
+        if (AnimeScroll.ScrollableHeight - AnimeScroll.VerticalOffset < 420)
+            _viewModel.LoadMoreHome();
+    }
+
+    private void Top_Click(object sender, System.Windows.RoutedEventArgs e)
+        => ScrollToTop();
 
     public void ResetScroll()
     {

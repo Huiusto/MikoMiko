@@ -19,6 +19,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly HomeViewModel _home;
     private readonly VideoViewModel _video;
     private readonly AnimeViewModel _anime;
+    private readonly AnimeFollowService _animeFollows;
 
     /// <summary>视频页 ViewModel（截图工具与外部调用用）。</summary>
     public VideoViewModel Video => _video;
@@ -51,8 +52,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
         _home = new HomeViewModel(content, OpenItem, user => OpenUserProfile(user.Uid));
         _video = new VideoViewModel(content, OpenUserProfile, _settings);
+        _animeFollows = new AnimeFollowService();
         _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), new AnimeStreamService(),
-            ShowAnimePlayer);
+            _animeFollows, ShowAnimePlayer);
         _moment = new MomentViewModel(content, OpenMoment, OpenUserProfile);
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
@@ -444,7 +446,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl)) return;
         CloseAnimePlayer();
-        AnimePlayerView = new Views.AnimePlayerView(playback, CloseAnimePlayer);
+        AnimePlayerView = new Views.AnimePlayerView(playback, _anime.Providers, _animeFollows, CloseAnimePlayer);
         IsAnimePlayerOpen = true;
     }
 

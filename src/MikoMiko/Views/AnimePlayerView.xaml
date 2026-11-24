@@ -39,7 +39,7 @@
             <Setter Property="Margin" Value="0,0,8,8" />
             <Setter Property="Padding" Value="11,0" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#9FB4C6" />
+            <Setter Property="Foreground" Value="#C0D3E2" />
             <Setter Property="FontSize" Value="10.5" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -163,7 +163,12 @@
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
                                 </Button.Template>
-                                <TextBlock x:Name="FollowText" Text="追剧" FontSize="12" FontWeight="SemiBold" />
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Path x:Name="FollowIcon" Data="M3 1 H10 V14 L6.5 11 L3 14 Z"
+                                          Stroke="White" StrokeThickness="1.2" Width="10" Height="13"
+                                          Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock x:Name="FollowText" Text="追剧" FontSize="12" FontWeight="SemiBold" />
+                                </StackPanel>
                             </Button>
                             <Border Grid.Column="1" Background="#16222F" CornerRadius="18" Padding="14,0"
                                     VerticalAlignment="Center" Height="36">
@@ -172,8 +177,30 @@
                             </Border>
                         </Grid>
 
+                        <StackPanel x:Name="ProviderSection" Margin="0,18,0,0">
+                            <Grid>
+                                <TextBlock Text="查询网站" FontSize="11" FontWeight="SemiBold" Foreground="#7F99AD" />
+                                <TextBlock Text="可换站重新查询" FontSize="9.5" Foreground="#4E6A81"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center" />
+                            </Grid>
+                            <ListBox x:Name="ProviderList" Margin="0,9,0,0" Background="Transparent"
+                                     BorderThickness="0" ItemContainerStyle="{StaticResource PlayerSourceItem}"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                     SelectionChanged="Providers_SelectionChanged">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+
                         <TextBlock Text="播放线路" FontSize="11" FontWeight="SemiBold" Foreground="#7F99AD"
-                                   Margin="0,20,0,9" />
+                                   Margin="0,12,0,9" />
                         <ListBox x:Name="SourceList" Background="Transparent" BorderThickness="0"
                                  ItemContainerStyle="{StaticResource PlayerSourceItem}"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"

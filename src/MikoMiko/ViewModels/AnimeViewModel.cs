@@ -13,18 +13,22 @@ public sealed partial class AnimeViewModel : ObservableObject
     private readonly AnimeModuleService _module;
     private readonly AnimeCatalogService _catalog;
     private readonly AnimeStreamService _streams;
+    private readonly AnimeFollowService _follows;
     private readonly Action<AnimePlayback> _openPlayer;
     private List<AnimeItem> _homeItems = new();
     private List<AnimeItem> _baseItems = new();
     private CancellationTokenSource? _loadCts;
+    private CancellationTokenSource? _searchDebounceCts;
     private bool _isOpening;
+    private bool _suppressSearch;
 
     public AnimeViewModel(AnimeModuleService module, AnimeCatalogService catalog, AnimeStreamService streams,
-        Action<AnimePlayback> openPlayer)
+        AnimeFollowService follows, Action<AnimePlayback> openPlayer)
     {
         _module = module;
         _catalog = catalog;
         _streams = streams;
+        _follows = follows;
         _openPlayer = openPlayer;
 
         Categories.Add(new ChoiceOption("home", "首页", "⌂"));
@@ -40,6 +44,8 @@ public sealed partial class AnimeViewModel : ObservableObject
         Categories.Add(new ChoiceOption("news", "资讯", "▤"));
         Categories[0].IsSelected = true;
         InitFilters();
+        _follows.Changed += RefreshWatchlist;
+        RefreshWatchlist();
     }
 
     private void InitFilters()
@@ -101,6 +107,7 @@ public sealed partial class AnimeViewModel : ObservableObject
     }
 
     public ObservableCollection<AnimeItem> Items { get; } = new();
+    public ObservableCollection<AnimeItem> Watchlist { get; } = new();
     public ObservableCollection<AnimeItem> Featured { get; } = new();
     public ObservableCollection<AnimeProvider> Providers { get; } = new();
     public ObservableCollection<ChoiceOption> Categories { get; } = new();
@@ -113,13 +120,17 @@ public sealed partial class AnimeViewModel : ObservableObject
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isDownloading;
     [ObservableProperty] private bool _isMorePage;
+    [ObservableProperty] private bool _isHomeMode = true;
+    [ObservableProperty] private bool _isWatchlistPage;
     [ObservableProperty] private bool _isEmpty;
+    [ObservableProperty] private bool _isWatchlistEmpty;
     [ObservableProperty] private bool _isSearching;
     [ObservableProperty] private AnimeItem? _hero;
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private string _sectionTitle = "猜你喜欢";
     [ObservableProperty] private string _statusText = string.Empty;
     [ObservableProperty] private string _countText = string.Empty;
+    [ObservableProperty] private string _watchlistCountText = string.Empty;
     [ObservableProperty] private double _downloadProgress;
     [ObservableProperty] private string _downloadPercentText = string.Empty;
     [ObservableProperty] private string _heroTitle = "追番 / 影视";
@@ -136,11 +147,12 @@ public sealed partial class AnimeViewModel : ObservableObject
 
     public async Task InitializeAsync(bool refresh = false)
     {
+        RefreshWatchlist();
         IsInstalled = _module.TryLoad();
         if (!IsInstalled) return;
         if (Providers.Count == 0) LoadProviders();
         if (refresh || Items.Count == 0) await LoadCatalogAsync();
-        else if (!IsMorePage && !IsSearching) ApplyFilter();
+        else if (!IsMorePage && !IsSearching && !IsWatchlistPage) ApplyFilter();
     }
 
     private void LoadProviders()
@@ -152,7 +164,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         }
     }
 
-    public async Task LoadCatalogAsync()
+    public async Task LoadCatalogAsync(bool resetView = true)
     {
         if (!IsInstalled) return;
 
@@ -167,11 +179,16 @@ public sealed partial class AnimeViewModel : ObservableObject
             if (cts.IsCancellationRequested) return;
             _homeItems = items;
             _baseItems = items;
-            IsSearching = false;
-            IsMorePage = false;
-            _categoryKey = "home";
-            SelectCategoryItem("home");
-            SectionTitle = "猜你喜欢";
+            if (resetView)
+            {
+                IsSearching = false;
+                IsMorePage = false;
+                IsWatchlistPage = false;
+                IsHomeMode = true;
+                _categoryKey = "home";
+                SelectCategoryItem("home");
+                SectionTitle = "猜你喜欢";
+            }
             ApplyFilter();
             StatusText = items.Count == 0
                 ? "数据源暂时没有返回内容，请稍后刷新。"
@@ -183,7 +200,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         catch
         {
             if (cts.IsCancellationRequested) return;
-            _homeItems = new List<AnimeItem>();
+            if (resetView) _homeItems = new List<AnimeItem>();
             _baseItems = _homeItems;
             ApplyFilter();
             StatusText = "数据源连接失败，请稍后重试。";
@@ -207,6 +224,7 @@ public sealed partial class AnimeViewModel : ObservableObject
 
     private void ApplyFilter()
     {
+        if (IsWatchlistPage) return;
         if (!IsMorePage && !IsSearching)
         {
             // 首页“猜你喜欢”每次进入都从聚合池里换一批，保持内容新鲜感。
@@ -248,7 +266,7 @@ public sealed partial class AnimeViewModel : ObservableObject
             "play" => query.OrderByDescending(i => EpisodeNumber(i.Note)),
             "follow" => query.OrderByDescending(i => i.Note.Length).ThenByDescending(i => EpisodeNumber(i.Note)),
             "rating" => query.OrderByDescending(i => StableScore(i.Title)),
-            _ => query,
+            _ => query.OrderBy(_ => Random.Shared.Next()),
         };
 
         var list = query.Take(180).ToList();
@@ -296,11 +314,71 @@ public sealed partial class AnimeViewModel : ObservableObject
         return match.Success && int.TryParse(match.Groups[1].Value, out var value) ? value : 0;
     }
 
+    /// <summary>
+    /// 页面右下角刷新的入口：不改变当前所在页面，只重新拉取并刷新内容。
+    /// 首页换一批猜你喜欢；查看全部保留当前类型/风格等筛选；搜索页重新执行搜索。
+    /// </summary>
     [RelayCommand]
-    private async Task RefreshAsync()
+    private async Task RefreshCurrentAsync()
     {
         if (!IsInstalled || IsLoading) return;
-        await LoadCatalogAsync();
+        if (IsWatchlistPage)
+        {
+            RefreshWatchlist();
+            WatchlistCountText = $"共 {Watchlist.Count} 部";
+            return;
+        }
+        if (IsSearching)
+        {
+            if (!string.IsNullOrWhiteSpace(SearchText)) await SearchInternalAsync(SearchText.Trim());
+            else ShowHome();
+            return;
+        }
+
+        await LoadCatalogAsync(resetView: false);
+        if (IsMorePage) SectionTitle = "全部内容";
+    }
+
+    /// <summary>首页滚动到底部时继续追加新海报，不必整页重载。</summary>
+    public bool LoadMoreHome()
+    {
+        if (!IsInstalled || IsLoading || IsMorePage || IsSearching || IsWatchlistPage) return false;
+        var existing = Items.Select(i => i.Source + "|" + i.Url).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var next = _homeItems
+            .Where(i => !existing.Contains(i.Source + "|" + i.Url))
+            .OrderBy(_ => Random.Shared.Next())
+            .Take(14)
+            .ToList();
+        if (next.Count == 0) return false;
+        foreach (var item in next) Items.Add(item);
+        return true;
+    }
+
+    [RelayCommand]
+    private void ShowWatchlist()
+    {
+        if (!IsInstalled) return;
+        _searchDebounceCts?.Cancel();
+        _loadCts?.Cancel();
+        IsLoading = false;
+        SetSearchTextSilently(string.Empty);
+        IsSearching = false;
+        IsMorePage = false;
+        IsHomeMode = false;
+        IsWatchlistPage = true;
+        SectionTitle = "我的追剧";
+        StatusText = string.Empty;
+        RefreshWatchlist();
+        WatchlistCountText = $"共 {Watchlist.Count} 部";
+    }
+
+    private void RefreshWatchlist()
+    {
+        Watchlist.Clear();
+        foreach (var follow in _follows.Items)
+            Watchlist.Add(follow.ToItem());
+        IsWatchlistEmpty = Watchlist.Count == 0;
+        WatchlistCountText = $"共 {Watchlist.Count} 部";
     }
 
     [RelayCommand]
@@ -339,9 +417,12 @@ public sealed partial class AnimeViewModel : ObservableObject
     private void UninstallModule()
     {
         _loadCts?.Cancel();
+        _searchDebounceCts?.Cancel();
         _module.Uninstall();
         IsInstalled = false;
         IsMorePage = false;
+        IsHomeMode = true;
+        IsWatchlistPage = false;
         IsLoading = false;
         IsSearching = false;
         _homeItems = new List<AnimeItem>();
@@ -350,15 +431,59 @@ public sealed partial class AnimeViewModel : ObservableObject
         Featured.Clear();
         Providers.Clear();
         Hero = null;
-        SearchText = string.Empty;
+        SetSearchTextSilently(string.Empty);
         StatusText = string.Empty;
     }
 
     [RelayCommand]
     private async Task SearchAsync()
     {
+        _searchDebounceCts?.Cancel();
         var keyword = SearchText.Trim();
         if (!IsInstalled) return;
+        if (keyword.Length == 0)
+        {
+            ShowHome();
+            return;
+        }
+        await SearchInternalAsync(keyword);
+    }
+
+    /// <summary>输入即搜索：短暂防抖后直接显示结果，不再先展示全部内容。</summary>
+    partial void OnSearchTextChanged(string value)
+    {
+        if (_suppressSearch || !IsInstalled) return;
+        _searchDebounceCts?.Cancel();
+
+        var keyword = value.Trim();
+        if (keyword.Length == 0)
+        {
+            ShowHome();
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _searchDebounceCts = cts;
+        _ = DebounceSearchAsync(keyword, cts.Token);
+    }
+
+    private async Task DebounceSearchAsync(string keyword, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(550, cancellationToken);
+            if (cancellationToken.IsCancellationRequested) return;
+            await SearchInternalAsync(keyword);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task SearchInternalAsync(string keyword)
+    {
+        if (!IsInstalled) return;
+        keyword = keyword.Trim();
         if (keyword.Length == 0)
         {
             ShowHome();
@@ -371,8 +496,13 @@ public sealed partial class AnimeViewModel : ObservableObject
         IsLoading = true;
         IsSearching = true;
         IsMorePage = true;
+        IsHomeMode = false;
+        IsWatchlistPage = false;
         SectionTitle = $"“{keyword}” 的搜索结果";
         StatusText = "正在搜索…";
+        Items.Clear();
+        IsEmpty = false;
+        CountText = string.Empty;
         try
         {
             var remote = await _catalog.SearchAsync(_module.Providers, keyword, cts.Token);
@@ -408,31 +538,46 @@ public sealed partial class AnimeViewModel : ObservableObject
     [RelayCommand]
     private void ClearSearch()
     {
-        SearchText = string.Empty;
+        _searchDebounceCts?.Cancel();
+        SetSearchTextSilently(string.Empty);
         ShowHome();
+    }
+
+    private void SetSearchTextSilently(string value)
+    {
+        _suppressSearch = true;
+        SearchText = value;
+        _suppressSearch = false;
     }
 
     [RelayCommand]
     private void ShowMore()
     {
         if (!IsInstalled) return;
+        SetSearchTextSilently(string.Empty);
         IsSearching = false;
         IsMorePage = true;
+        IsHomeMode = false;
+        IsWatchlistPage = false;
         _baseItems = _homeItems;
         _categoryKey = "all";
         SelectCategoryItem("all");
         ResetFilters();
         SectionTitle = "全部内容";
         ApplyFilter();
+        StatusText = string.Empty;
     }
 
     [RelayCommand]
     private void ShowHome()
     {
         if (!IsInstalled) return;
-        SearchText = string.Empty;
+        _searchDebounceCts?.Cancel();
+        SetSearchTextSilently(string.Empty);
         IsSearching = false;
         IsMorePage = false;
+        IsHomeMode = true;
+        IsWatchlistPage = false;
         _baseItems = _homeItems;
         _categoryKey = "home";
         SelectCategoryItem("home");
@@ -449,6 +594,8 @@ public sealed partial class AnimeViewModel : ObservableObject
         _categoryKey = option.Key;
         foreach (var item in Categories) item.IsSelected = item == option;
         IsSearching = false;
+        IsWatchlistPage = false;
+        IsHomeMode = option.Key == "home";
         SectionTitle = option.Key switch
         {
             "home" => "猜你喜欢",
@@ -469,12 +616,13 @@ public sealed partial class AnimeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SelectType(ChoiceOption? option)
+    private async Task SelectTypeAsync(ChoiceOption? option)
     {
         if (option is null) return;
         _typeKey = option.Key;
         MarkSelected(TypeFilters, option);
         ApplyFilter();
+        if (IsMorePage && !IsSearching) await ReloadFilteredPoolAsync();
     }
 
     [RelayCommand]
@@ -496,12 +644,21 @@ public sealed partial class AnimeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SelectGenre(ChoiceOption? option)
+    private async Task SelectGenreAsync(ChoiceOption? option)
     {
         if (option is null) return;
         _genreKey = option.Key;
         MarkSelected(GenreFilters, option);
         ApplyFilter();
+        if (IsMorePage && !IsSearching) await ReloadFilteredPoolAsync();
+    }
+
+    /// <summary>选中类型 / 风格时重新访问一次数据源，而不是只在旧缓存里筛选。</summary>
+    private async Task ReloadFilteredPoolAsync()
+    {
+        if (IsLoading) return;
+        await LoadCatalogAsync(resetView: false);
+        if (IsMorePage && string.IsNullOrWhiteSpace(SearchText)) SectionTitle = "全部内容";
     }
 
     private void ResetFilters()
@@ -557,9 +714,11 @@ public sealed partial class AnimeViewModel : ObservableObject
     /// <summary>开发期截图前复位筛选，避免把鼠标操作带进验收图。</summary>
     public void PrepareForCapture(bool showMore)
     {
-        SearchText = string.Empty;
+        SetSearchTextSilently(string.Empty);
         IsSearching = false;
         IsMorePage = showMore;
+        IsHomeMode = !showMore;
+        IsWatchlistPage = false;
         _categoryKey = showMore ? "all" : "home";
         SelectCategoryItem(_categoryKey);
         ResetFilters();
