@@ -23,17 +23,17 @@ public sealed partial class AnimeViewModel : ObservableObject
         _catalog = catalog;
         _openPlayer = openPlayer;
 
-        Categories.Add(new ChoiceOption("home", "首页"));
-        Categories.Add(new ChoiceOption("cn", "国产"));
-        Categories.Add(new ChoiceOption("jp", "日韩"));
-        Categories.Add(new ChoiceOption("us", "欧美"));
-        Categories.Add(new ChoiceOption("anime", "动画"));
-        Categories.Add(new ChoiceOption("hk", "港台"));
-        Categories.Add(new ChoiceOption("oversea", "海外"));
-        Categories.Add(new ChoiceOption("all", "综合"));
-        Categories.Add(new ChoiceOption("update", "今日更新"));
-        Categories.Add(new ChoiceOption("hot", "热榜"));
-        Categories.Add(new ChoiceOption("news", "资讯"));
+        Categories.Add(new ChoiceOption("home", "首页", "⌂"));
+        Categories.Add(new ChoiceOption("cn", "国产", "◈"));
+        Categories.Add(new ChoiceOption("jp", "日韩", "❀"));
+        Categories.Add(new ChoiceOption("us", "欧美", "◍"));
+        Categories.Add(new ChoiceOption("anime", "动画", "▣"));
+        Categories.Add(new ChoiceOption("hk", "港台", "◇"));
+        Categories.Add(new ChoiceOption("oversea", "海外", "◎"));
+        Categories.Add(new ChoiceOption("all", "综合", "⊕"));
+        Categories.Add(new ChoiceOption("update", "今日更新", "↻"));
+        Categories.Add(new ChoiceOption("hot", "热榜", "♨"));
+        Categories.Add(new ChoiceOption("news", "资讯", "▤"));
         Categories[0].IsSelected = true;
     }
 
@@ -127,7 +127,22 @@ public sealed partial class AnimeViewModel : ObservableObject
     private void BuildFeatured()
     {
         Featured.Clear();
-        foreach (var item in _homeItems.Take(7)) Featured.Add(item);
+        // 今日更新横排优先从不同站点各取一部，避免整排都来自同一来源。
+        var mixed = _homeItems
+            .GroupBy(i => i.Source, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .Take(7)
+            .ToList();
+        foreach (var item in mixed) Featured.Add(item);
+        if (Featured.Count < 7)
+        {
+            foreach (var item in _homeItems.Take(7))
+            {
+                if (Featured.Contains(item)) continue;
+                Featured.Add(item);
+                if (Featured.Count == 7) break;
+            }
+        }
         var hero = _homeItems.FirstOrDefault();
         Hero = hero;
         HeroTitle = hero?.Title ?? "追番 / 影视";

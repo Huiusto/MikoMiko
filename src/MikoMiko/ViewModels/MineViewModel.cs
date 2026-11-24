@@ -433,6 +433,10 @@ public sealed partial class MineViewModel : ObservableObject
             }
 
             var cookie = result.Cookie;
+            // 网站扫码的 Cookie 已包含 ltoken_v2 / cookie_token_v2；只有旧数据才尝试补换。
+            var refreshed = await _login.RefreshWebCookieAsync(cookie);
+            if (!string.IsNullOrWhiteSpace(refreshed) && refreshed.Contains("cookie_token", StringComparison.OrdinalIgnoreCase))
+                cookie = refreshed;
             LoginStatus = "正在校验登录态…";
             var check = await _login.ValidateCookieAsync(cookie);
             if (!check.Ok)

@@ -54,10 +54,9 @@
             <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
             <Setter Property="CornerRadius" Value="12" />
             <Setter Property="Padding" Value="22,18" />
-            <Setter Property="MaxWidth" Value="1080" />
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Margin" Value="0,0,14,14" />
-            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
         </Style>
 
         <Style x:Key="SectionTitle" TargetType="{x:Type TextBlock}">
@@ -97,7 +96,7 @@
 
                 <!-- 账号头部 -->
                 <Border Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="20,16"
-                        MaxWidth="1080" HorizontalAlignment="Stretch" Margin="0,0,0,16">
+                        HorizontalAlignment="Stretch" Margin="0,0,0,16">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
@@ -284,8 +283,6 @@
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Cache], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
-                        <TextBlock Text="缓存与下载" FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                                   Margin="0,-10,0,12" />
 
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding [S.CacheSize], Source={x:Static loc:Loc.Instance}}"
