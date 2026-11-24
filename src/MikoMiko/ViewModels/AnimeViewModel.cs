@@ -12,15 +12,19 @@ public sealed partial class AnimeViewModel : ObservableObject
 {
     private readonly AnimeModuleService _module;
     private readonly AnimeCatalogService _catalog;
-    private readonly Action<string> _openPlayer;
+    private readonly AnimeStreamService _streams;
+    private readonly Action<AnimePlayback> _openPlayer;
     private List<AnimeItem> _homeItems = new();
     private List<AnimeItem> _baseItems = new();
     private CancellationTokenSource? _loadCts;
+    private bool _isOpening;
 
-    public AnimeViewModel(AnimeModuleService module, AnimeCatalogService catalog, Action<string> openPlayer)
+    public AnimeViewModel(AnimeModuleService module, AnimeCatalogService catalog, AnimeStreamService streams,
+        Action<AnimePlayback> openPlayer)
     {
         _module = module;
         _catalog = catalog;
+        _streams = streams;
         _openPlayer = openPlayer;
 
         Categories.Add(new ChoiceOption("home", "首页", "⌂"));
@@ -350,12 +354,31 @@ public sealed partial class AnimeViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenItem(AnimeItem? item)
+    private async Task OpenItem(AnimeItem? item)
     {
-        if (item is null) return;
-        var target = string.IsNullOrWhiteSpace(item.PlayUrl) ? item.Url : item.PlayUrl;
-        if (string.IsNullOrWhiteSpace(target)) return;
-        _openPlayer(target);
+        if (item is null || _isOpening) return;
+        _isOpening = true;
+        StatusText = $"正在软件内提取《{item.Title}》的视频…";
+        try
+        {
+            var playback = await _streams.ResolveAsync(item);
+            if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
+            {
+                StatusText = "该站点暂时无法直接提取视频，换一个来源或稍后重试。";
+                return;
+            }
+
+            StatusText = string.Empty;
+            _openPlayer(playback);
+        }
+        catch
+        {
+            StatusText = "视频提取失败，请检查网络后重试。";
+        }
+        finally
+        {
+            _isOpening = false;
+        }
     }
 
     private void SelectCategoryItem(string key)

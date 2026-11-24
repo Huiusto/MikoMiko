@@ -115,122 +115,49 @@
 
     <Grid Background="{DynamicResource Brush.WindowBg}">
 
-        <!-- ==================== 未下载：软萌角色 + 一个下载按钮 ==================== -->
+        <!-- ==================== 未下载：直接使用设计原图，不再自行绘制 ==================== -->
         <Grid Visibility="{Binding IsInstalled, Converter={StaticResource InverseBoolToVis}}"
               Background="#FBFDFF" ClipToBounds="True">
-            <!-- 浅蓝软装饰 -->
-            <Canvas>
-                <Ellipse Width="520" Height="380" Canvas.Left="-150" Canvas.Top="-160">
-                    <Ellipse.Fill>
-                        <RadialGradientBrush>
-                            <GradientStop Color="#BFE5FA" Offset="0" />
-                            <GradientStop Color="#EBF7FF" Offset="0.62" />
-                            <GradientStop Color="#00EBF7FF" Offset="1" />
-                        </RadialGradientBrush>
-                    </Ellipse.Fill>
-                </Ellipse>
-                <Ellipse Width="560" Height="420" Canvas.Right="-190" Canvas.Bottom="-190">
-                    <Ellipse.Fill>
-                        <RadialGradientBrush>
-                            <GradientStop Color="#CBE9FB" Offset="0" />
-                            <GradientStop Color="#00E8F6FF" Offset="1" />
-                        </RadialGradientBrush>
-                    </Ellipse.Fill>
-                </Ellipse>
-                <Ellipse Width="26" Height="26" Canvas.Left="250" Canvas.Top="168" Fill="#6DB8E8" Opacity="0.55" />
-                <Ellipse Width="12" Height="12" Canvas.Left="214" Canvas.Top="290" Fill="#A3D6F3" />
-                <Ellipse Width="16" Height="16" Canvas.Left="905" Canvas.Top="236" Fill="#5EADE0" Opacity="0.6" />
-                <Path Data="M8 0 L10.2 6.8 L17 9 L10.2 11.2 L8 18 L5.8 11.2 L-1 9 L5.8 6.8 Z"
-                      Fill="#8ACDF2" Width="26" Height="26" Stretch="Uniform"
-                      Canvas.Left="300" Canvas.Top="132" Opacity="0.9" />
-                <Path Data="M8 0 L10.2 6.8 L17 9 L10.2 11.2 L8 18 L5.8 11.2 L-1 9 L5.8 6.8 Z"
-                      Fill="#B7DFF7" Width="18" Height="18" Stretch="Uniform"
-                      Canvas.Left="838" Canvas.Top="152" Opacity="0.9" />
-                <Path Data="M4 0 H18 M4 6 H18 M4 12 H18" Stroke="#7FC4EC" StrokeThickness="4"
-                      Width="28" Height="20" Stretch="Uniform" Canvas.Left="886" Canvas.Top="134" Opacity="0.5" />
-            </Canvas>
+            <Viewbox Stretch="UniformToFill">
+                <Canvas Width="1672" Height="941">
+                    <Image Source="pack://application:,,,/Assets/Anime/anime-download.png"
+                           Canvas.Left="0" Canvas.Top="0" Width="1672" Height="941"
+                           Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
 
-            <Grid Width="840" Height="640" VerticalAlignment="Center" HorizontalAlignment="Center">
-                <!-- 下载按钮：白描边 + 浅蓝外圈 + 大圆角 -->
-                <Button Command="{Binding DownloadModuleCommand}" Cursor="Hand"
-                        Width="640" Height="112" VerticalAlignment="Bottom" Margin="0,0,0,146"
-                        Panel.ZIndex="1"
-                        Visibility="{Binding IsDownloading, Converter={StaticResource InverseBoolToVis}}">
-                    <Button.Template>
-                        <ControlTemplate TargetType="{x:Type Button}">
-                            <Border x:Name="Bd" CornerRadius="56" Padding="7" Background="#D9EFFC"
-                                    RenderTransformOrigin="0.5,0.5">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="30" ShadowDepth="10" Opacity="0.18" Color="#5B9BC4" />
-                                </Border.Effect>
-                                <Border CornerRadius="49" Background="#FFFFFF" Padding="5">
-                                    <Border CornerRadius="44">
-                                        <Border.Background>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                <GradientStop Color="#82CBF2" Offset="0" />
-                                                <GradientStop Color="#5AAFE5" Offset="0.5" />
-                                                <GradientStop Color="#4EA4DD" Offset="1" />
-                                            </LinearGradientBrush>
-                                        </Border.Background>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                                                    VerticalAlignment="Center">
-                                            <TextBlock Text="下载 追番/影视 板块" Foreground="White" FontSize="28"
-                                                       FontWeight="Bold" VerticalAlignment="Center" />
-                                            <Path Data="M11 2 V16 M5 10 L11 16 L17 10 M3 21 H19"
-                                                  Stroke="White" StrokeThickness="2.6" Width="34" Height="34"
-                                                  Stretch="Uniform" Margin="24,0,0,0" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Border>
-                                </Border>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="Bd" Property="RenderTransform">
-                                        <Setter.Value>
-                                            <ScaleTransform ScaleX="1.02" ScaleY="1.02" />
-                                        </Setter.Value>
-                                    </Setter>
-                                </Trigger>
-                                <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="Bd" Property="Opacity" Value="0.88" />
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
+                    <!-- 原图中的大胶囊按钮位置覆盖透明点击区 -->
+                    <Button Canvas.Left="150" Canvas.Top="512" Width="1410" Height="205"
+                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding DownloadModuleCommand}"
+                            Visibility="{Binding IsDownloading, Converter={StaticResource InverseBoolToVis}}">
+                        <Button.Template>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border Background="Transparent" />
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
 
-                <!-- 下载进度：同样是一个大胶囊 -->
-                <Border Width="640" Height="112" CornerRadius="56" Padding="7" Background="#D9EFFC"
-                        VerticalAlignment="Bottom" Margin="0,0,0,146" Panel.ZIndex="1"
-                        Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}">
-                    <Border CornerRadius="49" Background="White" Padding="26,16">
-                        <StackPanel VerticalAlignment="Center">
+                    <!-- 下载进度覆盖在同一胶囊位置 -->
+                    <Border Canvas.Left="185" Canvas.Top="540" Width="1300" Height="150"
+                            CornerRadius="75" Background="#F2FFFFFF"
+                            Visibility="{Binding IsDownloading, Converter={StaticResource BoolToVis}}">
+                        <StackPanel VerticalAlignment="Center" Margin="42,0">
                             <Grid>
-                                <TextBlock Text="正在下载追番/影视模块…" FontSize="13" Foreground="#2F86B9" />
-                                <TextBlock Text="{Binding DownloadPercentText}" FontSize="13" FontWeight="SemiBold"
+                                <TextBlock Text="正在下载追番/影视板块…" FontSize="17" Foreground="#2F86B9" />
+                                <TextBlock Text="{Binding DownloadPercentText}" FontSize="17" FontWeight="SemiBold"
                                            Foreground="#2F86B9" HorizontalAlignment="Right" />
                             </Grid>
-                            <ProgressBar Height="9" Margin="0,10,0,0" Minimum="0" Maximum="100"
+                            <ProgressBar Height="11" Margin="0,14,0,0" Minimum="0" Maximum="100"
                                          Value="{Binding DownloadProgress}" Foreground="#4EA4DD"
                                          Background="#E2F3FD" BorderThickness="0" />
                         </StackPanel>
                     </Border>
-                </Border>
 
-                <!-- 角色压在按钮上沿 -->
-                <Image Source="pack://application:,,,/Assets/Anime/anime-mascot.png"
-                       Width="520" Height="520" Stretch="Uniform"
-                       VerticalAlignment="Top" HorizontalAlignment="Center"
-                       Margin="0,10,0,0" Panel.ZIndex="2"
-                       RenderOptions.BitmapScalingMode="HighQuality" />
-
-                <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="#C05050"
-                           VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,22"
-                           TextWrapping="Wrap" TextAlignment="Center"
-                           Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVis}}" />
-            </Grid>
+                    <TextBlock Canvas.Left="0" Canvas.Top="874" Width="1672" Text="{Binding StatusText}"
+                               FontSize="13" Foreground="#C05050" TextAlignment="Center" TextWrapping="Wrap"
+                               Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVis}}" />
+                </Canvas>
+            </Viewbox>
         </Grid>
-
         <!-- ==================== 已下载：原生影视首页 ==================== -->
         <Grid Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
             <Grid.RowDefinitions>
@@ -492,3 +419,4 @@
         </Grid>
     </Grid>
 </UserControl>
+

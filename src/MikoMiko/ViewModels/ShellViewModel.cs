@@ -51,7 +51,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
         _home = new HomeViewModel(content, OpenItem, user => OpenUserProfile(user.Uid));
         _video = new VideoViewModel(content, OpenUserProfile, _settings);
-        _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), OpenAnimePlayer);
+        _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), new AnimeStreamService(),
+            ShowAnimePlayer);
         _moment = new MomentViewModel(content, OpenMoment, OpenUserProfile);
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
@@ -107,6 +108,10 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>软件内网页视图（正文里的外部链接），不打开系统浏览器。</summary>
     [ObservableProperty] private Views.BrowserView? _browserView;
     [ObservableProperty] private bool _isBrowserOpen;
+
+    /// <summary>追番/影视的软件内视频播放器，只加载解析出的流地址。</summary>
+    [ObservableProperty] private Views.AnimePlayerView? _animePlayerView;
+    [ObservableProperty] private bool _isAnimePlayerOpen;
 
     /// <summary>上传内容弹层（不新开窗口，先选板块再选发布类型）。</summary>
     [ObservableProperty] private Views.UploadView? _uploadView;
@@ -432,13 +437,21 @@ public sealed partial class ShellViewModel : ObservableObject
         IsBrowserOpen = false;
     }
 
-    /// <summary>追番/影视在软件内播放：隐藏地址栏，只保留后退与关闭。</summary>
-    private void OpenAnimePlayer(string url)
+    /// <summary>追番/影视在软件内播放：先提取真实视频流，再交给内置播放器，不展示第三方网页。</summary>
+    private void ShowAnimePlayer(AnimePlayback playback)
     {
-        if (string.IsNullOrWhiteSpace(url)) return;
-        CloseBrowser();
-        BrowserView = new Views.BrowserView(url, CloseBrowser, immersivePlayer: true);
-        IsBrowserOpen = true;
+        if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl)) return;
+        CloseAnimePlayer();
+        AnimePlayerView = new Views.AnimePlayerView(playback, CloseAnimePlayer);
+        IsAnimePlayerOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseAnimePlayer()
+    {
+        if (AnimePlayerView is null) return;
+        AnimePlayerView = null;
+        IsAnimePlayerOpen = false;
     }
 
     /// <summary>打开上传内容弹层；再次打开时回到第一步。</summary>

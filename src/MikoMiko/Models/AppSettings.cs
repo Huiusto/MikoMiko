@@ -23,7 +23,7 @@ public sealed partial class AppSettings : ObservableObject
     [ObservableProperty] private string _profileBackground = string.Empty;
     [ObservableProperty] private bool _rememberLastPage = true;
     [ObservableProperty] private string _lastPage = "Home";
-    [ObservableProperty] private string _closeAction = "Ask";     // Tray / Exit / Ask
+    [ObservableProperty] private string _closeAction = "Tray";    // Tray / Exit / Ask
 
     /// <summary>启动首页与启动视频页互斥：勾选其一时自动取消另一个。</summary>
     partial void OnStartOnHomeChanged(bool value)

@@ -110,7 +110,6 @@ public partial class VideoView : UserControl
     private void CommentCard_Click(object sender, MouseButtonEventArgs e)
     {
         if (FindAncestor<System.Windows.Controls.Primitives.ButtonBase>(e.OriginalSource as DependencyObject) is not null) return;
-        if (FindAncestor<Border>(e.OriginalSource as DependencyObject) is not null) return;
         if (FindAncestor<System.Windows.Controls.TextBox>(e.OriginalSource as DependencyObject) is not null) return;
         if (sender is FrameworkElement { DataContext: CommentItem comment })
         {

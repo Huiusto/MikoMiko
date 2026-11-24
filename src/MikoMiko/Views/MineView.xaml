@@ -12,6 +12,25 @@
         <conv:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis" />
         <conv:ZeroToVisibilityConverter x:Key="ZeroToVis" />
 
+        <!-- 内容卡片：透明模板，鼠标悬浮时不改变底色 -->
+        <Style x:Key="PlainCardButton" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <LinearGradientBrush x:Key="ProfileBanner" StartPoint="0,0" EndPoint="1,1">
             <GradientStop Color="#4EA4DD" Offset="0" />
             <GradientStop Color="#63B8E8" Offset="0.55" />
@@ -468,7 +487,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                <Button Style="{StaticResource PlainCardButton}"
                                         HorizontalContentAlignment="Stretch" Margin="0,0,12,12"
                                         Command="{Binding DataContext.OpenMyPostCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}">
@@ -507,7 +526,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                <Button Style="{StaticResource PlainCardButton}"
                                         HorizontalContentAlignment="Stretch" Margin="0,0,12,12"
                                         Command="{Binding DataContext.OpenMyReplyCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}">
@@ -583,7 +602,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                <Button Style="{StaticResource PlainCardButton}"
                                         HorizontalContentAlignment="Stretch" Margin="0,0,12,12"
                                         Command="{Binding DataContext.OpenMyPostCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}">

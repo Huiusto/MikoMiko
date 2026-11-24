@@ -315,7 +315,7 @@
                 </Border>
 
                 <!-- 通用设置 -->
-                <Border Grid.Row="1" Grid.Column="1" MinHeight="180"
+                <Border Grid.Row="2" Grid.Column="1" MinHeight="180"
                         Style="{StaticResource SectionCard}" Margin="7,0,0,14" Tag="Common">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Common], Source={x:Static loc:Loc.Instance}}"
@@ -357,7 +357,7 @@
                 </Border>
 
                 <!-- 应用信息 -->
-                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource SectionCard}"
+                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource SectionCard}"
                         Margin="7,0,0,14" Tag="AppInfo">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.AppInfo], Source={x:Static loc:Loc.Instance}}"
