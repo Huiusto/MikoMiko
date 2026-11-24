@@ -60,6 +60,44 @@ public sealed partial class PostReaderViewModel : ObservableObject
     public ObservableCollection<CommentItem> Comments { get; } = new();
     public ObservableCollection<PostBlock> Blocks { get; } = new();
 
+    private readonly List<CommentItem> _allComments = new();
+
+    /// <summary>评论排序：默认沿用官方热评顺序，最新按发布时间倒序。</summary>
+    [ObservableProperty] private bool _isCommentLatest;
+
+    [RelayCommand]
+    private void SortCommentsDefault()
+    {
+        if (!IsCommentLatest) return;
+        IsCommentLatest = false;
+        ApplyCommentSort();
+    }
+
+    [RelayCommand]
+    private void SortCommentsLatest()
+    {
+        if (IsCommentLatest) return;
+        IsCommentLatest = true;
+        ApplyCommentSort();
+    }
+
+    private void ApplyCommentSort()
+    {
+        var ordered = IsCommentLatest
+            ? _allComments.OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.ReplyId).ToList()
+            : _allComments;
+        Comments.Clear();
+        foreach (var comment in ordered) Comments.Add(comment);
+        HasComments = Comments.Count > 0;
+    }
+
+    [RelayCommand]
+    private void OpenCommentUser(CommentItem? comment)
+    {
+        if (comment is null || string.IsNullOrWhiteSpace(comment.UserId)) return;
+        OpenAuthorProfile?.Invoke(comment.UserId);
+    }
+
     public bool HasTopics => Topics.Count > 0;
 
     [ObservableProperty] private bool _isBodyExpanded;
@@ -245,16 +283,21 @@ public sealed partial class PostReaderViewModel : ObservableObject
         if (comment is null) return;
         comment.IsLiked = !comment.IsLiked;
         comment.LikeText = BumpCount(comment.LikeText, comment.IsLiked);
-        if (comment.IsLiked) comment.IsDisliked = false;
+        if (comment.IsLiked)
+        {
+            comment.IsDisliked = false;
+            comment.IsCollapsed = false;
+        }
     }
 
-    /// <summary>评论点踩（本地即时反馈；与点赞互斥）。</summary>
+    /// <summary>评论点踩（本地即时反馈；与点赞互斥，点踩后折叠该评论）。</summary>
     [RelayCommand]
     private void DislikeComment(CommentItem? comment)
     {
         if (comment is null) return;
         comment.IsDisliked = !comment.IsDisliked;
         comment.DislikeText = BumpCount(comment.DislikeText, comment.IsDisliked);
+        comment.IsCollapsed = comment.IsDisliked;
         if (comment.IsDisliked) comment.IsLiked = false;
     }
 
@@ -392,9 +435,9 @@ public sealed partial class PostReaderViewModel : ObservableObject
         try
         {
             var replies = await _content.Api.GetRepliesAsync(Item.PostId);
-            Comments.Clear();
-            foreach (var reply in replies) Comments.Add(reply);
-            HasComments = Comments.Count > 0;
+            _allComments.Clear();
+            _allComments.AddRange(replies);
+            ApplyCommentSort();
         }
         catch
         {

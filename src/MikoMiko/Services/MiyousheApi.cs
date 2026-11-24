@@ -742,6 +742,7 @@ public sealed class MiyousheApi
             Level = (int)Num(Obj(user, "level_exp"), "level"),
             IpRegion = Str(user, "ip_region"),
             Content = Str(reply, "content"),
+            CreatedAt = Num(reply, "created_at"),
             TimeText = RelativeTime(Num(reply, "created_at")),
             LikeText = FormatCount(Num(Obj(element, "stat"), "like_num")),
             DislikeText = FormatCount(Num(Obj(element, "stat"), "dislike_num")),

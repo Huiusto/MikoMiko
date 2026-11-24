@@ -9,6 +9,67 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+
+        <Style x:Key="SortTabDefault" TargetType="{x:Type Button}">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="11" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsCommentLatest}" Value="False">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="SortTabLatest" TargetType="{x:Type Button}" BasedOn="{StaticResource SortTabDefault}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="11" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsCommentLatest}" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="CommentUserButton" TargetType="{x:Type Button}">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <conv:NotEmptyToVisibilityConverter x:Key="NotEmptyToVis" />
     </UserControl.Resources>
 
@@ -343,16 +404,24 @@
                 </Border>
 
                 <!-- 评论 -->
-                <StackPanel x:Name="CommentSection" Orientation="Horizontal" Margin="2,26,0,10">
-                    <TextBlock Text="{Binding [Post.Comments], Source={x:Static loc:Loc.Instance}}"
-                               FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding ReplyText}" FontSize="12"
-                               Foreground="{DynamicResource Brush.TextTertiary}" Margin="8,2,0,0"
-                               VerticalAlignment="Center" />
-                    <Button Content="{Binding [Common.Refresh], Source={x:Static loc:Loc.Instance}}"
-                            Style="{StaticResource LinkButton}" Margin="14,0,0,0" VerticalAlignment="Center"
-                            Command="{Binding ReloadCommentsCommand}" />
-                </StackPanel>
+                <Grid x:Name="CommentSection" Margin="2,26,0,10">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding [Post.Comments], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="15.5" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ReplyText}" FontSize="12"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" Margin="8,2,0,0"
+                                   VerticalAlignment="Center" />
+                        <Button Content="{Binding [Common.Refresh], Source={x:Static loc:Loc.Instance}}"
+                                Style="{StaticResource LinkButton}" Margin="14,0,0,0" VerticalAlignment="Center"
+                                Command="{Binding ReloadCommentsCommand}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <Button Content="默认" Style="{StaticResource SortTabDefault}" BorderThickness="0"
+                                Command="{Binding SortCommentsDefaultCommand}" />
+                        <Button Content="最新" Style="{StaticResource SortTabLatest}" BorderThickness="0"
+                                Margin="4,0,0,0" Command="{Binding SortCommentsLatestCommand}" />
+                    </StackPanel>
+                </Grid>
 
                 <TextBlock Text="{Binding [Post.NoComments], Source={x:Static loc:Loc.Instance}}"
                            FontSize="12.5" Foreground="{DynamicResource Brush.TextTertiary}" Margin="2,0,0,10"
@@ -401,14 +470,22 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <Border Grid.Column="0" Width="32" Height="32" CornerRadius="16" ClipToBounds="True"
-                                                Background="{DynamicResource Brush.Card}" VerticalAlignment="Top">
-                                            <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
-                                        </Border>
+                                        <Button Grid.Column="0" Style="{StaticResource CommentUserButton}" VerticalAlignment="Top"
+                                                Command="{Binding DataContext.OpenCommentUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" ToolTip="查看用户主页">
+                                            <Border Width="32" Height="32" CornerRadius="16" ClipToBounds="True"
+                                                    Background="{DynamicResource Brush.Card}">
+                                                <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
+                                            </Border>
+                                        </Button>
                                         <StackPanel Grid.Column="1" Margin="9,0,0,0">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Author}" FontSize="12.5" FontWeight="SemiBold"
-                                                           Foreground="#4EA4DD" VerticalAlignment="Center" />
+                                                <Button Style="{StaticResource CommentUserButton}"
+                                                        Command="{Binding DataContext.OpenCommentUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" ToolTip="查看用户主页">
+                                                    <TextBlock Text="{Binding Author}" FontSize="12.5" FontWeight="SemiBold"
+                                                               Foreground="#4EA4DD" VerticalAlignment="Center" />
+                                                </Button>
                                                 <Border Background="{DynamicResource Brush.AccentSoft}" CornerRadius="3"
                                                         Padding="4,0" Margin="6,0,0,0" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Level, StringFormat=Lv.{0}}" FontSize="10"
@@ -424,26 +501,32 @@
                                                            Margin="8,0,0,0" VerticalAlignment="Center" />
                                             </StackPanel>
 
-                                            <TextBlock Text="{Binding Content}" FontSize="13" LineHeight="21"
-                                                       TextWrapping="Wrap" Margin="0,7,0,0" />
+                                            <TextBlock Text="该评论已折叠，取消「踩」即可恢复" FontSize="11"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,8,0,0"
+                                                       Visibility="{Binding IsCollapsed, Converter={StaticResource BoolToVis}}" />
 
-                                            <ItemsControl ItemsSource="{Binding Images}" Margin="0,8,0,0"
-                                                          Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
-                                                <ItemsControl.ItemsPanel>
-                                                    <ItemsPanelTemplate>
-                                                        <WrapPanel />
-                                                    </ItemsPanelTemplate>
-                                                </ItemsControl.ItemsPanel>
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate>
-                                                        <Border Width="112" Height="112" CornerRadius="8" ClipToBounds="True"
-                                                                Background="{DynamicResource Brush.Card}" Margin="0,0,8,8"
-                                                                Cursor="Hand" Tag="{Binding}" MouseLeftButtonUp="InlineImage_Click">
-                                                            <Image controls:AsyncImage.Url="{Binding}" Stretch="UniformToFill" />
-                                                        </Border>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                            <StackPanel Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="{Binding Content}" FontSize="13" LineHeight="21"
+                                                           TextWrapping="Wrap" Margin="0,7,0,0" />
+
+                                                <ItemsControl ItemsSource="{Binding Images}" Margin="0,8,0,0"
+                                                              Visibility="{Binding HasImages, Converter={StaticResource BoolToVis}}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border Width="112" Height="112" CornerRadius="8" ClipToBounds="True"
+                                                                    Background="{DynamicResource Brush.Card}" Margin="0,0,8,8"
+                                                                    Cursor="Hand" Tag="{Binding}" MouseLeftButtonUp="InlineImage_Click">
+                                                                <Image controls:AsyncImage.Url="{Binding}" Stretch="UniformToFill" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
                                         </StackPanel>
                                     </Grid>
 
@@ -461,7 +544,7 @@
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsLiked}" Value="True">
                                                                     <Setter Property="Text" Value="♥" />
-                                                                    <Setter Property="Foreground" Value="#4EA4DD" />
+                                                                    <Setter Property="Foreground" Value="#E4465A" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -475,13 +558,14 @@
                                                 CommandParameter="{Binding}" Style="{StaticResource LinkButton}"
                                                 Margin="12,0,0,0" Height="18" Padding="0">
                                             <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="♧" FontSize="11" Foreground="{DynamicResource Brush.TextTertiary}">
+                                                <TextBlock Text="👎︎" FontSize="11" Foreground="#B9C2CC">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="♧" />
+                                                            <Setter Property="Text" Value="👎︎" />
+                                                            <Setter Property="Foreground" Value="#B9C2CC" />
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsDisliked}" Value="True">
-                                                                    <Setter Property="Foreground" Value="#6A8EAE" />
+                                                                    <Setter Property="Foreground" Value="#66707C" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -535,12 +619,20 @@
                                                         Padding="10,0,0,0" Margin="0,0,0,8">
                                                     <StackPanel>
                                                         <StackPanel Orientation="Horizontal">
-                                                            <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True"
-                                                                    Background="{DynamicResource Brush.Card}">
-                                                                <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
-                                                            </Border>
-                                                            <TextBlock Text="{Binding Author}" FontSize="11.5" FontWeight="SemiBold"
-                                                                       Foreground="#4EA4DD" Margin="7,0,0,0" VerticalAlignment="Center" />
+                                                            <Button Style="{StaticResource CommentUserButton}"
+                                                                    Command="{Binding DataContext.OpenCommentUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}" ToolTip="查看用户主页">
+                                                                <Border Width="22" Height="22" CornerRadius="11" ClipToBounds="True"
+                                                                        Background="{DynamicResource Brush.Card}">
+                                                                    <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
+                                                                </Border>
+                                                            </Button>
+                                                            <Button Style="{StaticResource CommentUserButton}" Margin="7,0,0,0"
+                                                                    Command="{Binding DataContext.OpenCommentUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                    CommandParameter="{Binding}" ToolTip="查看用户主页">
+                                                                <TextBlock Text="{Binding Author}" FontSize="11.5" FontWeight="SemiBold"
+                                                                           Foreground="#4EA4DD" VerticalAlignment="Center" />
+                                                            </Button>
                                                             <TextBlock Text="{Binding TimeText}" FontSize="10"
                                                                        Foreground="{DynamicResource Brush.TextTertiary}"
                                                                        Margin="8,0,0,0" VerticalAlignment="Center" />

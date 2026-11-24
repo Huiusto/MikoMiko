@@ -171,7 +171,7 @@ public partial class App : Application
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
                     : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
-                    : page is "Upload" or "UploadType" ? "Home"
+                    : page is "Upload" or "UploadType" or "UploadArticle" ? "Home"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
                 if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeDownload" or "AnimeSearch")
@@ -261,10 +261,15 @@ public partial class App : Application
                     Shell.SearchText = "原神";
                     _ = Shell.SearchAsync();
                 }
-                if (page is "Upload" or "UploadType")
+                if (page is "Upload" or "UploadType" or "UploadArticle")
                 {
                     Shell.OpenUpload();
                     if (page == "UploadType") Shell.Upload.ChooseSectionCommand.Execute(Shell.Upload.Sections[4]);
+                    if (page == "UploadArticle")
+                    {
+                        Shell.Upload.ChooseSectionCommand.Execute(Shell.Upload.Sections[2]);
+                        Shell.Upload.PublishCommand.Execute(Shell.Upload.ContentTypes[0]);
+                    }
                 }
                 if (page == "UserProfile")
                 {
@@ -321,7 +326,7 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : page == "UploadArticle" ? 32 : page == "ReaderComments" ? 9 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();
@@ -364,7 +369,7 @@ public partial class App : Application
                     if (page == "ReaderComments")
                     {
                         MainWindow!.UpdateLayout();
-                        Shell.ReaderView?.ScrollToCommentBox();
+                        Shell.ReaderView?.ScrollToComments();
                         MainWindow!.UpdateLayout();
                     }
                     if (page is not ("VideoPlay" or "VideoOptions" or "VideoComments")) Shell.Video.IsPlaying = false; // 截图时停在封面，避免抓到解码中的黑帧
@@ -373,6 +378,7 @@ public partial class App : Application
                     {
                         settle.Stop();
                         Shell.AnimePage?.ResetScroll();
+                        if (page == "ReaderComments") Shell.ReaderView?.ScrollToComments();
                         MainWindow!.UpdateLayout();
                         CaptureWindow(path);
                         Log(path, "saved");

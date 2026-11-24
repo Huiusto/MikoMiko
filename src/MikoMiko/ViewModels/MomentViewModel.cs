@@ -129,6 +129,24 @@ public sealed partial class MomentViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SelectMomentAuthor(MomentItem? moment)
+    {
+        if (moment is null || string.IsNullOrWhiteSpace(moment.AuthorUid)) return;
+        var user = FollowingUsers.FirstOrDefault(u => u.Uid == moment.AuthorUid);
+        if (user is not null)
+        {
+            SelectAuthor(user);
+            return;
+        }
+
+        foreach (var item in FollowingUsers) item.IsSelected = false;
+        SelectedAuthorUid = moment.AuthorUid;
+        SelectedAuthorName = moment.Author;
+        IsAllSelected = false;
+        Apply();
+    }
+
+    [RelayCommand]
     private async Task ToggleLikeAsync(MomentItem? item)
     {
         if (item is null || string.IsNullOrWhiteSpace(item.PostId)) return;
@@ -179,7 +197,7 @@ public sealed partial class MomentViewModel : ObservableObject
                                    || m.Author.Contains(keyword, StringComparison.OrdinalIgnoreCase));
         }
 
-        foreach (var item in list) Moments.Add(item);
+        foreach (var item in list.OrderByDescending(m => m.CreatedAt)) Moments.Add(item);
         IsEmpty = Moments.Count == 0;
     }
 }

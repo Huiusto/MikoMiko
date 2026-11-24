@@ -141,7 +141,7 @@
                                 </Path.Style>
                             </Path>
                         </Button>
-                        <TextBlock Text="{Binding Selected.LikeText}" Foreground="#E6FFFFFF" FontSize="10.5"
+                        <TextBlock Text="{Binding VideoLikeText}" Foreground="#E6FFFFFF" FontSize="10.5"
                                    HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
                     <StackPanel HorizontalAlignment="Center" Margin="0,0,0,14">
@@ -436,7 +436,55 @@
                         </Grid.RowDefinitions>
 
                         <Grid Grid.Row="0" Margin="0,0,0,10">
-                            <TextBlock Text="评论" Foreground="White" FontSize="15" FontWeight="SemiBold" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="评论" Foreground="White" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <Button Height="22" Padding="9,0" Margin="12,0,0,0" BorderThickness="0"
+                                        Foreground="White" FontSize="10.5" Cursor="Hand"
+                                        Command="{Binding SortCommentsDefaultCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}">
+                                            <Setter Property="Background" Value="#22FFFFFF" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCommentLatest}" Value="False">
+                                                    <Setter Property="Background" Value="#4EA4DD" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="11">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                  TextElement.Foreground="White" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <TextBlock Text="默认" Foreground="White" />
+                                </Button>
+                                <Button Height="22" Padding="9,0" Margin="5,0,0,0" BorderThickness="0"
+                                        Foreground="White" FontSize="10.5" Cursor="Hand"
+                                        Command="{Binding SortCommentsLatestCommand}">
+                                    <Button.Style>
+                                        <Style TargetType="{x:Type Button}">
+                                            <Setter Property="Background" Value="#22FFFFFF" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsCommentLatest}" Value="True">
+                                                    <Setter Property="Background" Value="#4EA4DD" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border Background="{TemplateBinding Background}" CornerRadius="11">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                  TextElement.Foreground="White" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <TextBlock Text="最新" Foreground="White" />
+                                </Button>
+                            </StackPanel>
                             <Button HorizontalAlignment="Right" Cursor="Hand" Background="Transparent" BorderThickness="0"
                                     Command="{Binding ToggleCommentsCommand}">
                                 <Path Data="M1 1 L11 11 M11 1 L1 11" Stroke="#CCFFFFFF" StrokeThickness="1.4"
@@ -450,10 +498,20 @@
                                     <DataTemplate>
                                         <StackPanel Margin="0,0,0,14">
                                             <StackPanel Orientation="Horizontal">
-                                                <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True"
-                                                        Background="#33FFFFFF">
+                                                <Button Cursor="Hand" Width="28" Height="28" Padding="0" BorderThickness="0"
+                                                        Background="Transparent"
+                                                        Command="{Binding DataContext.OpenCommentUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" ToolTip="查看用户主页">
+                                                    <Button.Template>
+                                                        <ControlTemplate TargetType="{x:Type Button}">
+                                                            <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True"
+                                                                    Background="#33FFFFFF">
+                                                                <ContentPresenter />
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Button.Template>
                                                     <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
-                                                </Border>
+                                                </Button>
                                                 <StackPanel Margin="8,0,0,0">
                                                     <StackPanel Orientation="Horizontal">
                                                         <TextBlock Text="{Binding Author}" Foreground="#4EA4DD" FontSize="11.5"
@@ -466,6 +524,10 @@
                                                         <TextBlock Text="{Binding TimeText}" Foreground="#66FFFFFF" FontSize="10"
                                                                    Margin="8,1,0,0" VerticalAlignment="Center" />
                                                     </StackPanel>
+                                                    <TextBlock Text="该评论已折叠，取消「踩」即可恢复" Foreground="#80FFFFFF"
+                                                               FontSize="10.5" Margin="0,5,0,0"
+                                                               Visibility="{Binding IsCollapsed, Converter={StaticResource BoolToVis}}" />
+                                                    <StackPanel Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
                                                     <TextBlock Text="{Binding Content}" Foreground="#EEFFFFFF" FontSize="12.5"
                                                                TextWrapping="Wrap" Margin="0,4,0,0" />
                                                     <ItemsControl ItemsSource="{Binding Images}" Margin="0,6,0,0"
@@ -478,12 +540,14 @@
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate>
                                                                 <Border CornerRadius="6" ClipToBounds="True" Margin="0,0,6,6"
-                                                                        MaxWidth="120" MaxHeight="90" Background="#22FFFFFF">
+                                                                        MaxWidth="120" MaxHeight="90" Background="#22FFFFFF"
+                                                                        Cursor="Hand" Tag="{Binding}" MouseLeftButtonUp="CommentImage_Click">
                                                                     <Image controls:AsyncImage.Url="{Binding}" Stretch="Uniform" />
                                                                 </Border>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
+                                                    </StackPanel>
                                                     <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
                                                         <Button Style="{StaticResource LinkButton}" Height="18" Padding="0"
                                                                 Command="{Binding DataContext.LikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
@@ -508,13 +572,13 @@
                                                                 Margin="12,0,0,0"
                                                                 Command="{Binding DataContext.DislikeCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                 CommandParameter="{Binding}">
-                                                            <TextBlock Text="♧" FontSize="10.5" Foreground="#80FFFFFF">
+                                                            <TextBlock Text="👎︎" FontSize="10.5" Foreground="#8CFFFFFF">
                                                                 <TextBlock.Style>
                                                                     <Style TargetType="TextBlock">
-                                                                        <Setter Property="Text" Value="♧" />
+                                                                        <Setter Property="Text" Value="👎︎" />
                                                                         <Style.Triggers>
                                                                             <DataTrigger Binding="{Binding IsDisliked}" Value="True">
-                                                                                <Setter Property="Foreground" Value="#8FD0FF" />
+                                                                                <Setter Property="Foreground" Value="#8A8F98" />
                                                                             </DataTrigger>
                                                                         </Style.Triggers>
                                                                     </Style>
@@ -554,7 +618,8 @@
                                                                     <ItemsControl.ItemTemplate>
                                                                         <DataTemplate>
                                                                             <Border CornerRadius="5" ClipToBounds="True" Margin="0,0,5,5"
-                                                                                    MaxWidth="92" MaxHeight="70" Background="#22FFFFFF">
+                                                                                    MaxWidth="92" MaxHeight="70" Background="#22FFFFFF"
+                                                                                    Cursor="Hand" Tag="{Binding}" MouseLeftButtonUp="CommentImage_Click">
                                                                                 <Image controls:AsyncImage.Url="{Binding}" Stretch="Uniform" />
                                                                             </Border>
                                                                         </DataTemplate>
@@ -618,5 +683,83 @@
                 </Border>
             </Grid>
         </Border>
+
+        <!-- 视频评论图片灯箱：与帖子阅读器一致，可缩放/拖动/下载 -->
+        <Grid x:Name="CommentLightbox" Background="#DD000000" Visibility="Collapsed">
+            <ScrollViewer x:Name="CommentLightboxScroll" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Center"
+                          VerticalContentAlignment="Center" Padding="56" Cursor="Hand"
+                          PreviewMouseWheel="CommentLightbox_PreviewMouseWheel"
+                          PreviewMouseLeftButtonDown="CommentLightbox_PreviewMouseLeftButtonDown"
+                          PreviewMouseMove="CommentLightbox_PreviewMouseMove"
+                          PreviewMouseLeftButtonUp="CommentLightbox_PreviewMouseLeftButtonUp">
+                <Image x:Name="CommentLightboxImage" Stretch="Uniform" MaxWidth="1600" MaxHeight="1200"
+                       RenderTransformOrigin="0.5,0.5">
+                    <Image.RenderTransform>
+                        <TransformGroup>
+                            <ScaleTransform x:Name="CommentLightboxScale" ScaleX="1" ScaleY="1" />
+                            <TranslateTransform x:Name="CommentLightboxTranslate" X="0" Y="0" />
+                        </TransformGroup>
+                    </Image.RenderTransform>
+                </Image>
+            </ScrollViewer>
+            <Button x:Name="CommentLightboxPrev" Width="44" Height="44" HorizontalAlignment="Left" VerticalAlignment="Center"
+                    Margin="18,0,0,0" Cursor="Hand" Click="CommentLightboxPrev_Click" ToolTip="上一张图片">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="22" Background="#33FFFFFF">
+                            <Path Data="M7 0 L0 7 L7 14" Stroke="White" StrokeThickness="1.8" Width="8" Height="15" Stretch="Uniform" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="#55FFFFFF" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Button x:Name="CommentLightboxNext" Width="44" Height="44" HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Margin="0,0,18,0" Cursor="Hand" Click="CommentLightboxNext_Click" ToolTip="下一张图片">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" CornerRadius="22" Background="#33FFFFFF">
+                            <Path Data="M0 0 L7 7 L0 14" Stroke="White" StrokeThickness="1.8" Width="8" Height="15" Stretch="Uniform" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="#55FFFFFF" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <TextBlock x:Name="CommentLightboxCounter" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                       Margin="0,0,0,22" Foreground="#B3FFFFFF" FontSize="12" />
+            <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,18,12"
+                    Width="36" Height="36" Padding="0" Cursor="Hand" Click="CommentLightboxDownload_Click"
+                    Background="#33FFFFFF" BorderThickness="0" ToolTip="下载图片">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" Background="#33FFFFFF" CornerRadius="18">
+                            <Path Data="M1 10 V14 H15 V10 M8 1 V10 M5 7 L8 10 L11 7" Stroke="White"
+                                  StrokeThickness="1.4" Width="15" Height="14" Stretch="Uniform"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Bd" Property="Background" Value="#55FFFFFF" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <TextBlock x:Name="CommentLightboxStatus" HorizontalAlignment="Center" VerticalAlignment="Top"
+                       Margin="0,26,0,0" Foreground="#CCFFFFFF" FontSize="11.5" />
+            <Button Width="40" Height="40" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="18"
+                    Cursor="Hand" Click="CloseCommentLightbox_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border CornerRadius="20" Background="#33FFFFFF">
+                            <Path Data="M0 0 L10 10 M10 0 L0 10" Stroke="White" StrokeThickness="1.6"
+                                  Width="11" Height="11" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </Grid>
     </Grid>
 </UserControl>

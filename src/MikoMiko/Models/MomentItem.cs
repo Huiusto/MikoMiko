@@ -9,6 +9,7 @@ public sealed class MomentItem
     public string AuthorUid { get; set; } = string.Empty;
     public string Avatar { get; set; } = string.Empty;
     public string TimeText { get; set; } = string.Empty;
+    public long CreatedAt { get; set; }
     public string Text { get; set; } = string.Empty;
     public string Topic { get; set; } = string.Empty;
     public string LikeText { get; set; } = string.Empty;

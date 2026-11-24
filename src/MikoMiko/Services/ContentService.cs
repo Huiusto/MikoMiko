@@ -392,6 +392,7 @@ public sealed class ContentService
                 AuthorUid = i.AuthorUid,
                 Avatar = i.AuthorAvatar,
                 TimeText = i.TimeText,
+                CreatedAt = i.CreatedAt,
                 Text = string.IsNullOrWhiteSpace(i.Summary) ? i.Title : i.Summary,
                 Topic = string.IsNullOrEmpty(i.ForumName) ? string.Empty : $"#{i.ForumName}#",
                 LikeText = i.LikeText,

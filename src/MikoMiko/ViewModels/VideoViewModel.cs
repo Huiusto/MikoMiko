@@ -42,6 +42,11 @@ public sealed partial class VideoViewModel : ObservableObject
     public ObservableCollection<FeedItem> Videos { get; } = new();
     public ObservableCollection<FeedItem> Related { get; } = new();
     public ObservableCollection<CommentItem> Comments { get; } = new();
+    private readonly List<CommentItem> _allComments = new();
+
+    /// <summary>视频点赞数单独暴露，避免通知 Selected 引起播放器重建。</summary>
+    [ObservableProperty] private string _videoLikeText = "0";
+    [ObservableProperty] private bool _isCommentLatest;
 
     [ObservableProperty] private FeedItem? _selected;
     [ObservableProperty] private bool _isLoading;
@@ -166,6 +171,7 @@ public sealed partial class VideoViewModel : ObservableObject
         if (!item.IsOfficial) _authorHistory.Remember(item.AuthorUid, item.Author);
         _batchAuthors.Add(AuthorKeyOf(item));
         Selected = item;
+        VideoLikeText = item.LikeText;
         HasSource = !string.IsNullOrWhiteSpace(item.VideoUrl);
         IsPlaying = false;
         IsLiked = false;
@@ -209,8 +215,9 @@ public sealed partial class VideoViewModel : ObservableObject
         {
             var replies = await _content.Api.GetRepliesAsync(item.PostId);
             if (Selected?.PostId != item.PostId) return;
-            Comments.Clear();
-            foreach (var reply in replies) Comments.Add(reply);
+            _allComments.Clear();
+            _allComments.AddRange(replies);
+            ApplyCommentSort();
             OnPropertyChanged(nameof(CommentCountText));
         }
         catch
@@ -279,6 +286,11 @@ public sealed partial class VideoViewModel : ObservableObject
         if (comment is null) return;
         comment.IsLiked = !comment.IsLiked;
         comment.LikeText = BumpCount(comment.LikeText, comment.IsLiked);
+        if (comment.IsLiked)
+        {
+            comment.IsDisliked = false;
+            comment.IsCollapsed = false;
+        }
     }
 
     [RelayCommand]
@@ -287,7 +299,40 @@ public sealed partial class VideoViewModel : ObservableObject
         if (comment is null) return;
         comment.IsDisliked = !comment.IsDisliked;
         comment.DislikeText = BumpCount(comment.DislikeText, comment.IsDisliked);
+        comment.IsCollapsed = comment.IsDisliked;
         if (comment.IsDisliked) comment.IsLiked = false;
+    }
+
+    [RelayCommand]
+    private void SortCommentsDefault()
+    {
+        if (!IsCommentLatest) return;
+        IsCommentLatest = false;
+        ApplyCommentSort();
+    }
+
+    [RelayCommand]
+    private void SortCommentsLatest()
+    {
+        if (IsCommentLatest) return;
+        IsCommentLatest = true;
+        ApplyCommentSort();
+    }
+
+    private void ApplyCommentSort()
+    {
+        var ordered = IsCommentLatest
+            ? _allComments.OrderByDescending(c => c.CreatedAt).ThenByDescending(c => c.ReplyId).ToList()
+            : _allComments;
+        Comments.Clear();
+        foreach (var comment in ordered) Comments.Add(comment);
+    }
+
+    [RelayCommand]
+    private void OpenCommentUser(CommentItem? comment)
+    {
+        if (comment is null || string.IsNullOrWhiteSpace(comment.UserId)) return;
+        _openUser?.Invoke(comment.UserId);
     }
 
     /// <summary>同一作者 3 天内只推送一次；同一批次内也不重复，官方视频始终放行。</summary>
@@ -644,6 +689,7 @@ public sealed partial class VideoViewModel : ObservableObject
         var next = !IsLiked;
         IsLiked = next;
         Selected.LikeText = BumpCount(Selected.LikeText, next);
+        VideoLikeText = Selected.LikeText;
         // 不触发 Selected 变更通知：点赞只更新计数，不能让播放器重新加载视频。
         if (!next)
         {

@@ -10,6 +10,7 @@ public sealed class UploadSection
     public string Name { get; init; } = string.Empty;
     public string Slug { get; init; } = string.Empty;
     public string Accent { get; init; } = "#4EA4DD";
+    public string ImagePath { get; init; } = string.Empty;
 
     public string UrlFor(string kind) => $"https://www.miyoushe.com/{Slug}/newArticle/0/{kind}";
 }
@@ -37,15 +38,15 @@ public sealed partial class UploadViewModel : ObservableObject
 
     public ObservableCollection<UploadSection> Sections { get; } = new(new[]
     {
-        new UploadSection { Name = "大别墅", Slug = "dby", Accent = "#5FA8F6" },
-        new UploadSection { Name = "崩坏学园2", Slug = "bh2", Accent = "#F08A4B" },
-        new UploadSection { Name = "崩坏3", Slug = "bh3", Accent = "#4EA4DD" },
-        new UploadSection { Name = "未定事件簿", Slug = "wd", Accent = "#C56C87" },
-        new UploadSection { Name = "原神", Slug = "ys", Accent = "#6AA9D8" },
-        new UploadSection { Name = "崩坏：星穹铁道", Slug = "sr", Accent = "#8A83D6" },
-        new UploadSection { Name = "绝区零", Slug = "zzz", Accent = "#D2A53A" },
-        new UploadSection { Name = "星布谷地", Slug = "planet", Accent = "#63B68B" },
-        new UploadSection { Name = "崩坏：因缘精灵", Slug = "hna", Accent = "#8E7BC4" },
+        new UploadSection { Name = "大别墅", Slug = "dby", Accent = "#5FA8F6", ImagePath = "pack://application:,,,/Assets/Sections/dby.jpeg" },
+        new UploadSection { Name = "崩坏学园2", Slug = "bh2", Accent = "#F08A4B", ImagePath = "pack://application:,,,/Assets/Sections/bh2.jpg" },
+        new UploadSection { Name = "崩坏3", Slug = "bh3", Accent = "#4EA4DD", ImagePath = "pack://application:,,,/Assets/Sections/bh3.jpg" },
+        new UploadSection { Name = "未定事件簿", Slug = "wd", Accent = "#C56C87", ImagePath = "pack://application:,,,/Assets/Sections/wd.jpg" },
+        new UploadSection { Name = "原神", Slug = "ys", Accent = "#6AA9D8", ImagePath = "pack://application:,,,/Assets/Sections/ys.jpg" },
+        new UploadSection { Name = "崩坏：星穹铁道", Slug = "sr", Accent = "#8A83D6", ImagePath = "pack://application:,,,/Assets/Sections/sr.png" },
+        new UploadSection { Name = "绝区零", Slug = "zzz", Accent = "#D2A53A", ImagePath = "pack://application:,,,/Assets/Sections/zzz.png" },
+        new UploadSection { Name = "星布谷地", Slug = "planet", Accent = "#63B68B", ImagePath = "pack://application:,,,/Assets/Sections/planet.png" },
+        new UploadSection { Name = "崩坏：因缘精灵", Slug = "hna", Accent = "#8E7BC4", ImagePath = "pack://application:,,,/Assets/Sections/hna.png" },
     });
 
     public ObservableCollection<UploadContentType> ContentTypes { get; } = new(new[]

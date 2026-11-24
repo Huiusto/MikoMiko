@@ -32,6 +32,11 @@ public partial class VideoView : UserControl
     private bool _wasPlayingBeforeSeek;
     private readonly DanmakuService _danmaku = new();
     private double _lastDanmakuSecond = -10;
+    private List<string> _commentLightboxImages = new();
+    private int _commentLightboxIndex;
+    private string _commentLightboxUrl = string.Empty;
+    private bool _commentLightboxPanning;
+    private Point _commentLightboxLastPoint;
 
     public VideoView(VideoViewModel viewModel, AppSettings settings)
     {
@@ -639,5 +644,110 @@ public partial class VideoView : UserControl
         };
         animation.Completed += (_, _) => DanmakuHost.Children.Remove(block);
         block.BeginAnimation(Canvas.LeftProperty, animation);
+    }
+
+    // ------------------------------------------------ 评论图片灯箱
+
+    private void CommentImage_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border { Tag: string url } border || string.IsNullOrWhiteSpace(url)) return;
+        var comment = border.DataContext as CommentItem;
+        _commentLightboxImages = comment?.Images is { Count: > 0 } ? comment.Images : new List<string> { url };
+        _commentLightboxIndex = Math.Max(0, _commentLightboxImages.IndexOf(url));
+        ShowCommentLightboxImage(url);
+        CommentLightbox.Visibility = Visibility.Visible;
+        e.Handled = true;
+    }
+
+    private void ShowCommentLightboxImage(string url)
+    {
+        _commentLightboxUrl = url;
+        CommentLightboxImage.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(url, UriKind.Absolute));
+        CommentLightboxScale.ScaleX = 1;
+        CommentLightboxScale.ScaleY = 1;
+        CommentLightboxTranslate.X = 0;
+        CommentLightboxTranslate.Y = 0;
+        CommentLightboxStatus.Text = string.Empty;
+        CommentLightboxCounter.Text = _commentLightboxImages.Count > 1
+            ? $"{_commentLightboxIndex + 1} / {_commentLightboxImages.Count}"
+            : string.Empty;
+        var multi = _commentLightboxImages.Count > 1;
+        CommentLightboxPrev.Visibility = multi ? Visibility.Visible : Visibility.Collapsed;
+        CommentLightboxNext.Visibility = multi ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void CommentLightboxPrev_Click(object sender, RoutedEventArgs e)
+    {
+        if (_commentLightboxImages.Count == 0) return;
+        _commentLightboxIndex = (_commentLightboxIndex - 1 + _commentLightboxImages.Count) % _commentLightboxImages.Count;
+        ShowCommentLightboxImage(_commentLightboxImages[_commentLightboxIndex]);
+    }
+
+    private void CommentLightboxNext_Click(object sender, RoutedEventArgs e)
+    {
+        if (_commentLightboxImages.Count == 0) return;
+        _commentLightboxIndex = (_commentLightboxIndex + 1) % _commentLightboxImages.Count;
+        ShowCommentLightboxImage(_commentLightboxImages[_commentLightboxIndex]);
+    }
+
+    private async void CommentLightboxDownload_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_commentLightboxUrl)) return;
+        try
+        {
+            var directory = DownloadService.ResolveDirectory(_settings);
+            var title = _vm.Selected?.Title ?? "MikoMiko";
+            var path = await DownloadService.DownloadAsync(_commentLightboxUrl, directory, title + "_评论图片",
+                DownloadService.GuessImageExtension(_commentLightboxUrl));
+            CommentLightboxStatus.Text = "已保存到：" + path;
+        }
+        catch (Exception ex)
+        {
+            CommentLightboxStatus.Text = "下载失败：" + ex.Message;
+        }
+    }
+
+    private void CommentLightbox_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        var factor = e.Delta > 0 ? 1.12 : 1 / 1.12;
+        var scale = Math.Clamp(CommentLightboxScale.ScaleX * factor, 0.5, 6);
+        CommentLightboxScale.ScaleX = scale;
+        CommentLightboxScale.ScaleY = scale;
+        e.Handled = true;
+    }
+
+    private void CommentLightbox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (CommentLightbox.Visibility != Visibility.Visible) return;
+        _commentLightboxPanning = true;
+        _commentLightboxLastPoint = e.GetPosition(CommentLightboxScroll);
+        CommentLightboxScroll.CaptureMouse();
+        CommentLightboxScroll.Cursor = System.Windows.Input.Cursors.SizeAll;
+        e.Handled = true;
+    }
+
+    private void CommentLightbox_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_commentLightboxPanning || e.LeftButton != MouseButtonState.Pressed) return;
+        var point = e.GetPosition(CommentLightboxScroll);
+        CommentLightboxTranslate.X += point.X - _commentLightboxLastPoint.X;
+        CommentLightboxTranslate.Y += point.Y - _commentLightboxLastPoint.Y;
+        _commentLightboxLastPoint = point;
+        e.Handled = true;
+    }
+
+    private void CommentLightbox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_commentLightboxPanning) return;
+        _commentLightboxPanning = false;
+        CommentLightboxScroll.ReleaseMouseCapture();
+        CommentLightboxScroll.Cursor = System.Windows.Input.Cursors.Hand;
+        e.Handled = true;
+    }
+
+    private void CloseCommentLightbox_Click(object sender, RoutedEventArgs e)
+    {
+        CommentLightbox.Visibility = Visibility.Collapsed;
+        CommentLightboxImage.Source = null;
     }
 }

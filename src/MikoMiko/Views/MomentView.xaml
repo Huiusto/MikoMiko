@@ -175,13 +175,17 @@
                                     </Grid.ColumnDefinitions>
 
                                     <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22" ClipToBounds="True"
-                                            Background="{DynamicResource Brush.Card}" VerticalAlignment="Top">
+                                            Background="{DynamicResource Brush.Card}" VerticalAlignment="Top"
+                                            Cursor="Hand" PreviewMouseLeftButtonDown="MomentAuthor_Click" ToolTip="查看该用户的全部动态">
                                         <Image controls:AsyncImage.Url="{Binding Avatar}" Stretch="UniformToFill" />
                                     </Border>
 
                                     <StackPanel Grid.Column="1" Margin="14,0,0,0">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Author}" FontSize="14" FontWeight="SemiBold"
+                                                       VerticalAlignment="Center" Cursor="Hand"
+                                                       PreviewMouseLeftButtonDown="MomentAuthor_Click"
+                                                       ToolTip="查看该用户的全部动态" />
                                             <Border Background="{DynamicResource Brush.AccentSoft}" CornerRadius="4" Padding="5,1"
                                                     Margin="8,0,0,0" VerticalAlignment="Center"
                                                     Visibility="{Binding IsOfficial, Converter={StaticResource BoolToVis}}">

@@ -463,12 +463,14 @@ public partial class PostReaderView : UserControl
 
     private void BackToTop_Click(object sender, RoutedEventArgs e) => BodyScroll.ScrollToTop();
 
-    private void GoComments_Click(object sender, RoutedEventArgs e) => CommentSection.BringIntoView();
+    private void GoComments_Click(object sender, RoutedEventArgs e) => ScrollToComments();
 
     /// <summary>开发期截图用：滚到评论区。</summary>
     public void ScrollToComments()
     {
-        CommentSection.BringIntoView();
+        BodyScroll.UpdateLayout();
+        var y = CommentSection.TransformToAncestor(BodyScroll).Transform(new Point(0, 0)).Y;
+        BodyScroll.ScrollToVerticalOffset(Math.Max(0, BodyScroll.VerticalOffset + y - 104));
     }
 
     /// <summary>开发期截图用：把评论输入框滚到顶部，检查多行输入是否完整可见。</summary>

@@ -82,6 +82,7 @@ public sealed class CommentItem : System.ComponentModel.INotifyPropertyChanged
     private string _replyInput = string.Empty;
     private bool _isPostingReply;
     private string _inlineStatus = string.Empty;
+    private bool _isCollapsed;
 
     public string ReplyId { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
@@ -91,6 +92,10 @@ public sealed class CommentItem : System.ComponentModel.INotifyPropertyChanged
     public string IpRegion { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public string TimeText { get; set; } = string.Empty;
+
+    /// <summary>服务端发布时间戳，用于“最新”排序。</summary>
+    public long CreatedAt { get; set; }
+
     public bool IsAuthor { get; set; }
 
     /// <summary>评论里附带的图片（米游社 structured_content / images）。</summary>
@@ -191,6 +196,21 @@ public sealed class CommentItem : System.ComponentModel.INotifyPropertyChanged
             OnPropertyChanged(nameof(IsDisliked));
         }
     }
+
+    /// <summary>点踩后折叠正文；取消踩恢复。</summary>
+    public bool IsCollapsed
+    {
+        get => _isCollapsed;
+        set
+        {
+            if (_isCollapsed == value) return;
+            _isCollapsed = value;
+            OnPropertyChanged(nameof(IsCollapsed));
+            OnPropertyChanged(nameof(IsExpanded));
+        }
+    }
+
+    public bool IsExpanded => !_isCollapsed;
 
     public List<CommentItem> Children { get; set; } = new();
 

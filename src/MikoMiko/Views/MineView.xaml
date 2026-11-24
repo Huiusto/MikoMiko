@@ -283,9 +283,6 @@
                                 <TextBlock Text="游戏角色显示" FontSize="13.5" FontWeight="SemiBold" />
                                 <TextBlock Text="勾选要展示的游戏，使用箭头调整顺序。" FontSize="11"
                                            Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,4,0,10" />
-                                <CheckBox Content="显示游戏战绩详情（点击角色卡查看）" FontSize="11.5"
-                                          Style="{StaticResource MikoCheckBox}" Margin="0,0,0,10"
-                                          IsChecked="{Binding Settings.ShowGameRecords}" />
                                 <ItemsControl ItemsSource="{Binding Games}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -624,13 +621,29 @@
                         <Button HorizontalAlignment="Right" Style="{StaticResource LinkButton}"
                                 Content="关闭" Command="{Binding CancelBackgroundCropCommand}" />
                     </Grid>
-                    <TextBlock Text="拖动下方滑块，决定这张图在主页横幅里显示哪一块；确认后按所选区域裁切保存。"
+                    <TextBlock Text="拖动下方滑块，决定这张图在主页横幅里显示哪一块；确认后按所选区域裁切保存。斑马线内为自定义背景的实际显示区域。"
                                FontSize="11.5" Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,6,0,14"
                                TextWrapping="Wrap" />
 
-                    <Border Height="300" CornerRadius="12" ClipToBounds="True" Background="#101418">
-                        <Image Source="{Binding CropPreview}" Stretch="UniformToFill" />
-                    </Border>
+                    <Grid Height="300" ClipToBounds="True">
+                        <Border CornerRadius="12" Background="#101418">
+                            <Image Source="{Binding CropPreview}" Stretch="UniformToFill" />
+                        </Border>
+                        <Border Margin="10" BorderThickness="3" CornerRadius="8" IsHitTestVisible="False">
+                            <Border.BorderBrush>
+                                <DrawingBrush TileMode="Tile" Viewport="0,0,10,10" ViewportUnits="Absolute"
+                                              Stretch="None">
+                                    <DrawingBrush.Drawing>
+                                        <GeometryDrawing Geometry="M0,0 L10,10 M10,0 L0,10">
+                                            <GeometryDrawing.Pen>
+                                                <Pen Brush="#CCFFFFFF" Thickness="2" />
+                                            </GeometryDrawing.Pen>
+                                        </GeometryDrawing>
+                                    </DrawingBrush.Drawing>
+                                </DrawingBrush>
+                            </Border.BorderBrush>
+                        </Border>
+                    </Grid>
 
                     <Grid Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
