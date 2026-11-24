@@ -200,6 +200,12 @@
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             Focusable="False"
                             Visibility="{Binding IsBrowserOpen, Converter={StaticResource BoolToVis}}" />
+
+            <!-- ==================== 上传内容弹层（先选板块，再选发布类型） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding UploadView}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False"
+                            Visibility="{Binding IsUploadOpen, Converter={StaticResource BoolToVis}}" />
         </Grid>
     </Border>
 </Window>

@@ -31,7 +31,107 @@
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource Brush.WindowBg}">
-        <ScrollViewer x:Name="MomentScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="232" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左侧：关注用户导航（参考米游社关注页） -->
+        <Border Grid.Column="0" Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.Border}"
+                BorderThickness="0,0,1,0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="12,16,10,22">
+                    <TextBlock Text="我的关注" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.TextSecondary}" Margin="8,0,0,10" />
+
+                    <Button Command="{Binding SelectAllCommand}" Cursor="Hand" HorizontalContentAlignment="Stretch">
+                        <Button.Template>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border x:Name="Bd" CornerRadius="9" Padding="9,8" Background="Transparent">
+                                    <ContentPresenter />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding IsAllSelected}" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                    </DataTrigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="34" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="#F5A9C2"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Path Data="M6 0 L7.5 4.5 L12 6 L7.5 7.5 L6 12 L4.5 7.5 L0 6 L4.5 4.5 Z"
+                                      Fill="White" Width="12" Height="12" Stretch="Uniform"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Grid.Column="1" Text="全部动态" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
+                        </Grid>
+                    </Button>
+
+                    <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="8,9,8,9" />
+
+                    <ItemsControl ItemsSource="{Binding FollowingUsers}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.SelectAuthorCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding}" Cursor="Hand" HorizontalContentAlignment="Stretch" Margin="0,0,0,2">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border x:Name="Bd" CornerRadius="9" Padding="8,7" Background="Transparent">
+                                                <ContentPresenter />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                                </DataTrigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#F5F8FB" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="36" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Ellipse Width="6" Height="6" Fill="#E8556D" VerticalAlignment="Center"
+                                                 HorizontalAlignment="Left"
+                                                 Visibility="{Binding HasUpdate, Converter={StaticResource BoolToVis}}" />
+                                        <Grid Grid.Column="1" Width="30" Height="30" HorizontalAlignment="Left">
+                                            <Ellipse Fill="#E4F0FA" />
+                                            <Ellipse>
+                                                <Ellipse.Fill>
+                                                    <ImageBrush ImageSource="{Binding Avatar}" Stretch="UniformToFill" />
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                        </Grid>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="2,0,0,0">
+                                            <TextBlock Text="{Binding Name}" FontSize="12.5" TextTrimming="CharacterEllipsis"
+                                                       Foreground="{DynamicResource Brush.TextPrimary}" />
+                                            <TextBlock Text="{Binding PostCountText}" FontSize="10.5" Margin="0,2,0,0"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <ScrollViewer x:Name="MomentScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
             <StackPanel Margin="26,18,18,30" MaxWidth="1160" HorizontalAlignment="Stretch">
 
                 <!-- 头部 -->
@@ -40,8 +140,7 @@
                                FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <Border Background="{DynamicResource Brush.AccentSoft}" CornerRadius="10" Padding="10,4"
                             Margin="14,0,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding [Moment.FollowingOnly], Source={x:Static loc:Loc.Instance}}"
-                                   FontSize="11.5" Foreground="{DynamicResource Brush.Accent}" />
+                        <TextBlock Text="{Binding SelectedAuthorName}" FontSize="11.5" Foreground="{DynamicResource Brush.Accent}" />
                     </Border>
                     <Button Style="{StaticResource LinkButton}" Content="{Binding [Common.Refresh], Source={x:Static loc:Loc.Instance}}"
                             Command="{Binding RefreshCommand}" Margin="16,0,0,0" VerticalAlignment="Center" FontSize="12.5" />
@@ -223,7 +322,7 @@
         </ScrollViewer>
 
         <!-- 内容右下角：刷新 / 返回顶部 -->
-        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,22">
+        <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,22">
             <Button Width="42" Height="42" Cursor="Hand" Click="FloatingRefresh_Click" ToolTip="刷新">
                 <Button.Template>
                     <ControlTemplate TargetType="{x:Type Button}">

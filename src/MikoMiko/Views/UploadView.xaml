@@ -1,0 +1,171 @@
+<UserControl x:Class="MikoMiko.Views.UploadView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:MikoMiko.Converters"
+             FontFamily="{DynamicResource Font.Ui}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVis" />
+
+        <Style x:Key="PlainCardButton" TargetType="{x:Type Button}">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                <Setter TargetName="Bd" Property="Background" Value="#F6FAFE" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#73000000">
+        <Border Width="860" MaxHeight="640" Background="{DynamicResource Brush.Surface}" CornerRadius="18"
+                BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 标题栏 -->
+                <Grid Margin="26,20,18,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="38" Height="38" CornerRadius="19" Background="#5AA9F1" VerticalAlignment="Center">
+                        <Path Data="M9 0 L11.3 6.7 L18 9 L11.3 11.3 L9 18 L6.7 11.3 L0 9 L6.7 6.7 Z"
+                              Fill="White" Width="19" Height="19" Stretch="Uniform"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="发布内容" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.TextPrimary}" />
+                        <TextBlock Text="先选择板块，再选择要发布的内容类型" FontSize="11.5" Margin="0,4,0,0"
+                                   Foreground="{DynamicResource Brush.TextTertiary}" />
+                    </StackPanel>
+                    <Button Grid.Column="2" Width="30" Height="30" Cursor="Hand" Command="{Binding CloseCommand}"
+                            ToolTip="关闭" Background="Transparent" BorderThickness="0">
+                        <Button.Template>
+                            <ControlTemplate TargetType="{x:Type Button}">
+                                <Border x:Name="Bd" CornerRadius="15" Background="Transparent">
+                                    <Path Data="M0 0 L10 10 M10 0 L0 10" Stroke="{DynamicResource Brush.TextTertiary}"
+                                          StrokeThickness="1.4" Width="11" Height="11" Stretch="Uniform"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#F2F5F8" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </Grid>
+
+                <!-- 第一步：选择板块 -->
+                <StackPanel Grid.Row="1" Margin="26,6,26,24"
+                            Visibility="{Binding IsChoosingType, Converter={StaticResource InverseBoolToVis}}">
+                    <TextBlock Text="选择板块" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.TextSecondary}" Margin="2,0,0,10" />
+                    <ItemsControl ItemsSource="{Binding Sections}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource PlainCardButton}" Margin="7"
+                                        Background="#FBFCFE" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                        Command="{Binding DataContext.ChooseSectionCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding}">
+                                    <Grid Height="88" Margin="14,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Width="34" Height="34" CornerRadius="17" Background="{Binding Accent}"
+                                                VerticalAlignment="Center">
+                                            <Path Data="M5 0 L6.3 3.7 L10 5 L6.3 6.3 L5 10 L3.7 6.3 L0 5 L3.7 3.7 Z"
+                                                  Fill="White" Width="11" Height="11" Stretch="Uniform"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold"
+                                                       TextWrapping="Wrap" Foreground="{DynamicResource Brush.TextPrimary}" />
+                                            <TextBlock Text="发布长文 / 图片 / 视频" FontSize="10.5" Margin="0,5,0,0"
+                                                       Foreground="{DynamicResource Brush.TextTertiary}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- 第二步：选择发布类型 -->
+                <StackPanel Grid.Row="1" Margin="26,6,26,24"
+                            Visibility="{Binding IsChoosingType, Converter={StaticResource BoolToVis}}">
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Style="{StaticResource LinkButton}" Command="{Binding BackCommand}"
+                                Content="返回板块" FontSize="12.5" VerticalAlignment="Center" />
+                        <Border Grid.Column="1" HorizontalAlignment="Right" Background="{DynamicResource Brush.AccentSoft}"
+                                CornerRadius="10" Padding="11,5">
+                            <TextBlock Text="{Binding SelectedSection.Name}" FontSize="11.5"
+                                       Foreground="{DynamicResource Brush.Accent}" />
+                        </Border>
+                    </Grid>
+                    <TextBlock Text="选择要发布的内容" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.TextSecondary}" Margin="2,0,0,10" />
+                    <ItemsControl ItemsSource="{Binding ContentTypes}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="3" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource PlainCardButton}" Margin="7" Height="168"
+                                        Background="#FBFCFE" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1"
+                                        Command="{Binding DataContext.PublishCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border Width="54" Height="54" CornerRadius="27" Background="{Binding Accent}"
+                                                HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding Badge}" Foreground="White" FontSize="20"
+                                                       FontWeight="SemiBold" HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" FontSize="14.5" FontWeight="SemiBold" Margin="0,12,0,0"
+                                                   HorizontalAlignment="Center" Foreground="{DynamicResource Brush.TextPrimary}" />
+                                        <TextBlock Text="{Binding Hint}" FontSize="10.5" Margin="0,5,0,0"
+                                                   HorizontalAlignment="Center" Foreground="{DynamicResource Brush.TextTertiary}" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

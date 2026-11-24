@@ -24,6 +24,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly MomentViewModel _moment;
     private readonly MineViewModel _mine;
     private readonly SettingsViewModel _settingsVm;
+    private readonly UploadViewModel _upload;
 
     private readonly Dictionary<string, object> _views = new();
     private readonly Stack<string> _history = new();
@@ -53,6 +54,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
         _settingsVm.LanguageChanged = RefreshLocalization;
+        _upload = new UploadViewModel(OpenUploadUrl);
+        _upload.CloseRequested = CloseUpload;
 
         SearchPlaceholder = PickSearchPlaceholder();
         _placeholderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
@@ -63,6 +66,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
         Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
         Navigation.Add(new NavItem("Mine", "Nav.Mine", "mine"));
+        FooterNavigation.Add(new NavItem("Upload", "Nav.Upload", "upload"));
         FooterNavigation.Add(new NavItem("Settings", "Nav.Settings", "settings"));
 
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
@@ -96,7 +100,12 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private Views.BrowserView? _browserView;
     [ObservableProperty] private bool _isBrowserOpen;
 
+    /// <summary>上传内容弹层（不新开窗口，先选板块再选发布类型）。</summary>
+    [ObservableProperty] private Views.UploadView? _uploadView;
+    [ObservableProperty] private bool _isUploadOpen;
+
     public SettingsViewModel SettingsViewModel => _settingsVm;
+    public UploadViewModel Upload => _upload;
     public MineViewModel MineViewModel => _mine;
     public HomeViewModel Home => _home;
 
@@ -113,7 +122,13 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void NavigateTo(NavItem? item)
     {
-        if (item is not null) Navigate(item.Key);
+        if (item is null) return;
+        if (item.Key == "Upload")
+        {
+            OpenUpload();
+            return;
+        }
+        Navigate(item.Key);
     }
 
     [RelayCommand]
@@ -165,6 +180,7 @@ public sealed partial class ShellViewModel : ObservableObject
         // 首页打开帖子后切到视频 / 动态等页面时，自动关闭阅读器与浏览器
         if (IsReaderOpen) CloseReader();
         if (IsBrowserOpen) CloseBrowser();
+        if (IsUploadOpen) CloseUpload();
         CloseProfile();
 
         // 离开视频页时暂停播放与特效，避免在别的页面继续出声
@@ -360,6 +376,30 @@ public sealed partial class ShellViewModel : ObservableObject
         if (BrowserView is null) return;
         BrowserView = null;
         IsBrowserOpen = false;
+    }
+
+    /// <summary>打开上传内容弹层；再次打开时回到第一步。</summary>
+    public void OpenUpload()
+    {
+        _upload.Reset();
+        UploadView ??= new Views.UploadView(_upload);
+        IsUploadOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseUpload()
+    {
+        IsUploadOpen = false;
+        UploadView = null;
+    }
+
+    /// <summary>上传页属于米游社编辑页，直接交给软件内浏览器，避免被帖子正则误判。</summary>
+    private void OpenUploadUrl(string url)
+    {
+        CloseUpload();
+        CloseBrowser();
+        BrowserView = new Views.BrowserView(url, CloseBrowser);
+        IsBrowserOpen = true;
     }
 
     /// <summary>收起阅读器，回到当前页面。</summary>

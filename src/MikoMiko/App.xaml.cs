@@ -154,7 +154,7 @@ public partial class App : Application
         var path = args[2];
         Log(path, "start page=" + page);
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page == "Video" ? 10 : 2) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
@@ -169,6 +169,7 @@ public partial class App : Application
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
                     : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
+                    : page is "Upload" or "UploadType" ? "Home"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
                 if (page == "Posts" && Shell.HomeTabs.Count > 1)
@@ -227,6 +228,11 @@ public partial class App : Application
                 {
                     Shell.SearchText = "原神";
                     _ = Shell.SearchAsync();
+                }
+                if (page is "Upload" or "UploadType")
+                {
+                    Shell.OpenUpload();
+                    if (page == "UploadType") Shell.Upload.ChooseSectionCommand.Execute(Shell.Upload.Sections[4]);
                 }
                 if (page == "UserProfile")
                 {

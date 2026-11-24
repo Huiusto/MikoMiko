@@ -15,7 +15,8 @@ public sealed partial class VideoViewModel : ObservableObject
     private readonly AppSettings? _settings;
     private List<FeedItem> _all = new();
     private readonly HashSet<string> _seen = new();
-    private readonly Queue<string> _recentAuthors = new();
+    private readonly HashSet<string> _batchAuthors = new();
+    private readonly VideoAuthorHistory _authorHistory;
     private readonly DispatcherTimer _placeholderTimer;
     private static readonly string[] DanmakuPlaceholders =
     {
@@ -23,11 +24,13 @@ public sealed partial class VideoViewModel : ObservableObject
         "好好好", "关注了", "难道说", "米哈游！", "启动！", "怎么说",
     };
 
-    public VideoViewModel(ContentService content, Action<string>? openUser = null, AppSettings? settings = null)
+    public VideoViewModel(ContentService content, Action<string>? openUser = null, AppSettings? settings = null,
+        VideoAuthorHistory? authorHistory = null)
     {
         _content = content;
         _openUser = openUser;
         _settings = settings;
+        _authorHistory = authorHistory ?? new VideoAuthorHistory();
         DanmakuPlaceholder = PickPlaceholder();
         _placeholderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
         _placeholderTimer.Tick += (_, _) => DanmakuPlaceholder = PickPlaceholder();
@@ -117,31 +120,29 @@ public sealed partial class VideoViewModel : ObservableObject
         try
         {
             _seen.Clear();
-            _recentAuthors.Clear();
+            _batchAuthors.Clear();
             _all.Clear();
             Videos.Clear();
-            var fetched = await _content.GetRandomVideosAsync(20, _seen);
+            var fetched = await _content.GetRandomVideosAsync(36, _seen);
             foreach (var item in fetched)
             {
-                if (!CanPushAuthor(item.Author)) continue;
+                if (!CanPushAuthor(item)) continue;
                 _seen.Add(item.PostId);
+                _batchAuthors.Add(AuthorKeyOf(item));
                 _all.Add(item);
                 Videos.Add(item);
-                RememberAuthor(item.Author);
                 if (Videos.Count >= 12) break;
             }
-            if (Videos.Count == 0)
-            {
-                // 同作者过滤过严时至少保证首批有内容
-                foreach (var item in fetched.Take(8))
-                {
-                    _all.Add(item);
-                    Videos.Add(item);
-                }
-            }
             IsDemo = _content.IsDemo;
-            if (Videos.Count > 0) Select(Videos[0]);
-            StatusText = string.Empty;
+            if (Videos.Count > 0)
+            {
+                Select(Videos[0]);
+                StatusText = string.Empty;
+            }
+            else
+            {
+                StatusText = "最近刷到的作者正在 7 天冷却中，稍后再刷新试试";
+            }
         }
         catch
         {
@@ -161,6 +162,9 @@ public sealed partial class VideoViewModel : ObservableObject
 
     public void Select(FeedItem item)
     {
+        // 真正展示给用户时才写入后台记录，7 天内不再推送同一作者。
+        _authorHistory.Remember(item.AuthorUid, item.Author);
+        _batchAuthors.Add(AuthorKeyOf(item));
         Selected = item;
         HasSource = !string.IsNullOrWhiteSpace(item.VideoUrl);
         IsPlaying = false;
@@ -286,15 +290,21 @@ public sealed partial class VideoViewModel : ObservableObject
         if (comment.IsDisliked) comment.IsLiked = false;
     }
 
-    /// <summary>同一位作者在最近 5 条视频内不再出现。</summary>
-    private bool CanPushAuthor(string author)
-        => !string.IsNullOrWhiteSpace(author) && !_recentAuthors.Contains(author);
-
-    private void RememberAuthor(string author)
+    /// <summary>同一作者 7 天内只推送一次；同一批次内也不重复。</summary>
+    private bool CanPushAuthor(FeedItem item)
     {
-        if (string.IsNullOrWhiteSpace(author)) return;
-        _recentAuthors.Enqueue(author);
-        while (_recentAuthors.Count > 5) _recentAuthors.Dequeue();
+        var key = AuthorKeyOf(item);
+        if (key.Length == 0) return true;
+        if (_batchAuthors.Contains(key)) return false;
+        return !_authorHistory.IsBlocked(item.AuthorUid, item.Author);
+    }
+
+    private static string AuthorKeyOf(FeedItem item)
+    {
+        var uid = item.AuthorUid?.Trim() ?? string.Empty;
+        if (uid.Length > 0) return "uid:" + uid;
+        var name = item.Author?.Trim() ?? string.Empty;
+        return name.Length > 0 ? "name:" + name : string.Empty;
     }
 
     private static string BumpCount(string text, bool up)
@@ -478,14 +488,14 @@ public sealed partial class VideoViewModel : ObservableObject
         IsLoadingMore = true;
         try
         {
-            var more = await _content.GetRandomVideosAsync(12, _seen);
+            var more = await _content.GetRandomVideosAsync(20, _seen);
             foreach (var item in more)
             {
-                if (_seen.Contains(item.PostId) || !CanPushAuthor(item.Author)) continue;
+                if (_seen.Contains(item.PostId) || !CanPushAuthor(item)) continue;
                 _seen.Add(item.PostId);
+                _batchAuthors.Add(AuthorKeyOf(item));
                 _all.Add(item);
                 Videos.Add(item);
-                RememberAuthor(item.Author);
             }
 
             if (Selected is not null)

@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 
 namespace MikoMiko.ViewModels;
 
-/// <summary>动态页：关注的人发布的内容。</summary>
+/// <summary>关注页：左侧关注用户导航 + 右侧该用户（或全部）的动态流。</summary>
 public sealed partial class MomentViewModel : ObservableObject
 {
     private readonly ContentService _content;
@@ -20,6 +20,7 @@ public sealed partial class MomentViewModel : ObservableObject
     }
 
     public ObservableCollection<MomentItem> Moments { get; } = new();
+    public ObservableCollection<FollowUserItem> FollowingUsers { get; } = new();
 
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isDemo;
@@ -27,10 +28,16 @@ public sealed partial class MomentViewModel : ObservableObject
     [ObservableProperty] private string _filter = string.Empty;
     [ObservableProperty] private bool _isEmpty;
     [ObservableProperty] private bool _needsLogin;
+    [ObservableProperty] private string _selectedAuthorUid = string.Empty;
+    [ObservableProperty] private string _selectedAuthorName = "全部动态";
+    [ObservableProperty] private bool _isAllSelected = true;
 
     public bool ShowAll => !OnlyFollowing;
 
     partial void OnOnlyFollowingChanged(bool value) => OnPropertyChanged(nameof(ShowAll));
+
+    partial void OnIsAllSelectedChanged(bool value) => OnPropertyChanged(nameof(AllBadgeText));
+    public string AllBadgeText => IsAllSelected ? "全部" : "全部动态";
 
     public async Task LoadAsync()
     {
@@ -40,6 +47,7 @@ public sealed partial class MomentViewModel : ObservableObject
         {
             _all.Clear();
             Moments.Clear();
+            FollowingUsers.Clear();
             IsEmpty = false;
             IsLoading = false;
             return;
@@ -47,9 +55,31 @@ public sealed partial class MomentViewModel : ObservableObject
 
         try
         {
-            _all = (await _content.GetMomentsAsync()).ToList();
+            var usersTask = _content.GetFollowingUsersAsync();
+            var momentsTask = _content.GetMomentsAsync();
+            await Task.WhenAll(usersTask, momentsTask);
+            var users = usersTask.Result;
+            _all = momentsTask.Result.ToList();
             IsDemo = _content.IsDemo;
             OnlyFollowing = true;
+
+            FollowingUsers.Clear();
+            foreach (var user in users)
+            {
+                var count = _all.Count(m => m.AuthorUid == user.Uid);
+                FollowingUsers.Add(new FollowUserItem
+                {
+                    Uid = user.Uid,
+                    Name = user.Nickname,
+                    Avatar = string.IsNullOrWhiteSpace(user.Avatar)
+                        ? "pack://application:,,,/Assets/avatar-placeholder.png"
+                        : user.Avatar,
+                    PostCount = count,
+                    HasUpdate = count > 0,
+                });
+            }
+
+            SelectAllInternal();
             Apply();
         }
         catch
@@ -69,6 +99,33 @@ public sealed partial class MomentViewModel : ObservableObject
     private void Open(MomentItem? item)
     {
         if (item is not null) _openMoment(item);
+    }
+
+    /// <summary>点击左侧「全部动态」。</summary>
+    [RelayCommand]
+    private void SelectAll()
+    {
+        SelectAllInternal();
+        Apply();
+    }
+
+    /// <summary>点击左侧某位关注用户。</summary>
+    [RelayCommand]
+    private void SelectAuthor(FollowUserItem? user)
+    {
+        foreach (var item in FollowingUsers) item.IsSelected = item == user;
+        SelectedAuthorUid = user?.Uid ?? string.Empty;
+        SelectedAuthorName = user?.Name ?? "全部动态";
+        IsAllSelected = false;
+        Apply();
+    }
+
+    private void SelectAllInternal()
+    {
+        foreach (var item in FollowingUsers) item.IsSelected = false;
+        SelectedAuthorUid = string.Empty;
+        SelectedAuthorName = "全部动态";
+        IsAllSelected = true;
     }
 
     [RelayCommand]
@@ -114,6 +171,8 @@ public sealed partial class MomentViewModel : ObservableObject
         var keyword = Filter.Trim();
         Moments.Clear();
         var list = _all.Where(m => !OnlyFollowing || m.IsFollowing);
+        if (!string.IsNullOrEmpty(SelectedAuthorUid))
+            list = list.Where(m => m.AuthorUid == SelectedAuthorUid);
         if (!string.IsNullOrEmpty(keyword))
         {
             list = list.Where(m => m.Text.Contains(keyword, StringComparison.OrdinalIgnoreCase)

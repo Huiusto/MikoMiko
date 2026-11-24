@@ -239,48 +239,57 @@ public sealed class ContentService
     {
         var collected = new List<FeedItem>();
 
-        for (var attempt = 0; attempt < 6 && collected.Count < take; attempt++)
+        // 并行跑几组随机关键词搜索，避免 6 次串行请求把首屏拖到十几秒。
+        var searches = await Task.WhenAll(Enumerable.Range(0, 4).Select(async _ =>
         {
             var keyword = VideoKeywords[Random.Shared.Next(VideoKeywords.Length)];
             var lastId = _cursorPool.Count > 0 && Random.Shared.Next(0, 2) == 0
                 ? _cursorPool[Random.Shared.Next(_cursorPool.Count)]
                 : null;
-
             try
             {
                 var search = await Api.SearchPostsAsync(keyword, take + 12, lastId, ct);
-                if (!string.IsNullOrEmpty(search.LastId) && !_cursorPool.Contains(search.LastId))
-                {
-                    _cursorPool.Add(search.LastId);
-                    if (_cursorPool.Count > 64) _cursorPool.RemoveAt(0);
-                }
-
-                collected.AddRange(search.Items.Where(p => p.IsVideo && !string.IsNullOrEmpty(p.VideoUrl)
-                                                             && !exclude.Contains(p.PostId)));
+                return (Items: search.Items, search.LastId);
             }
             catch
             {
-                // 忽略
+                return (Items: (IReadOnlyList<FeedItem>)Array.Empty<FeedItem>(), LastId: string.Empty);
             }
+        }));
+
+        foreach (var search in searches)
+        {
+            if (!string.IsNullOrEmpty(search.LastId) && !_cursorPool.Contains(search.LastId))
+            {
+                _cursorPool.Add(search.LastId);
+                if (_cursorPool.Count > 64) _cursorPool.RemoveAt(0);
+            }
+            collected.AddRange(search.Items.Where(p => p.IsVideo && !string.IsNullOrEmpty(p.VideoUrl)
+                                                         && !exclude.Contains(p.PostId)));
         }
 
-        // 全站搜索里暂时没有视频时，退回版块列表筛选
-        if (collected.Count == 0)
+        // 搜索常只返回少量视频；继续用版块列表并行补足随机池，让作者分布更均匀。
+        var target = take * 2;
+        if (collected.Count < target)
         {
-            for (var attempt = 0; attempt < 5 && collected.Count < take; attempt++)
+            var forums = await Task.WhenAll(Enumerable.Range(0, 8).Select(async _ =>
             {
                 var gids = Games[Random.Shared.Next(Games.Length)];
                 try
                 {
-                    var posts = await Api.GetForumPostsAsync(gids, ForumIdFor(gids), take + 12, ct,
-                        Random.Shared.Next(1, 3));
-                    collected.AddRange(posts.Where(p => p.IsVideo && !string.IsNullOrEmpty(p.VideoUrl)
-                                                         && !exclude.Contains(p.PostId)));
+                    return await Api.GetForumPostsAsync(gids, ForumIdFor(gids), target + 12, ct,
+                        Random.Shared.Next(1, 4));
                 }
                 catch
                 {
-                    // 忽略
+                    return (IReadOnlyList<FeedItem>)Array.Empty<FeedItem>();
                 }
+            }));
+
+            foreach (var posts in forums)
+            {
+                collected.AddRange(posts.Where(p => p.IsVideo && !string.IsNullOrEmpty(p.VideoUrl)
+                                                     && !exclude.Contains(p.PostId)));
             }
         }
 
@@ -322,6 +331,11 @@ public sealed class ContentService
                 {
                     // 不指定 gids，取该用户在所有版块（原神、星铁、绝区零、大别野等）的最新发布。
                     var items = await Api.GetUserPostsAsync(user.Uid, 0, 24, ct);
+                    foreach (var item in items)
+                    {
+                        if (string.IsNullOrWhiteSpace(item.AuthorUid)) item.AuthorUid = user.Uid;
+                        if (string.IsNullOrWhiteSpace(item.Author)) item.Author = user.Nickname;
+                    }
                     return items;
                 }
                 catch
@@ -375,6 +389,7 @@ public sealed class ContentService
                 Id = i.PostId,
                 PostId = i.PostId,
                 Author = i.Author,
+                AuthorUid = i.AuthorUid,
                 Avatar = i.AuthorAvatar,
                 TimeText = i.TimeText,
                 Text = string.IsNullOrWhiteSpace(i.Summary) ? i.Title : i.Summary,
@@ -390,6 +405,11 @@ public sealed class ContentService
             })
             .ToList();
     }
+
+    /// <summary>关注页左侧导航使用的关注用户列表（UID / 昵称 / 头像）。</summary>
+    public Task<IReadOnlyList<(string Uid, string Nickname, string Avatar)>> GetFollowingUsersAsync(
+        CancellationToken ct = default)
+        => Api.GetFollowingAsync(ct);
 
     public async Task<FeedItem> GetDetailAsync(FeedItem item, CancellationToken ct = default)
     {

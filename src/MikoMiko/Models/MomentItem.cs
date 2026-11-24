@@ -6,6 +6,7 @@ public sealed class MomentItem
     public string Id { get; set; } = string.Empty;
     public string PostId { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
+    public string AuthorUid { get; set; } = string.Empty;
     public string Avatar { get; set; } = string.Empty;
     public string TimeText { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
