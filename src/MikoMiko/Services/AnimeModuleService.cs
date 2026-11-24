@@ -17,6 +17,25 @@ public sealed class AnimeProvider
     public string Search { get; set; } = string.Empty;
 }
 
+/// <summary>分类片库里的一个站点条目，直接对应一条公开列表页。</summary>
+public sealed class AnimeCatalogSource
+{
+    public string Name { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+    public string Parser { get; set; } = "generic";
+    public string Kind { get; set; } = "动漫";
+    public string Region { get; set; } = "其他";
+    public string Home { get; set; } = string.Empty;
+}
+
+/// <summary>电影 / 电视剧 / 日漫 / 国漫等分类片库。</summary>
+public sealed class AnimeCatalogCategory
+{
+    public string Key { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public List<AnimeCatalogSource> Sources { get; set; } = new();
+}
+
 /// <summary>模块 manifest.json 的结构。</summary>
 public sealed class AnimeModuleManifest
 {
@@ -24,6 +43,7 @@ public sealed class AnimeModuleManifest
     public string Version { get; set; } = "1.0.0";
     public string Description { get; set; } = string.Empty;
     public List<AnimeProvider> Providers { get; set; } = new();
+    public List<AnimeCatalogCategory> Categories { get; set; } = new();
 }
 
 /// <summary>

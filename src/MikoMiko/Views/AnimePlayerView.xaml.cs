@@ -20,6 +20,7 @@ public partial class AnimePlayerView : UserControl
     private readonly AnimeStreamService _streams = new();
     private readonly AnimeCatalogService _catalog = new();
     private readonly AnimeFollowService _follows;
+    private readonly AnimeDanmakuService _danmaku;
     private readonly IReadOnlyList<AnimeProvider> _providers;
     private AnimePlayback _playback;
     private string _referer;
@@ -34,11 +35,12 @@ public partial class AnimePlayerView : UserControl
     private bool _disposed;
 
     public AnimePlayerView(AnimePlayback playback, IReadOnlyList<AnimeProvider> providers,
-        AnimeFollowService follows, Action? closeRequested = null)
+        AnimeFollowService follows, AnimeDanmakuService danmaku, Action? closeRequested = null)
     {
         InitializeComponent();
         _playback = playback;
         _follows = follows;
+        _danmaku = danmaku;
         _providers = providers;
         _referer = playback.Referer;
         CloseRequested = closeRequested;
@@ -245,6 +247,11 @@ public partial class AnimePlayerView : UserControl
             var playback = await _streams.ResolveEpisodeAsync(_playback.Details, source, episode, item);
             if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
             {
+                SwitchStatus.Text = $"{source.Name} · {episode.Name} 无法提取，正在自动切换其他站点…";
+                LoadingText.Text = "正在自动切换站点…";
+                LoadingPanel.Visibility = Visibility.Visible;
+                if (await TryAutoSwitchAsync(episode.Order, source.Name))
+                    return;
                 LoadingPanel.Visibility = Visibility.Collapsed;
                 SwitchStatus.Text = $"{source.Name} · {episode.Name} 暂时无法播放，可以换一条线路。";
                 return;
@@ -266,6 +273,62 @@ public partial class AnimePlayerView : UserControl
         }
     }
 
+    /// <summary>当前线路取不到流时，按作品名自动检索其他站点，优先找同一集序号。</summary>
+    private async Task<bool> TryAutoSwitchAsync(int episodeOrder, string failedProvider)
+    {
+        var item = _playback.CatalogItem;
+        if (item is null) return false;
+
+        var playable = _providers
+            .Where(provider => !string.Equals(provider.Name, failedProvider, StringComparison.Ordinal))
+            .Where(provider => provider.Parser is "module-poster" or "stui" or "manmankan" or "generic" or "mhys")
+            .Where(provider => !string.IsNullOrWhiteSpace(provider.Search))
+            .ToList();
+        if (playable.Count == 0) return false;
+
+        var results = await _catalog.SearchAsync(playable, item.Title, CancellationToken.None);
+        var normalized = NormalizeTitle(item.Title);
+        var candidates = results
+            .Where(candidate => !string.Equals(candidate.Source, failedProvider, StringComparison.Ordinal))
+            .DistinctBy(candidate => candidate.Source + "|" + candidate.Url)
+            .OrderBy(candidate => NormalizeTitle(candidate.Title) == normalized ? 0 :
+                NormalizeTitle(candidate.Title).Contains(normalized, StringComparison.Ordinal) ? 1 : 2)
+            .Take(4)
+            .ToList();
+
+        foreach (var candidate in candidates)
+        {
+            SwitchStatus.Text = $"自动尝试「{candidate.Source}」…";
+            try
+            {
+                var first = await _streams.ResolveAsync(candidate);
+                var details = first?.Details;
+                if (details is null) continue;
+                var source = details.Sources.FirstOrDefault(s => s.Episodes.Any(e => e.Order == episodeOrder))
+                             ?? details.Sources.FirstOrDefault();
+                var episode = source?.Episodes.FirstOrDefault(e => e.Order == episodeOrder)
+                              ?? source?.Episodes.FirstOrDefault();
+                if (source is null || episode is null) continue;
+
+                var playback = await _streams.ResolveEpisodeAsync(details, source, episode, candidate);
+                if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl)) continue;
+
+                _providerName = candidate.Source;
+                _playback = playback;
+                await ApplyPlaybackAsync(playback);
+                ProviderList_Select(candidate.Source);
+                SwitchStatus.Text = $"已自动切换到「{candidate.Source}」· {episode.Name}";
+                return true;
+            }
+            catch
+            {
+                // 单个站点失败后继续尝试下一站。
+            }
+        }
+
+        return false;
+    }
+
     /// <summary>切换网站 / 线路 / 选集后统一刷新标题、简介、线路、选集与视频画面。</summary>
     private async Task ApplyPlaybackAsync(AnimePlayback playback)
     {
@@ -282,6 +345,37 @@ public partial class AnimePlayerView : UserControl
             var caption = $"{playback.Title} · {playback.Episode}";
             await Web.CoreWebView2.ExecuteScriptAsync(
                 $"window.mikoPlay({JsonSerializer.Serialize(playback.StreamUrl)}, {JsonSerializer.Serialize(caption)})");
+            await PushDanmakuAsync();
+        }
+    }
+
+    private async Task PushDanmakuAsync()
+    {
+        if (!_webReady) return;
+        var list = _danmaku.Get(_playback.Title, _playback.Episode)
+            .Select(item => new { time = item.TimeMs, text = item.Text })
+            .ToList();
+        await Web.CoreWebView2.ExecuteScriptAsync(
+            $"window.mikoSetDanmaku({JsonSerializer.Serialize(list)})");
+    }
+
+    private void Web_MessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(e.WebMessageAsJson);
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("type", out var type) || type.GetString() != "danmaku") return;
+            var text = root.TryGetProperty("text", out var textNode) ? textNode.GetString() ?? string.Empty : string.Empty;
+            var time = root.TryGetProperty("time", out var timeNode) && timeNode.TryGetDouble(out var value) ? value : 0;
+            var entry = _danmaku.Add(_playback.Title, _playback.Episode, time, text);
+            if (entry.Text.Length == 0) return;
+            var payload = JsonSerializer.Serialize(new { time = entry.TimeMs, text = entry.Text });
+            _ = Web.CoreWebView2.ExecuteScriptAsync($"window.mikoAddDanmaku({payload})");
+        }
+        catch
+        {
+            // 非法消息直接忽略，不打断播放。
         }
     }
 
@@ -368,7 +462,9 @@ public partial class AnimePlayerView : UserControl
             {
                 LoadingPanel.Visibility = Visibility.Collapsed;
                 _webReady = true;
+                _ = PushDanmakuAsync();
             };
+            core.WebMessageReceived += Web_MessageReceived;
 
             core.NavigateToString(BuildHtml(LoadHlsJs()));
         }
@@ -429,6 +525,9 @@ public partial class AnimePlayerView : UserControl
         var caption = JsonSerializer.Serialize($"{_playback.Title} · {_playback.Episode}");
         var title = WebUtility.HtmlEncode(_playback.Title);
         var episode = WebUtility.HtmlEncode(_playback.Episode);
+        var danmaku = JsonSerializer.Serialize(_danmaku.Get(_playback.Title, _playback.Episode)
+            .Select(item => new { time = item.TimeMs, text = item.Text })
+            .ToList());
 
         return $$"""
 <!DOCTYPE html>
@@ -447,12 +546,33 @@ public partial class AnimePlayerView : UserControl
             border:1px solid rgba(126,196,242,.25); pointer-events:none; }
   #caption { position:absolute; left:18px; top:16px; color:rgba(232,245,255,.66);
              font:12px "Microsoft YaHei UI", sans-serif; text-shadow:0 1px 4px #000; pointer-events:none; }
+  #dmLayer { position:absolute; left:0; right:0; top:0; bottom:62px; overflow:hidden;
+             pointer-events:none; z-index:8; }
+  .dm { position:absolute; left:100%; white-space:nowrap; color:#fff;
+        font:14px/1.4 "Microsoft YaHei UI", "Segoe UI", sans-serif;
+        text-shadow:0 1px 2px #000, 0 0 6px rgba(0,0,0,.75); will-change:transform; }
+  @keyframes dmRun { from { transform:translateX(0); } to { transform:translateX(calc(-100vw - 110%)); } }
+  #dmTools { position:absolute; left:50%; bottom:62px; transform:translateX(-50%); z-index:9;
+             display:flex; gap:8px; padding:6px; border-radius:10px;
+             background:rgba(8,16,25,.78); border:1px solid rgba(126,196,242,.22);
+             opacity:0; transition:opacity .18s; pointer-events:none; }
+  #stage:hover #dmTools, #dmTools:focus-within { opacity:1; pointer-events:auto; }
+  #dmInput { width:260px; height:28px; padding:0 10px; border-radius:7px; border:1px solid #294154;
+             background:#101d29; color:#e8f5ff; outline:none;
+             font:12px "Microsoft YaHei UI", sans-serif; }
+  #dmSend { height:28px; padding:0 13px; border:0; border-radius:7px; cursor:pointer;
+            background:#4EA4DD; color:#fff; font:12px "Microsoft YaHei UI", sans-serif; }
 </style>
 </head>
 <body>
 <div id="stage">
   <video id="video" controls autoplay playsinline preload="auto"></video>
+  <div id="dmLayer"></div>
   <div id="caption">{{title}} · {{episode}}</div>
+  <div id="dmTools">
+    <input id="dmInput" maxlength="60" placeholder="发个友善的弹幕…">
+    <button id="dmSend" type="button">发送</button>
+  </div>
   <div id="status">正在连接视频流…</div>
 </div>
 <script>{{hlsJs}}</script>
@@ -460,11 +580,17 @@ public partial class AnimePlayerView : UserControl
 (function () {
   const initial = {{source}};
   const initialCaption = {{caption}};
+  const initialDanmaku = {{danmaku}};
   const video = document.getElementById('video');
   const status = document.getElementById('status');
   const caption = document.getElementById('caption');
+  const dmLayer = document.getElementById('dmLayer');
+  const dmInput = document.getElementById('dmInput');
+  const dmSend = document.getElementById('dmSend');
   let hls = null;
   let retried = 0;
+  let dmPool = [];
+  let dmCursor = 0;
 
   function show(text) {
     status.textContent = text;
@@ -476,6 +602,63 @@ public partial class AnimePlayerView : UserControl
     video.removeAttribute('src');
     try { video.load(); } catch (_) {}
   }
+  function resetDmLayer() {
+    dmLayer.innerHTML = '';
+    dmCursor = 0;
+  }
+  function spawnDm(text) {
+    if (!text) return;
+    const node = document.createElement('div');
+    node.className = 'dm';
+    node.textContent = text;
+    node.style.top = (8 + Math.random() * 62) + '%';
+    const duration = 8.5 + Math.random() * 3.5;
+    node.style.animation = 'dmRun ' + duration.toFixed(1) + 's linear forwards';
+    node.addEventListener('animationend', function () { node.remove(); });
+    dmLayer.appendChild(node);
+  }
+  window.mikoSetDanmaku = function (list) {
+    dmPool = Array.isArray(list) ? list.filter(function (e) { return e && e.text; })
+      .sort(function (a, b) { return (a.time || 0) - (b.time || 0); }) : [];
+    resetDmLayer();
+  };
+  window.mikoAddDanmaku = function (entry) {
+    if (!entry || !entry.text) return;
+    dmPool.push(entry);
+    dmPool.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
+  };
+  function sendDanmaku() {
+    const text = (dmInput.value || '').trim();
+    if (!text) return;
+    const time = Math.round((video.currentTime || 0) * 1000);
+    try {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ type: 'danmaku', text: text, time: time });
+      }
+    } catch (_) {}
+    dmPool.push({ time: time, text: text });
+    dmPool.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
+    spawnDm(text);
+    dmInput.value = '';
+  }
+  dmSend.addEventListener('click', sendDanmaku);
+  dmInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); sendDanmaku(); }
+  });
+  video.addEventListener('timeupdate', function () {
+    if (video.paused) return;
+    const now = (video.currentTime || 0) * 1000;
+    while (dmCursor < dmPool.length && (dmPool[dmCursor].time || 0) <= now + 260) {
+      const entry = dmPool[dmCursor++];
+      if ((entry.time || 0) >= now - 1500) spawnDm(entry.text);
+    }
+  });
+  video.addEventListener('seeking', function () {
+    const now = (video.currentTime || 0) * 1000;
+    dmLayer.innerHTML = '';
+    dmCursor = 0;
+    while (dmCursor < dmPool.length && (dmPool[dmCursor].time || 0) < now - 1500) dmCursor++;
+  });
 
   video.addEventListener('playing', hide);
   video.addEventListener('canplay', hide);
@@ -490,6 +673,7 @@ public partial class AnimePlayerView : UserControl
     if (hls) { try { hls.destroy(); } catch (_) {} hls = null; }
     retried = 0;
     resetVideo();
+    resetDmLayer();
     show('正在连接视频流…');
 
     if (src.indexOf('.m3u8') >= 0) {
@@ -532,6 +716,7 @@ public partial class AnimePlayerView : UserControl
   };
 
   try {
+    window.mikoSetDanmaku(initialDanmaku);
     window.mikoPlay(initial, initialCaption);
   } catch (e) {
     show('播放失败：' + (e && e.message ? e.message : e));

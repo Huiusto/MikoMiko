@@ -362,6 +362,25 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="72" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="片库" Style="{StaticResource FilterLabel}" />
+                                <ItemsControl Grid.Column="1" ItemsSource="{Binding FeedFilters}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding Label}" Style="{StaticResource FilterChip}"
+                                                    Command="{Binding DataContext.SelectFeedCommand, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                                    CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -369,7 +388,7 @@
                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
                         <ProgressBar Width="110" Height="4" IsIndeterminate="True" Foreground="#4EA4DD"
                                      Background="#D8ECF9" BorderThickness="0" VerticalAlignment="Center" />
-                        <TextBlock Text="正在聚合九个站点…" FontSize="11" Foreground="#6C8FA5" Margin="10,0,0,0" />
+                        <TextBlock Text="正在从片库站点同步…" FontSize="11" Foreground="#6C8FA5" Margin="10,0,0,0" />
                     </StackPanel>
 
                     <Grid Visibility="{Binding IsWatchlistPage, Converter={StaticResource InverseBoolToVis}}">

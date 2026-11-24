@@ -1,7 +1,7 @@
 {
   "name": "追番/影视",
-  "version": "1.3.0",
-  "description": "聚合九个追番与影视站点的独立模块，内容在软件内浏览与播放。",
+  "version": "1.4.0",
+  "description": "聚合追番与影视站点的独立模块，片库列表直连站点公开页面，内容在软件内浏览与播放。",
   "providers": [
     {
       "name": "樱花动漫1",
@@ -74,6 +74,129 @@
       "region": "国产",
       "parser": "mhys",
       "search": ""
+    },
+    {
+      "name": "哔哩哔哩",
+      "home": "https://www.bilibili.com/",
+      "kind": "动漫",
+      "region": "其他",
+      "parser": "bilibili",
+      "search": ""
+    },
+    {
+      "name": "腾讯视频",
+      "home": "https://v.qq.com/",
+      "kind": "电影",
+      "region": "国产",
+      "parser": "none",
+      "search": ""
+    }
+  ],
+  "categories": [
+    {
+      "key": "movie",
+      "label": "电影",
+      "sources": [
+        { "name": "PIDEC", "url": "https://superpix.com.cn/list/1.html", "parser": "stui", "kind": "电影", "region": "其他" },
+        { "name": "南瓜电影", "url": "https://v.vcinema.cn/movie", "parser": "none", "kind": "电影", "region": "其他" },
+        { "name": "南瓜电影", "url": "https://v.vcinema.cn/filtrate", "parser": "none", "kind": "电影", "region": "其他" },
+        { "name": "漫漫看", "url": "https://www.manmankan.com/dy2013/dianying/", "parser": "manmankan", "kind": "电影", "region": "其他" },
+        { "name": "麻花影视", "url": "https://mh-ys.cc/mhys/dianying/", "parser": "mhys", "kind": "电影", "region": "其他" },
+        { "name": "哔哩哔哩", "url": "https://www.bilibili.com/movie/", "parser": "bilibili", "kind": "电影", "region": "其他" },
+        { "name": "腾讯视频", "url": "https://v.qq.com/channel/movie", "parser": "none", "kind": "电影", "region": "国产" }
+      ]
+    },
+    {
+      "key": "tv",
+      "label": "电视剧",
+      "sources": [
+        { "name": "PIDEC", "url": "https://superpix.com.cn/list/2.html", "parser": "stui", "kind": "电视剧", "region": "其他" },
+        { "name": "漫漫看", "url": "https://www.manmankan.com/dy2013/dianshiju/", "parser": "manmankan", "kind": "电视剧", "region": "其他" },
+        { "name": "麻花影视", "url": "https://mh-ys.cc/mhys/dianshiju/", "parser": "mhys", "kind": "电视剧", "region": "其他" },
+        { "name": "哔哩哔哩", "url": "https://www.bilibili.com/tv/", "parser": "bilibili", "kind": "电视剧", "region": "其他" },
+        { "name": "腾讯视频", "url": "https://v.qq.com/channel/tv", "parser": "none", "kind": "电视剧", "region": "国产" }
+      ]
+    },
+    {
+      "key": "short",
+      "label": "短剧",
+      "sources": [
+        { "name": "PIDEC", "url": "https://superpix.com.cn/list/25.html", "parser": "stui", "kind": "短剧", "region": "国产" },
+        { "name": "麻花影视", "url": "https://mh-ys.cc/mhys/duanju/", "parser": "mhys", "kind": "短剧", "region": "国产" },
+        { "name": "腾讯视频", "url": "https://v.qq.com/channel/mini_series", "parser": "none", "kind": "短剧", "region": "国产" }
+      ]
+    },
+    {
+      "key": "anime",
+      "label": "动漫",
+      "sources": [
+        { "name": "PIDEC", "url": "https://superpix.com.cn/list/4.html", "parser": "stui", "kind": "动漫", "region": "其他" }
+      ]
+    },
+    {
+      "key": "jp-anime",
+      "label": "日漫",
+      "sources": [
+        { "name": "樱花动漫1", "url": "https://www.zhuidm.net/s/1.html", "parser": "module-poster", "kind": "动漫", "region": "日本" },
+        { "name": "哔哩哔哩", "url": "https://www.bilibili.com/anime/", "parser": "bilibili", "kind": "动漫", "region": "日本" }
+      ]
+    },
+    {
+      "key": "jp-kr-comic",
+      "label": "日韩漫画",
+      "sources": [
+        { "name": "樱花TV", "url": "https://www.yhdmtv.cc/vod/1/153/0/0/0/0/0/0", "parser": "module-poster", "kind": "动漫", "region": "日本" }
+      ]
+    },
+    {
+      "key": "cn-anime",
+      "label": "国漫",
+      "sources": [
+        { "name": "樱花动漫1", "url": "https://www.zhuidm.net/s/2.html", "parser": "module-poster", "kind": "动漫", "region": "国产" },
+        { "name": "樱花TV", "url": "https://www.yhdmtv.cc/vod/1/1/0/0/0/0/0/0", "parser": "module-poster", "kind": "动漫", "region": "国产" },
+        { "name": "哔哩哔哩", "url": "https://www.bilibili.com/guochuang/", "parser": "bilibili", "kind": "动漫", "region": "国产" }
+      ]
+    },
+    {
+      "key": "west-anime",
+      "label": "欧美动漫",
+      "sources": [
+        { "name": "樱花动漫1", "url": "https://www.zhuidm.net/s/3.html", "parser": "module-poster", "kind": "动漫", "region": "欧美" },
+        { "name": "樱花TV", "url": "https://www.yhdmtv.cc/vod/1/154/0/0/0/0/0/0", "parser": "module-poster", "kind": "动漫", "region": "欧美" }
+      ]
+    },
+    {
+      "key": "other-anime",
+      "label": "其他动漫",
+      "sources": [
+        { "name": "樱花动漫1", "url": "https://www.zhuidm.net/s/4.html", "parser": "module-poster", "kind": "动漫", "region": "其他" },
+        { "name": "樱花TV", "url": "https://www.yhdmtv.cc/vod/1/157/0/0/0/0/0/0", "parser": "module-poster", "kind": "动漫", "region": "其他" }
+      ]
+    },
+    {
+      "key": "anime-movie",
+      "label": "动漫电影",
+      "sources": [
+        { "name": "樱花TV", "url": "https://www.yhdmtv.cc/vod/1/155/0/0/0/0/0/0", "parser": "module-poster", "kind": "动漫", "region": "其他" }
+      ]
+    },
+    {
+      "key": "hk-mo-tw-anime",
+      "label": "中国港澳台动漫",
+      "sources": [
+        { "name": "樱花TV", "url": "https://www.yhdmtv.cc/vod/1/156/0/0/0/0/0/0", "parser": "module-poster", "kind": "动漫", "region": "港台" }
+      ]
+    },
+    {
+      "key": "variety",
+      "label": "综艺",
+      "sources": [
+        { "name": "PIDEC", "url": "https://superpix.com.cn/list/3.html", "parser": "stui", "kind": "综艺", "region": "其他" },
+        { "name": "漫漫看", "url": "https://www.manmankan.com/dy2013/zongyi/", "parser": "manmankan", "kind": "综艺", "region": "其他" },
+        { "name": "麻花影视", "url": "https://mh-ys.cc/mhys/zongyi/", "parser": "mhys", "kind": "综艺", "region": "其他" },
+        { "name": "麻花影视", "url": "https://mh-ys.cc/mhys/dongman/", "parser": "mhys", "kind": "综艺", "region": "其他" },
+        { "name": "腾讯视频", "url": "https://v.qq.com/channel/variety", "parser": "none", "kind": "综艺", "region": "国产" }
+      ]
     }
   ]
 }

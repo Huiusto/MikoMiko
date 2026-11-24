@@ -81,10 +81,173 @@ public sealed class AnimeCatalogService
         var encoded = Uri.EscapeDataString(keyword);
         var tasks = searchable.Select(provider =>
             FetchProviderAsync(provider.Search.Replace("{q}", encoded), provider, cancellationToken)).ToList();
-        var all = Task.WhenAll(tasks);
-        await Task.WhenAny(all, Task.Delay(TimeSpan.FromSeconds(9), cancellationToken)).ConfigureAwait(false);
+        var includeBilibili = providers.Any(p => string.Equals(p.Name, "哔哩哔哩", StringComparison.Ordinal));
+        var bilibiliTask = includeBilibili ? SearchBilibiliAsync(keyword, cancellationToken) : Task.FromResult(new List<AnimeItem>());
+        var all = Task.WhenAll(tasks.Append(bilibiliTask));
+        await Task.WhenAny(all, Task.Delay(TimeSpan.FromSeconds(12), cancellationToken)).ConfigureAwait(false);
         var lists = tasks.Select(task => task.IsCompletedSuccessfully ? task.Result : new List<AnimeItem>()).ToList();
-        return Merge(searchable, lists).Take(120).ToList();
+        var results = Merge(searchable, lists);
+        if (includeBilibili && bilibiliTask.IsCompletedSuccessfully)
+            results.AddRange(bilibiliTask.Result);
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return results.Where(item => seen.Add(item.Source + "|" + item.Url)).Take(120).ToList();
+    }
+
+    /// <summary>按 manifest 中的分类片库逐站拉取；无解析器的入口站点会被跳过。</summary>
+    public async Task<List<AnimeItem>> LoadCategoryAsync(AnimeCatalogCategory category,
+        CancellationToken cancellationToken = default)
+    {
+        var sources = category.Sources
+            .Where(source => !string.IsNullOrWhiteSpace(source.Url) && !string.Equals(source.Parser, "none", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (sources.Count == 0) return new List<AnimeItem>();
+
+        var tasks = sources.Select(source => FetchCatalogSourceAsync(source, cancellationToken)).ToList();
+        var all = Task.WhenAll(tasks);
+        await Task.WhenAny(all, Task.Delay(TimeSpan.FromSeconds(14), cancellationToken)).ConfigureAwait(false);
+        var results = tasks.SelectMany(task => task.IsCompletedSuccessfully ? task.Result : new List<AnimeItem>()).ToList();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return results.Where(item => seen.Add(item.Source + "|" + item.Url)).Take(160).ToList();
+    }
+
+    private static async Task<List<AnimeItem>> FetchCatalogSourceAsync(AnimeCatalogSource source,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(source.Parser, "bilibili", StringComparison.OrdinalIgnoreCase))
+            return await FetchBilibiliCategoryAsync(source, cancellationToken).ConfigureAwait(false);
+
+        Uri uri;
+        try { uri = new Uri(source.Url, UriKind.Absolute); }
+        catch { return new List<AnimeItem>(); }
+
+        var provider = new AnimeProvider
+        {
+            Name = source.Name,
+            Home = string.IsNullOrWhiteSpace(source.Home) ? uri.GetLeftPart(UriPartial.Authority) : source.Home,
+            Kind = source.Kind,
+            Region = source.Region,
+            Parser = source.Parser,
+        };
+        return await FetchProviderAsync(source.Url, provider, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<List<AnimeItem>> FetchBilibiliCategoryAsync(AnimeCatalogSource source,
+        CancellationToken cancellationToken)
+    {
+        var seasonType = source.Url.Contains("/guochuang", StringComparison.OrdinalIgnoreCase) ? 4 :
+            source.Url.Contains("/anime", StringComparison.OrdinalIgnoreCase) ? 1 :
+            source.Url.Contains("/tv", StringComparison.OrdinalIgnoreCase) ? 5 : 2;
+        var api = "https://api.bilibili.com/pgc/season/index/result?st=1&order=3&page=1&pagesize=40&type=1"
+                  + "&season_type=" + seasonType;
+        var provider = new AnimeProvider
+        {
+            Name = "哔哩哔哩",
+            Home = "https://www.bilibili.com/",
+            Kind = source.Kind,
+            Region = source.Region,
+            Parser = "bilibili",
+        };
+        var items = new List<AnimeItem>();
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, api);
+            request.Headers.Referrer = new Uri("https://www.bilibili.com/");
+            using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
+                .ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode) return items;
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            using var doc = JsonDocument.Parse(json);
+            var list = doc.RootElement.GetProperty("data").GetProperty("list");
+            foreach (var node in list.EnumerateArray())
+            {
+                var title = JsonString(node, "title");
+                var cover = NormalizeBilibiliUrl(JsonString(node, "cover"));
+                var link = NormalizeBilibiliUrl(JsonString(node, "link"));
+                if (title.Length == 0 || cover.Length == 0 || link.Length == 0) continue;
+                var note = JsonString(node, "index_show");
+                items.Add(new AnimeItem
+                {
+                    Title = Text(title),
+                    Poster = cover,
+                    Url = link,
+                    PlayUrl = link,
+                    Source = provider.Name,
+                    Note = note,
+                    Kind = provider.Kind,
+                    Region = provider.Region,
+                });
+            }
+        }
+        catch { }
+        return items;
+    }
+
+    private static async Task<List<AnimeItem>> SearchBilibiliAsync(string keyword, CancellationToken cancellationToken)
+    {
+        var encoded = Uri.EscapeDataString(keyword);
+        var urls = new[]
+        {
+            "https://api.bilibili.com/x/web-interface/search/type?search_type=media_bangumi&keyword=" + encoded,
+            "https://api.bilibili.com/x/web-interface/search/type?search_type=media_ft&keyword=" + encoded,
+        };
+        var items = new List<AnimeItem>();
+        foreach (var url in urls)
+        {
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Referrer = new Uri("https://www.bilibili.com/");
+                using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken)
+                    .ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode) continue;
+                var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                using var doc = JsonDocument.Parse(json);
+                if (!doc.RootElement.TryGetProperty("data", out var data) ||
+                    !data.TryGetProperty("result", out var list) ||
+                    list.ValueKind != JsonValueKind.Array) continue;
+                foreach (var node in list.EnumerateArray())
+                {
+                    var title = Text(JsonString(node, "title"));
+                    var cover = NormalizeBilibiliUrl(JsonString(node, "cover"));
+                    var link = NormalizeBilibiliUrl(JsonString(node, "url"));
+                    if (title.Length == 0 || cover.Length == 0 || link.Length == 0) continue;
+                    items.Add(new AnimeItem
+                    {
+                        Title = title,
+                        Poster = cover,
+                        Url = link,
+                        PlayUrl = link,
+                        Source = "哔哩哔哩",
+                        Note = JsonString(node, "index_show"),
+                        Kind = "动漫",
+                        Region = "其他",
+                    });
+                }
+            }
+            catch { }
+        }
+        return items;
+    }
+
+    private static string JsonString(JsonElement node, string name)
+    {
+        if (!node.TryGetProperty(name, out var value)) return string.Empty;
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.Number => value.ToString(),
+            _ => string.Empty,
+        };
+    }
+
+    private static string NormalizeBilibiliUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return string.Empty;
+        if (url.StartsWith("//", StringComparison.Ordinal)) return "https:" + url;
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            return "https://" + url[7..];
+        return url;
     }
 
     private static List<AnimeItem> Merge(IReadOnlyList<AnimeProvider> providers, IReadOnlyList<List<AnimeItem>> lists)

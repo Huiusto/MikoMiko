@@ -1,18 +1,32 @@
-MikoMiko 追番/影视模块 1.1.0
+MikoMiko 追番/影视模块 1.4.0
 ================================
 
-本模块为 MikoMiko 的可选独立模块，安装后开启原生影视首页、站内搜索与站内播放。
+本模块为 MikoMiko 的可选独立模块，安装后开启原生影视首页、站点优先搜索、
+分类片库与站内播放。搜索先向各站点公开检索接口取结果，再同步到站内展示；
+当前站点无法提取视频流时会自动尝试其它可解析站点。
 
-数据源：
-- 樱花动漫1：https://yinghdm.org.cn/
-- 樱花动漫2：https://www.zhuidm.net/
+站点与片库：
+- 电影：PIDEC 电影、南瓜电影、漫漫看电影、麻花影视电影、哔哩哔哩电影、腾讯视频电影
+- 电视剧：PIDEC 电视剧、漫漫看电视剧、麻花影视电视剧、哔哩哔哩电视剧、腾讯视频电视剧
+- 短剧：PIDEC 短剧、麻花影视短剧、腾讯视频短剧
+- 动漫 / 国漫：PIDEC 动漫、追番动漫国漫、樱花TV 国漫、哔哩哔哩国创
+- 日漫：追番动漫日漫、哔哩哔哩番剧
+- 日韩漫画：樱花TV 日韩漫画
+- 欧美动漫 / 其他动漫 / 动漫电影 / 中国港澳台动漫：樱花TV 对应频道
+- 综艺：PIDEC 综艺、漫漫看综艺、麻花影视综艺、麻花影视动漫、腾讯视频综艺
+
+数据源站点：
+- 樱花动漫（追番）：https://www.zhuidm.net/
+- 樱花动漫2：https://yinghdm.org.cn/
 - 樱花TV：https://www.yhdmtv.cc/
 - PIDEC：https://superpix.com.cn/
-- 南瓜电影：https://v.vcinema.cn/filtrate
+- 南瓜电影：https://v.vcinema.cn/
 - 七猫视频：https://milace.cn/
 - 电影先生：https://silidm.com/
-- 漫漫看：https://www.manmankan.com/dy2013/dianshiju/dalu/
+- 漫漫看：https://www.manmankan.com/
 - 麻花影视：https://mh-ys.cc/
+- 哔哩哔哩：https://www.bilibili.com/
+- 腾讯视频：https://v.qq.com/
 
 所有页面与视频均在 MikoMiko 软件内打开，不跳转系统浏览器。
 第三方站点内容版权归原站点与权利人所有，本模块仅提供聚合与播放入口。

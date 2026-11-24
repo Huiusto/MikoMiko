@@ -56,6 +56,7 @@ public sealed partial class AnimeViewModel : ObservableObject
                      new ChoiceOption("anime", "动漫"),
                      new ChoiceOption("movie", "电影"),
                      new ChoiceOption("tv", "电视剧"),
+                     new ChoiceOption("short", "短剧"),
                      new ChoiceOption("doc", "纪录片"),
                      new ChoiceOption("variety", "综艺"),
                  })
@@ -104,6 +105,25 @@ public sealed partial class AnimeViewModel : ObservableObject
                  })
             GenreFilters.Add(option);
         GenreFilters[0].IsSelected = true;
+
+        foreach (var option in new[]
+                 {
+                     new ChoiceOption("all", "全部片库"),
+                     new ChoiceOption("movie", "电影"),
+                     new ChoiceOption("tv", "电视剧"),
+                     new ChoiceOption("short", "短剧"),
+                     new ChoiceOption("anime", "动漫"),
+                     new ChoiceOption("jp-anime", "日漫"),
+                     new ChoiceOption("jp-kr-comic", "日韩漫画"),
+                     new ChoiceOption("cn-anime", "国漫"),
+                     new ChoiceOption("west-anime", "欧美动漫"),
+                     new ChoiceOption("other-anime", "其他动漫"),
+                     new ChoiceOption("anime-movie", "动漫电影"),
+                     new ChoiceOption("hk-mo-tw-anime", "中国港澳台动漫"),
+                     new ChoiceOption("variety", "综艺"),
+                 })
+            FeedFilters.Add(option);
+        FeedFilters[0].IsSelected = true;
     }
 
     public ObservableCollection<AnimeItem> Items { get; } = new();
@@ -115,6 +135,7 @@ public sealed partial class AnimeViewModel : ObservableObject
     public ObservableCollection<ChoiceOption> SortFilters { get; } = new();
     public ObservableCollection<ChoiceOption> RegionFilters { get; } = new();
     public ObservableCollection<ChoiceOption> GenreFilters { get; } = new();
+    public ObservableCollection<ChoiceOption> FeedFilters { get; } = new();
 
     [ObservableProperty] private bool _isInstalled;
     [ObservableProperty] private bool _isLoading;
@@ -134,13 +155,14 @@ public sealed partial class AnimeViewModel : ObservableObject
     [ObservableProperty] private double _downloadProgress;
     [ObservableProperty] private string _downloadPercentText = string.Empty;
     [ObservableProperty] private string _heroTitle = "追番 / 影视";
-    [ObservableProperty] private string _heroMeta = "樱花动漫、樱花TV、PIDEC 等九个站点，全部在软件内播放";
+    [ObservableProperty] private string _heroMeta = "樱花动漫、樱花TV、PIDEC、B 站等十一个站点，片库直连公开列表，全部在软件内播放";
 
     private string _categoryKey = "home";
     private string _typeKey = "all";
     private string _sortKey = "default";
     private string _regionKey = "all";
     private string _genreKey = "all";
+    private string _feedKey = "all";
 
     public string ModuleVersion => _module.Manifest?.Version ?? "1.0.0";
     public int ProviderCount => Providers.Count;
@@ -335,6 +357,16 @@ public sealed partial class AnimeViewModel : ObservableObject
             return;
         }
 
+        if (_feedKey != "all")
+        {
+            var feed = FeedFilters.FirstOrDefault(f => f.Key == _feedKey);
+            if (feed is not null)
+            {
+                await LoadFeedAsync(feed, resetFilters: false);
+                return;
+            }
+        }
+
         await LoadCatalogAsync(resetView: false);
         if (IsMorePage) SectionTitle = "全部内容";
     }
@@ -507,16 +539,18 @@ public sealed partial class AnimeViewModel : ObservableObject
         {
             var remote = await _catalog.SearchAsync(_module.Providers, keyword, cts.Token);
             if (cts.IsCancellationRequested) return;
-            var local = _homeItems.Where(i => i.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)).ToList();
-            var merged = remote.Concat(local)
+            var merged = remote
                 .GroupBy(i => i.Source + "|" + i.Url, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .ToList();
             _baseItems = merged;
             _categoryKey = "all";
             ResetFilters();
+            ResetFeedSelection();
             ApplyFilter();
-            StatusText = merged.Count == 0 ? "没有找到相关作品，换个关键词试试。" : string.Empty;
+            StatusText = merged.Count == 0
+                ? "各站点都没有搜到相关作品，换个关键词试试。"
+                : $"已从站点同步 {merged.Count} 部作品";
         }
         catch (OperationCanceledException)
         {
@@ -524,10 +558,9 @@ public sealed partial class AnimeViewModel : ObservableObject
         catch
         {
             if (cts.IsCancellationRequested) return;
-            var local = _homeItems.Where(i => i.Title.Contains(keyword, StringComparison.OrdinalIgnoreCase)).ToList();
-            _baseItems = local;
+            _baseItems = new List<AnimeItem>();
             ApplyFilter();
-            StatusText = local.Count == 0 ? "搜索失败，请稍后重试。" : string.Empty;
+            StatusText = "站点搜索失败，请稍后重试。";
         }
         finally
         {
@@ -563,6 +596,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         _categoryKey = "all";
         SelectCategoryItem("all");
         ResetFilters();
+        ResetFeedSelection();
         SectionTitle = "全部内容";
         ApplyFilter();
         StatusText = string.Empty;
@@ -582,6 +616,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         _categoryKey = "home";
         SelectCategoryItem("home");
         ResetFilters();
+        ResetFeedSelection();
         SectionTitle = "猜你喜欢";
         ApplyFilter();
         StatusText = string.Empty;
@@ -616,13 +651,79 @@ public sealed partial class AnimeViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task SelectFeedAsync(ChoiceOption? option)
+    {
+        if (option is null) return;
+        await LoadFeedAsync(option, resetFilters: true);
+    }
+
+    private async Task LoadFeedAsync(ChoiceOption option, bool resetFilters)
+    {
+        if (!IsInstalled) return;
+        _feedKey = option.Key;
+        MarkSelected(FeedFilters, option);
+        if (option.Key == "all")
+        {
+            _baseItems = _homeItems;
+            ApplyFilter();
+            if (IsMorePage && !IsSearching) SectionTitle = "全部内容";
+            return;
+        }
+
+        _searchDebounceCts?.Cancel();
+        _loadCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _loadCts = cts;
+        IsLoading = true;
+        IsSearching = false;
+        IsMorePage = true;
+        IsHomeMode = false;
+        IsWatchlistPage = false;
+        SectionTitle = option.Label + " 片库";
+        StatusText = $"正在从 {option.Label} 的站点列表同步…";
+        CountText = string.Empty;
+        Items.Clear();
+        if (resetFilters) ResetFilters();
+        try
+        {
+            var category = _module.Manifest?.Categories.FirstOrDefault(c => c.Key == option.Key);
+            if (category is null)
+            {
+                StatusText = "这个分类暂时没有可用的公开列表。";
+                _baseItems = new List<AnimeItem>();
+            }
+            else
+            {
+                var items = await _catalog.LoadCategoryAsync(category, cts.Token);
+                if (cts.IsCancellationRequested) return;
+                _baseItems = items;
+                StatusText = items.Count == 0
+                    ? "站点列表暂未返回可解析内容，稍后刷新重试。"
+                    : $"已同步 {items.Count} 部 {option.Label} 作品";
+            }
+            ApplyFilter();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            if (!cts.IsCancellationRequested) StatusText = "片库同步失败，请检查网络后刷新。";
+        }
+        finally
+        {
+            if (!cts.IsCancellationRequested) IsLoading = false;
+        }
+    }
+
+    [RelayCommand]
     private async Task SelectTypeAsync(ChoiceOption? option)
     {
         if (option is null) return;
         _typeKey = option.Key;
         MarkSelected(TypeFilters, option);
         ApplyFilter();
-        if (IsMorePage && !IsSearching) await ReloadFilteredPoolAsync();
+        if (IsMorePage && !IsSearching && _feedKey == "all") await ReloadFilteredPoolAsync();
     }
 
     [RelayCommand]
@@ -673,6 +774,12 @@ public sealed partial class AnimeViewModel : ObservableObject
         foreach (var item in GenreFilters) item.IsSelected = item.Key == "all";
     }
 
+    private void ResetFeedSelection()
+    {
+        _feedKey = "all";
+        foreach (var item in FeedFilters) item.IsSelected = item.Key == "all";
+    }
+
     private static void MarkSelected(IEnumerable<ChoiceOption> options, ChoiceOption selected)
     {
         foreach (var option in options) option.IsSelected = option == selected;
@@ -686,10 +793,10 @@ public sealed partial class AnimeViewModel : ObservableObject
         StatusText = $"正在软件内提取《{item.Title}》的视频…";
         try
         {
-            var playback = await _streams.ResolveAsync(item);
+            var playback = await ResolveWithFallbackAsync(item);
             if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
             {
-                StatusText = "该站点暂时无法直接提取视频，换一个来源或稍后重试。";
+                StatusText = "各站点都暂时无法提取视频，请稍后重试。";
                 return;
             }
 
@@ -705,6 +812,47 @@ public sealed partial class AnimeViewModel : ObservableObject
             _isOpening = false;
         }
     }
+
+    /// <summary>
+    /// 先解析当前站点；若当前站点无法提取，则按标题到其他可播放站点检索，
+    /// 找到第一条能出画的来源后自动切站播放。分类片库里的 B 站 / 腾讯入口也会走这条回退链路。
+    /// </summary>
+    private async Task<AnimePlayback?> ResolveWithFallbackAsync(AnimeItem item)
+    {
+        var playback = await _streams.ResolveAsync(item);
+        if (playback is not null && !string.IsNullOrWhiteSpace(playback.StreamUrl)) return playback;
+
+        var playable = _module.Providers
+            .Where(provider => !string.Equals(provider.Name, item.Source, StringComparison.Ordinal))
+            .Where(provider => provider.Parser is "module-poster" or "stui" or "manmankan" or "generic" or "mhys")
+            .Where(provider => !string.IsNullOrWhiteSpace(provider.Search))
+            .ToList();
+        if (playable.Count == 0) return null;
+
+        StatusText = $"当前来源「{item.Source}」无法提取，正在自动检索其他站点…";
+        var candidates = await _catalog.SearchAsync(playable, item.Title);
+        var normalized = NormalizeTitle(item.Title);
+        var ranked = candidates
+            .Where(candidate => !string.Equals(candidate.Source, item.Source, StringComparison.Ordinal))
+            .Where(candidate => !string.Equals(candidate.Source, "哔哩哔哩", StringComparison.Ordinal))
+            .OrderBy(candidate => NormalizeTitle(candidate.Title) == normalized ? 0 :
+                NormalizeTitle(candidate.Title).Contains(normalized, StringComparison.Ordinal) ? 1 : 2)
+            .Take(4)
+            .ToList();
+
+        foreach (var candidate in ranked)
+        {
+            StatusText = $"当前站点无法提取，正在自动切换到「{candidate.Source}」…";
+            var fallback = await _streams.ResolveAsync(candidate);
+            if (fallback is not null && !string.IsNullOrWhiteSpace(fallback.StreamUrl))
+                return fallback;
+        }
+
+        return null;
+    }
+
+    private static string NormalizeTitle(string title)
+        => Regex.Replace(title ?? string.Empty, @"[\s\p{P}\p{S}]+", string.Empty).ToLowerInvariant();
 
     private void SelectCategoryItem(string key)
     {
@@ -722,6 +870,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         _categoryKey = showMore ? "all" : "home";
         SelectCategoryItem(_categoryKey);
         ResetFilters();
+        ResetFeedSelection();
         SectionTitle = showMore ? "全部内容" : "猜你喜欢";
         _baseItems = _homeItems;
         ApplyFilter();
