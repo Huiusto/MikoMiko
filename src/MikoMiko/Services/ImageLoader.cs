@@ -21,31 +21,44 @@ public static class ImageLoader
         return client;
     }
 
-    public static Task<BitmapImage?> LoadAsync(string url)
+    public static Task<BitmapImage?> LoadAsync(string url, string? referer = null)
     {
         if (string.IsNullOrWhiteSpace(url)) return Task.FromResult<BitmapImage?>(null);
 
+        var key = string.IsNullOrWhiteSpace(referer) ? url : $"{url}|{referer}";
         lock (Gate)
         {
-            if (Cache.TryGetValue(url, out var cached)) return Task.FromResult<BitmapImage?>(cached);
-            if (Pending.TryGetValue(url, out var running)) return running;
-            var task = DownloadAsync(url);
-            Pending[url] = task;
+            if (Cache.TryGetValue(key, out var cached)) return Task.FromResult<BitmapImage?>(cached);
+            if (Pending.TryGetValue(key, out var running)) return running;
+            var task = DownloadAsync(url, key, referer);
+            Pending[key] = task;
             return task;
         }
     }
 
-    private static async Task<BitmapImage?> DownloadAsync(string url)
+    private static async Task<BitmapImage?> DownloadAsync(string url, string key, string? referer)
     {
         try
         {
-            var bytes = await Http.GetByteArrayAsync(url).ConfigureAwait(false);
+            byte[]? bytes = null;
+            if (!string.IsNullOrWhiteSpace(referer))
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Referrer = new Uri(referer);
+                using var response = await Http.SendAsync(request).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                    bytes = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+            }
+
+            if (bytes is null)
+                bytes = await Http.GetByteArrayAsync(url).ConfigureAwait(false);
+
             var image = Create(bytes, 900);
             if (image is not null)
             {
                 lock (Gate)
                 {
-                    Cache[url] = image;
+                    Cache[key] = image;
                 }
             }
 
@@ -59,7 +72,7 @@ public static class ImageLoader
         {
             lock (Gate)
             {
-                Pending.Remove(url);
+                Pending.Remove(key);
             }
         }
     }

@@ -15,6 +15,14 @@ public static class AsyncImage
     public static readonly DependencyProperty FallbackProperty = DependencyProperty.RegisterAttached(
         "Fallback", typeof(string), typeof(AsyncImage), new PropertyMetadata(null));
 
+    /// <summary>图片请求需要携带的 Referer（部分追番站图床限制外链）。</summary>
+    public static readonly DependencyProperty RefererProperty = DependencyProperty.RegisterAttached(
+        "Referer", typeof(string), typeof(AsyncImage), new PropertyMetadata(null, OnRefererChanged));
+
+    public static void SetReferer(DependencyObject element, string? value) => element.SetValue(RefererProperty, value);
+
+    public static string? GetReferer(DependencyObject element) => (string?)element.GetValue(RefererProperty);
+
     public static void SetFallback(DependencyObject element, string? value) => element.SetValue(FallbackProperty, value);
 
     public static string? GetFallback(DependencyObject element) => (string?)element.GetValue(FallbackProperty);
@@ -22,6 +30,15 @@ public static class AsyncImage
     public static void SetUrl(DependencyObject element, string? value) => element.SetValue(UrlProperty, value);
 
     public static string? GetUrl(DependencyObject element) => (string?)element.GetValue(UrlProperty);
+
+    private static void OnRefererChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not Image image) return;
+        var url = GetUrl(image);
+        if (string.IsNullOrWhiteSpace(url) || url.StartsWith("pack:", StringComparison.OrdinalIgnoreCase)) return;
+        // Referer 通常晚于 Url 绑定到达，拿到后按正确来源重新请求一次。
+        OnUrlChanged(image, new DependencyPropertyChangedEventArgs(UrlProperty, null, url));
+    }
 
     private static async void OnUrlChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -44,7 +61,7 @@ public static class AsyncImage
         }
         else
         {
-            bitmap = await ImageLoader.LoadAsync(url);
+            bitmap = await ImageLoader.LoadAsync(url, GetReferer(image));
         }
 
         if (bitmap is not null && string.Equals(GetUrl(image), url, StringComparison.Ordinal))

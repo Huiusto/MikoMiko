@@ -18,6 +18,23 @@ public sealed class AnimeItem
     public string Region { get; init; } = "其他";
 
     public string MetaText => string.IsNullOrWhiteSpace(Note) ? Source : $"{Source} · {Note}";
+
+    /// <summary>海报请求的 Referer：多数追番站图床只允许本站页面外链。</summary>
+    public string PosterReferer
+    {
+        get
+        {
+            try
+            {
+                var uri = new Uri(Url);
+                return $"{uri.Scheme}://{uri.Host}/";
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+    }
 }
 
 /// <summary>

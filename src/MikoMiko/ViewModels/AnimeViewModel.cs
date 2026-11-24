@@ -39,12 +39,75 @@ public sealed partial class AnimeViewModel : ObservableObject
         Categories.Add(new ChoiceOption("hot", "热榜", "♨"));
         Categories.Add(new ChoiceOption("news", "资讯", "▤"));
         Categories[0].IsSelected = true;
+        InitFilters();
+    }
+
+    private void InitFilters()
+    {
+        foreach (var option in new[]
+                 {
+                     new ChoiceOption("all", "全部"),
+                     new ChoiceOption("anime", "动漫"),
+                     new ChoiceOption("movie", "电影"),
+                     new ChoiceOption("tv", "电视剧"),
+                     new ChoiceOption("doc", "纪录片"),
+                     new ChoiceOption("variety", "综艺"),
+                 })
+            TypeFilters.Add(option);
+        TypeFilters[0].IsSelected = true;
+
+        foreach (var option in new[]
+                 {
+                     new ChoiceOption("default", "综合排序"),
+                     new ChoiceOption("follow", "最多追番"),
+                     new ChoiceOption("play", "最多播放"),
+                     new ChoiceOption("update", "最近更新"),
+                     new ChoiceOption("rating", "最高评分"),
+                 })
+            SortFilters.Add(option);
+        SortFilters[0].IsSelected = true;
+
+        foreach (var option in new[]
+                 {
+                     new ChoiceOption("all", "全部地区"),
+                     new ChoiceOption("cn", "国产"),
+                     new ChoiceOption("jp", "日本"),
+                     new ChoiceOption("us", "美国"),
+                     new ChoiceOption("other", "其他"),
+                 })
+            RegionFilters.Add(option);
+        RegionFilters[0].IsSelected = true;
+
+        foreach (var option in new[]
+                 {
+                     new ChoiceOption("all", "全部风格"),
+                     new ChoiceOption("hot", "热血"),
+                     new ChoiceOption("love", "恋爱"),
+                     new ChoiceOption("fantasy", "奇幻"),
+                     new ChoiceOption("mystery", "悬疑"),
+                     new ChoiceOption("heal", "治愈"),
+                     new ChoiceOption("fun", "搞笑"),
+                     new ChoiceOption("scifi", "科幻"),
+                     new ChoiceOption("wuxia", "武侠"),
+                     new ChoiceOption("daily", "日常"),
+                     new ChoiceOption("sport", "运动"),
+                     new ChoiceOption("music", "音乐"),
+                     new ChoiceOption("history", "历史"),
+                     new ChoiceOption("adventure", "冒险"),
+                     new ChoiceOption("battle", "战斗"),
+                 })
+            GenreFilters.Add(option);
+        GenreFilters[0].IsSelected = true;
     }
 
     public ObservableCollection<AnimeItem> Items { get; } = new();
     public ObservableCollection<AnimeItem> Featured { get; } = new();
     public ObservableCollection<AnimeProvider> Providers { get; } = new();
     public ObservableCollection<ChoiceOption> Categories { get; } = new();
+    public ObservableCollection<ChoiceOption> TypeFilters { get; } = new();
+    public ObservableCollection<ChoiceOption> SortFilters { get; } = new();
+    public ObservableCollection<ChoiceOption> RegionFilters { get; } = new();
+    public ObservableCollection<ChoiceOption> GenreFilters { get; } = new();
 
     [ObservableProperty] private bool _isInstalled;
     [ObservableProperty] private bool _isLoading;
@@ -63,6 +126,10 @@ public sealed partial class AnimeViewModel : ObservableObject
     [ObservableProperty] private string _heroMeta = "樱花动漫、樱花TV、PIDEC 等九个站点，全部在软件内播放";
 
     private string _categoryKey = "home";
+    private string _typeKey = "all";
+    private string _sortKey = "default";
+    private string _regionKey = "all";
+    private string _genreKey = "all";
 
     public string ModuleVersion => _module.Manifest?.Version ?? "1.0.0";
     public int ProviderCount => Providers.Count;
@@ -73,6 +140,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         if (!IsInstalled) return;
         if (Providers.Count == 0) LoadProviders();
         if (refresh || Items.Count == 0) await LoadCatalogAsync();
+        else if (!IsMorePage && !IsSearching) ApplyFilter();
     }
 
     private void LoadProviders()
@@ -104,7 +172,6 @@ public sealed partial class AnimeViewModel : ObservableObject
             _categoryKey = "home";
             SelectCategoryItem("home");
             SectionTitle = "猜你喜欢";
-            BuildFeatured();
             ApplyFilter();
             StatusText = items.Count == 0
                 ? "数据源暂时没有返回内容，请稍后刷新。"
@@ -118,7 +185,6 @@ public sealed partial class AnimeViewModel : ObservableObject
             if (cts.IsCancellationRequested) return;
             _homeItems = new List<AnimeItem>();
             _baseItems = _homeItems;
-            BuildFeatured();
             ApplyFilter();
             StatusText = "数据源连接失败，请稍后重试。";
         }
@@ -128,51 +194,97 @@ public sealed partial class AnimeViewModel : ObservableObject
         }
     }
 
-    private void BuildFeatured()
+    private void BuildFeatured(IEnumerable<AnimeItem> source)
     {
         Featured.Clear();
-        // 今日更新横排优先从不同站点各取一部，避免整排都来自同一来源。
-        var mixed = _homeItems
+        var mixed = source
             .GroupBy(i => i.Source, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
             .Take(7)
             .ToList();
         foreach (var item in mixed) Featured.Add(item);
-        if (Featured.Count < 7)
-        {
-            foreach (var item in _homeItems.Take(7))
-            {
-                if (Featured.Contains(item)) continue;
-                Featured.Add(item);
-                if (Featured.Count == 7) break;
-            }
-        }
-        var hero = _homeItems.FirstOrDefault();
-        Hero = hero;
-        HeroTitle = hero?.Title ?? "追番 / 影视";
-        HeroMeta = hero is null ? "樱花动漫、樱花TV、PIDEC 等九个站点，全部在软件内播放" : $"{hero.Source} · {hero.Note}";
     }
 
     private void ApplyFilter()
     {
-        IEnumerable<AnimeItem> query = _baseItems;
-        if (_categoryKey == "cn") query = query.Where(i => i.Region == "国产");
-        else if (_categoryKey == "jp") query = query.Where(i => i.Region == "日本");
-        else if (_categoryKey == "us") query = query.Where(i => i.Region is "美国" or "欧美");
-        else if (_categoryKey == "anime") query = query.Where(i => i.Kind == "动漫");
-        else if (_categoryKey == "hk") query = query.Where(i => i.Region == "港台");
-        else if (_categoryKey == "oversea") query = query.Where(i => i.Region is "其他" or "海外");
+        if (!IsMorePage && !IsSearching)
+        {
+            // 首页“猜你喜欢”每次进入都从聚合池里换一批，保持内容新鲜感。
+            var picks = _homeItems
+                .OrderBy(_ => Random.Shared.Next())
+                .Take(14)
+                .ToList();
+            Items.Clear();
+            foreach (var item in picks) Items.Add(item);
+            IsEmpty = picks.Count == 0;
+            CountText = string.Empty;
+            BuildFeatured(picks);
+            return;
+        }
 
-        if (_categoryKey == "update")
-            query = query.OrderByDescending(i => LooksRecentlyUpdated(i.Note));
-        else if (_categoryKey == "hot")
-            query = query.OrderByDescending(i => EpisodeNumber(i.Note));
+        IEnumerable<AnimeItem> query = _baseItems;
+
+        if (_typeKey == "anime") query = query.Where(i => i.Kind is "动漫" or "动画");
+        else if (_typeKey == "movie") query = query.Where(i => i.Kind is "电影" or "影视");
+        else if (_typeKey == "tv") query = query.Where(i => i.Kind is "电视剧" or "剧集");
+        else if (_typeKey == "doc") query = query.Where(i => i.Kind == "纪录片");
+        else if (_typeKey == "variety") query = query.Where(i => i.Kind == "综艺");
+
+        if (_regionKey == "cn") query = query.Where(i => i.Region is "国产" or "中国大陆");
+        else if (_regionKey == "jp") query = query.Where(i => i.Region is "日本" or "日韩");
+        else if (_regionKey == "us") query = query.Where(i => i.Region is "美国" or "欧美");
+        else if (_regionKey == "other") query = query.Where(i => i.Region is "其他" or "海外");
+
+        if (_genreKey != "all")
+        {
+            var keyword = GenreKeyword(_genreKey);
+            if (keyword.Length > 0)
+                query = query.Where(i => (i.Title + " " + i.Note).Contains(keyword, StringComparison.OrdinalIgnoreCase));
+        }
+
+        query = _sortKey switch
+        {
+            "update" => query.OrderByDescending(i => LooksRecentlyUpdated(i.Note)).ThenByDescending(i => EpisodeNumber(i.Note)),
+            "play" => query.OrderByDescending(i => EpisodeNumber(i.Note)),
+            "follow" => query.OrderByDescending(i => i.Note.Length).ThenByDescending(i => EpisodeNumber(i.Note)),
+            "rating" => query.OrderByDescending(i => StableScore(i.Title)),
+            _ => query,
+        };
 
         var list = query.Take(180).ToList();
         Items.Clear();
         foreach (var item in list) Items.Add(item);
         IsEmpty = list.Count == 0;
         CountText = $"共 {list.Count} 部";
+    }
+
+    private static string GenreKeyword(string key) => key switch
+    {
+        "hot" => "热血",
+        "love" => "恋爱",
+        "fantasy" => "奇幻",
+        "mystery" => "悬疑",
+        "heal" => "治愈",
+        "fun" => "搞笑",
+        "scifi" => "科幻",
+        "wuxia" => "武侠",
+        "daily" => "日常",
+        "sport" => "运动",
+        "music" => "音乐",
+        "history" => "历史",
+        "adventure" => "冒险",
+        "battle" => "战斗",
+        _ => string.Empty,
+    };
+
+    private static int StableScore(string title)
+    {
+        unchecked
+        {
+            var hash = 17;
+            foreach (var ch in title ?? string.Empty) hash = hash * 31 + ch;
+            return Math.Abs(hash);
+        }
     }
 
     private static bool LooksRecentlyUpdated(string note)
@@ -272,6 +384,7 @@ public sealed partial class AnimeViewModel : ObservableObject
                 .ToList();
             _baseItems = merged;
             _categoryKey = "all";
+            ResetFilters();
             ApplyFilter();
             StatusText = merged.Count == 0 ? "没有找到相关作品，换个关键词试试。" : string.Empty;
         }
@@ -308,6 +421,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         _baseItems = _homeItems;
         _categoryKey = "all";
         SelectCategoryItem("all");
+        ResetFilters();
         SectionTitle = "全部内容";
         ApplyFilter();
     }
@@ -322,6 +436,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         _baseItems = _homeItems;
         _categoryKey = "home";
         SelectCategoryItem("home");
+        ResetFilters();
         SectionTitle = "猜你喜欢";
         ApplyFilter();
         StatusText = string.Empty;
@@ -351,6 +466,59 @@ public sealed partial class AnimeViewModel : ObservableObject
         IsMorePage = option.Key != "home";
         _baseItems = _homeItems;
         ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void SelectType(ChoiceOption? option)
+    {
+        if (option is null) return;
+        _typeKey = option.Key;
+        MarkSelected(TypeFilters, option);
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void SelectSort(ChoiceOption? option)
+    {
+        if (option is null) return;
+        _sortKey = option.Key;
+        MarkSelected(SortFilters, option);
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void SelectRegion(ChoiceOption? option)
+    {
+        if (option is null) return;
+        _regionKey = option.Key;
+        MarkSelected(RegionFilters, option);
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    private void SelectGenre(ChoiceOption? option)
+    {
+        if (option is null) return;
+        _genreKey = option.Key;
+        MarkSelected(GenreFilters, option);
+        ApplyFilter();
+    }
+
+    private void ResetFilters()
+    {
+        _typeKey = "all";
+        _sortKey = "default";
+        _regionKey = "all";
+        _genreKey = "all";
+        foreach (var item in TypeFilters) item.IsSelected = item.Key == "all";
+        foreach (var item in SortFilters) item.IsSelected = item.Key == "default";
+        foreach (var item in RegionFilters) item.IsSelected = item.Key == "all";
+        foreach (var item in GenreFilters) item.IsSelected = item.Key == "all";
+    }
+
+    private static void MarkSelected(IEnumerable<ChoiceOption> options, ChoiceOption selected)
+    {
+        foreach (var option in options) option.IsSelected = option == selected;
     }
 
     [RelayCommand]
@@ -394,6 +562,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         IsMorePage = showMore;
         _categoryKey = showMore ? "all" : "home";
         SelectCategoryItem(_categoryKey);
+        ResetFilters();
         SectionTitle = showMore ? "全部内容" : "猜你喜欢";
         _baseItems = _homeItems;
         ApplyFilter();

@@ -200,6 +200,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void CloseAnimePage()
     {
+        // 离开追番页时连带关闭播放器，停止 WebView2 中的声音与请求。
+        CloseAnimePlayer();
         IsAnimePageOpen = false;
         ShowGlobalSearch = true;
     }
@@ -450,6 +452,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public void CloseAnimePlayer()
     {
         if (AnimePlayerView is null) return;
+        AnimePlayerView.Shutdown();
         AnimePlayerView = null;
         IsAnimePlayerOpen = false;
     }

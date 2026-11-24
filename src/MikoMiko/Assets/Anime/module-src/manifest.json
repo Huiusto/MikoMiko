@@ -1,23 +1,23 @@
 {
   "name": "追番/影视",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "聚合九个追番与影视站点的独立模块，内容在软件内浏览与播放。",
   "providers": [
     {
       "name": "樱花动漫1",
-      "home": "https://yinghdm.org.cn/",
-      "kind": "动漫",
-      "region": "日本",
-      "parser": "generic",
-      "search": ""
-    },
-    {
-      "name": "樱花动漫2",
       "home": "https://www.zhuidm.net/",
       "kind": "动漫",
       "region": "日本",
       "parser": "module-poster",
       "search": "https://www.zhuidm.net/vodsearch/{q}-------------.html"
+    },
+    {
+      "name": "樱花动漫2",
+      "home": "https://yinghdm.org.cn/",
+      "kind": "动漫",
+      "region": "日本",
+      "parser": "generic",
+      "search": ""
     },
     {
       "name": "樱花TV",
