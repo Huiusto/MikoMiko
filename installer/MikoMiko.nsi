@@ -48,6 +48,7 @@ Section "MikoMiko 主程序" SecMain
   SetOutPath "$INSTDIR"
   SetOverwrite on
 
+  Delete "$INSTDIR\${APP_EXE}"
   File "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\dist\app\MikoMiko.exe"
   SetOutPath "$INSTDIR\Assets\Anime"
   File "/nonfatal" "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\dist\app\Assets\Anime\anime-module.zip"
