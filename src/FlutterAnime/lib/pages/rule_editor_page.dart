@@ -218,9 +218,9 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
             children: [
               Row(
                 children: [
-                  Expanded(child: _Field(label: '规则名称', hint: '例如 7sefun', controller: _name)),
+                  Expanded(child: _Field(label: '规则名称', hint: '例如 zhuidm', controller: _name)),
                   const SizedBox(width: 12),
-                  Expanded(child: _Field(label: '显示名称', hint: '七色番', controller: _displayName)),
+                  Expanded(child: _Field(label: '显示名称', hint: '樱花动漫1', controller: _displayName)),
                   const SizedBox(width: 12),
                   SizedBox(width: 110, child: _Field(label: '版本', hint: '1.3', controller: _version)),
                 ],

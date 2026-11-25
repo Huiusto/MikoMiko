@@ -3,17 +3,18 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"assets/AssetManifest.bin": "4ee01ebd020ff2862d37d12859b0d5a2",
-"assets/AssetManifest.bin.json": "b50576eac8a13033765dc823305418d9",
-"assets/AssetManifest.json": "421eb7a6970c92b909d617917bd7f717",
+const RESOURCES = {"assets/AssetManifest.bin": "c334f85575eed696601b7f35293ee2f9",
+"assets/AssetManifest.bin.json": "7dab9da47ee29c930ce88835942ded27",
+"assets/AssetManifest.json": "f5cc75439d00ab1627a9fe03390078dd",
 "assets/assets/fonts/NotoSansSC.ttf": "504abdda545478632820c606a577b4a3",
-"assets/assets/rules/7sefun.json": "9d2a1cbe40f8eeaea767e93af319d8a2",
-"assets/assets/rules/aafun.json": "284b9738789ea4fd3aefafbe5cbeb211",
-"assets/assets/rules/akianime.json": "8fed4ff717971bdc904ef4d4fbe3db00",
-"assets/assets/rules/baimao.json": "b7faec4058162930b5e642e6747c5b92",
-"assets/assets/rules/DM84.json": "f23447ffb3c63dbf43b487173c7d8d02",
-"assets/assets/rules/MXdm.json": "e115f5c0861f96cf341cd67266b12072",
-"assets/assets/rules/xfdmneo.json": "3e6312b141b13b2cd1d4e5bb1ece4b81",
+"assets/assets/rules/manmankan.json": "1490dd6815845556f7c7a8788a5d79cf",
+"assets/assets/rules/mhys.json": "20a34495e5f1da7b3fcb844342ff4629",
+"assets/assets/rules/milace.json": "b7de52765ba5360008e234da74affa62",
+"assets/assets/rules/silidm.json": "52348357a4eaed40cca94214fd221f95",
+"assets/assets/rules/superpix.json": "3e176c47c97d3fd0c06816866ae517f0",
+"assets/assets/rules/vcinema.json": "e75c30268610c45432875620d411ce4c",
+"assets/assets/rules/yhdmtv.json": "9161826de64d9aac71c2c8501dbc35da",
+"assets/assets/rules/zhuidm.json": "ed82918ed3c0dc5d718a056d63555721",
 "assets/FontManifest.json": "baad8af0dd50df0d99f8a887a51c26bb",
 "assets/fonts/MaterialIcons-Regular.otf": "4ce77ba7f8eaee786b1d9899b753cc88",
 "assets/NOTICES": "223e4cd6c09e677bd226cc7160c823e0",
@@ -32,16 +33,16 @@ const RESOURCES = {"assets/AssetManifest.bin": "4ee01ebd020ff2862d37d12859b0d5a2
 "canvaskit/skwasm_heavy.wasm": "8034ad26ba2485dab2fd49bdd786837b",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
-"flutter_bootstrap.js": "196a78e04713e9887d8cc39d25d904e9",
+"flutter_bootstrap.js": "0e4361038d5f6293bf83ab98e732ba63",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
 "icons/Icon-maskable-512.png": "301a7604d45b3e739efc881eb04896ea",
 "index.html": "8089ba3d0e21baf15b03914de877a9de",
 "/": "8089ba3d0e21baf15b03914de877a9de",
-"main.dart.js": "6c3307f898a6a4130f534f89274beb7a",
+"main.dart.js": "849b08ca03e9d805e03d51ce94e70338",
 "manifest.json": "7768e28276a279a38097c4c719872d8a",
-"version.json": "b83bf7bfcfe306ef98cd26869dfd37e2"};
+"version.json": "f9c051f028bf7893dcff9e88374b0e5a"};
 // The application shell files that are downloaded before a service worker can
 // start.
 const CORE = ["main.dart.js",

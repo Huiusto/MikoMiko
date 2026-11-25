@@ -4,18 +4,19 @@ using System.Text.Json;
 namespace MikoMiko.Services;
 
 /// <summary>
-/// 视频随机流的作者冷却记录：同一作者（优先按 UID）展示过后 3 天内不再推送，
+/// 视频随机流的作者冷却记录：同一作者（优先按 UID）展示过后在设定时间内不再推送，
 /// 过期记录在启动和写入时自动清理。持久化到应用数据目录，重启后继续生效。
 /// </summary>
 public sealed class VideoAuthorHistory
 {
-    private static readonly TimeSpan Cooldown = TimeSpan.FromDays(3);
+    private readonly TimeSpan _cooldown;
     private readonly string _filePath;
     private readonly object _gate = new();
     private Dictionary<string, Entry> _entries = new();
 
-    public VideoAuthorHistory(string? filePath = null)
+    public VideoAuthorHistory(string? filePath = null, TimeSpan? cooldown = null)
     {
+        _cooldown = cooldown ?? TimeSpan.FromDays(3);
         _filePath = filePath ?? Path.Combine(SettingsService.DataDirectory, "video-author-history.json");
         Load();
     }
@@ -27,14 +28,14 @@ public sealed class VideoAuthorHistory
         public DateTime ShownAtUtc { get; set; }
     }
 
-    /// <summary>作者是否仍在 3 天冷却期。空作者不拦截。</summary>
+    /// <summary>作者是否仍在冷却期。空作者不拦截。</summary>
     public bool IsBlocked(string? uid, string? name)
     {
         var key = KeyOf(uid, name);
         if (key.Length == 0) return false;
         lock (_gate)
         {
-            return _entries.TryGetValue(key, out var entry) && DateTime.UtcNow - entry.ShownAtUtc < Cooldown;
+            return _entries.TryGetValue(key, out var entry) && DateTime.UtcNow - entry.ShownAtUtc < _cooldown;
         }
     }
 
@@ -104,7 +105,7 @@ public sealed class VideoAuthorHistory
         var now = DateTime.UtcNow;
         foreach (var key in _entries.Keys.ToList())
         {
-            if (now - _entries[key].ShownAtUtc >= Cooldown)
+            if (now - _entries[key].ShownAtUtc >= _cooldown)
             {
                 _entries.Remove(key);
                 changed = true;

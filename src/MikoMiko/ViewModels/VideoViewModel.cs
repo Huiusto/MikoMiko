@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MikoMiko.Models;
 using MikoMiko.Services;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows.Threading;
 
 namespace MikoMiko.ViewModels;
@@ -17,6 +18,7 @@ public sealed partial class VideoViewModel : ObservableObject
     private readonly HashSet<string> _seen = new();
     private readonly HashSet<string> _batchAuthors = new();
     private readonly VideoAuthorHistory _authorHistory;
+    private readonly VideoAuthorHistory _officialHistory;
     private readonly DispatcherTimer _placeholderTimer;
     private static readonly string[] DanmakuPlaceholders =
     {
@@ -25,12 +27,15 @@ public sealed partial class VideoViewModel : ObservableObject
     };
 
     public VideoViewModel(ContentService content, Action<string>? openUser = null, AppSettings? settings = null,
-        VideoAuthorHistory? authorHistory = null)
+        VideoAuthorHistory? authorHistory = null, VideoAuthorHistory? officialHistory = null)
     {
         _content = content;
         _openUser = openUser;
         _settings = settings;
         _authorHistory = authorHistory ?? new VideoAuthorHistory();
+        _officialHistory = officialHistory ?? new VideoAuthorHistory(
+            Path.Combine(SettingsService.DataDirectory, "video-official-history.json"),
+            TimeSpan.FromHours(1));
         DanmakuPlaceholder = PickPlaceholder();
         _placeholderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
         _placeholderTimer.Tick += (_, _) => DanmakuPlaceholder = PickPlaceholder();
@@ -146,7 +151,7 @@ public sealed partial class VideoViewModel : ObservableObject
             }
             else
             {
-                StatusText = "最近刷到的作者正在 7 天冷却中，稍后再刷新试试";
+                StatusText = "最近刷到的作者仍在冷却中，官方账号需间隔 1 小时、普通作者需间隔 3 天";
             }
         }
         catch
@@ -167,8 +172,9 @@ public sealed partial class VideoViewModel : ObservableObject
 
     public void Select(FeedItem item)
     {
-        // 真正展示给用户时才写入后台记录，3 天内不再推送同一作者；官方视频不限。
-        if (!item.IsOfficial) _authorHistory.Remember(item.AuthorUid, item.Author);
+        // 真正展示给用户时才写入后台记录：普通作者 3 天、官方账号 1 小时内不再推送。
+        if (item.IsOfficial) _officialHistory.Remember(item.AuthorUid, item.Author);
+        else _authorHistory.Remember(item.AuthorUid, item.Author);
         _batchAuthors.Add(AuthorKeyOf(item));
         Selected = item;
         VideoLikeText = item.LikeText;
@@ -335,14 +341,15 @@ public sealed partial class VideoViewModel : ObservableObject
         _openUser?.Invoke(comment.UserId);
     }
 
-    /// <summary>同一作者 3 天内只推送一次；同一批次内也不重复，官方视频始终放行。</summary>
+    /// <summary>普通作者 3 天、官方账号 1 小时内只推送一次；同一批次内也不重复。</summary>
     private bool CanPushAuthor(FeedItem item)
     {
-        if (item.IsOfficial) return true;
         var key = AuthorKeyOf(item);
         if (key.Length == 0) return true;
         if (_batchAuthors.Contains(key)) return false;
-        return !_authorHistory.IsBlocked(item.AuthorUid, item.Author);
+        return item.IsOfficial
+            ? !_officialHistory.IsBlocked(item.AuthorUid, item.Author)
+            : !_authorHistory.IsBlocked(item.AuthorUid, item.Author);
     }
 
     private static string AuthorKeyOf(FeedItem item)

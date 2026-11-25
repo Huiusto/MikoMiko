@@ -27,7 +27,16 @@ class RuleStore extends ChangeNotifier {
   Future<void> load() async {
     if (loaded) return;
     final builtin = <AnimeRule>[];
-    for (final name in const ['7sefun', 'aafun', 'akianime', 'baimao', 'MXdm', 'DM84', 'xfdmneo']) {
+    for (final name in const [
+      'zhuidm',
+      'yhdmtv',
+      'superpix',
+      'vcinema',
+      'milace',
+      'silidm',
+      'manmankan',
+      'mhys',
+    ]) {
       try {
         final text = await rootBundle.loadString('assets/rules/$name.json');
         builtin.add(AnimeRule.fromJson(jsonDecode(text) as Map<String, dynamic>, builtIn: true));

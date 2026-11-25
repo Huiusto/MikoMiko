@@ -25,7 +25,7 @@ class _HomePageState extends State<HomePage> {
   List<AnimeCard> _cards = <AnimeCard>[];
   bool _loading = true;
   String _error = '';
-  String _source = '7sefun';
+  String _source = 'zhuidm';
 
   @override
   void initState() {

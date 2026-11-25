@@ -6,16 +6,18 @@ using System.Collections.ObjectModel;
 
 namespace MikoMiko.ViewModels;
 
-/// <summary>首页：随机推荐流 + 米游社「帖子」分区 / 版块 / 排序流。</summary>
+/// <summary>首页：随机推荐流（同作者间隔 20 条）+ 米游社「板块」分区 / 版块 / 排序流。</summary>
 public sealed partial class HomeViewModel : ObservableObject
 {
     private const int PageSize = 20;
+    private const int AuthorGap = 20;
 
     private readonly ContentService _content;
     private readonly Action<FeedItem> _openItem;
     private readonly Action<SearchUser>? _openUser;
     private readonly HashSet<string> _seen = new();
     private readonly List<FeedItem> _feed = new();
+    private readonly Dictionary<string, int> _recommendAuthorIndex = new();
 
     private string _forumLastId = string.Empty;
     private bool _forumHasMore;
@@ -121,6 +123,44 @@ public sealed partial class HomeViewModel : ObservableObject
 
     // ---------------------------------------------------------------- 推荐流
 
+    /// <summary>推荐流补足：同一作者的帖子之间至少保留 20 条其他帖子。</summary>
+    private async Task<int> AppendRecommendAsync(int target)
+    {
+        var added = 0;
+        for (var attempt = 0; attempt < 3 && added < target; attempt++)
+        {
+            var items = await _content.GetRandomPostsAsync(Math.Max(target * 2, 24), _seen);
+            foreach (var item in items)
+            {
+                if (added >= target) break;
+                if (string.IsNullOrEmpty(item.PostId) || _seen.Contains(item.PostId)) continue;
+
+                var author = RecommendAuthorKey(item);
+                if (author.Length > 0 &&
+                    _recommendAuthorIndex.TryGetValue(author, out var last) &&
+                    _feed.Count - last - 1 < AuthorGap)
+                {
+                    // 这一批里位置太近，先丢弃，避免下一次随机取样又反复命中。
+                    _seen.Add(item.PostId);
+                    continue;
+                }
+
+                _seen.Add(item.PostId);
+                _feed.Add(item);
+                if (author.Length > 0) _recommendAuthorIndex[author] = _feed.Count - 1;
+                added++;
+            }
+        }
+
+        return added;
+    }
+
+    private static string RecommendAuthorKey(FeedItem item)
+    {
+        if (!string.IsNullOrWhiteSpace(item.AuthorUid)) return "uid:" + item.AuthorUid;
+        return string.IsNullOrWhiteSpace(item.Author) ? string.Empty : "name:" + item.Author;
+    }
+
     public async Task LoadAsync(bool latest)
     {
         IsLatest = latest;
@@ -140,17 +180,14 @@ public sealed partial class HomeViewModel : ObservableObject
         {
             _seen.Clear();
             _feed.Clear();
-            var items = await _content.GetRandomPostsAsync(PageSize, _seen);
+            _recommendAuthorIndex.Clear();
+            await AppendRecommendAsync(PageSize);
             IsDemo = _content.IsDemo;
-            foreach (var item in items)
-            {
-                if (_seen.Add(item.PostId)) _feed.Add(item);
-            }
 
             Items.Clear();
             foreach (var item in _feed) Items.Add(item);
             IsEmpty = Items.Count == 0;
-            HasMore = true;
+            HasMore = Items.Count > 0;
         }
         catch
         {
@@ -162,9 +199,9 @@ public sealed partial class HomeViewModel : ObservableObject
         }
     }
 
-    // ---------------------------------------------------------------- 「帖子」分区流
+    // ---------------------------------------------------------------- 「板块」分区流
 
-    /// <summary>切到「帖子」页：首次进入拉目录，随后每次点击都强制刷新当前帖子流。</summary>
+    /// <summary>切到「板块」页：首次进入拉目录，随后每次点击都强制刷新当前帖子流。</summary>
     public async Task ActivatePostsAsync()
     {
         IsPostsTab = true;
@@ -271,6 +308,7 @@ public sealed partial class HomeViewModel : ObservableObject
             {
                 _seen.Clear();
                 _feed.Clear();
+                _recommendAuthorIndex.Clear();
                 Items.Clear();
             }
 
@@ -426,19 +464,11 @@ public sealed partial class HomeViewModel : ObservableObject
         IsLoadingMore = true;
         try
         {
-            var items = await _content.GetRandomPostsAsync(12, _seen);
-            var added = 0;
-            foreach (var item in items)
-            {
-                if (_seen.Add(item.PostId))
-                {
-                    _feed.Add(item);
-                    Items.Add(item);
-                    added++;
-                }
-            }
+            var before = _feed.Count;
+            await AppendRecommendAsync(12);
+            for (var i = before; i < _feed.Count; i++) Items.Add(_feed[i]);
 
-            HasMore = added > 0;
+            HasMore = _feed.Count > before;
         }
         catch
         {
@@ -475,6 +505,6 @@ public sealed partial class HomeViewModel : ObservableObject
         if (user is not null) _openUser?.Invoke(user);
     }
 
-    /// <summary>兼容旧调用：官方聚合页已替换为「帖子」分区流。</summary>
+    /// <summary>兼容旧调用：官方聚合页已替换为「板块」分区流。</summary>
     public Task LoadOfficialAsync() => ActivatePostsAsync();
 }
