@@ -8,16 +8,21 @@ using System.Text.RegularExpressions;
 namespace MikoMiko.Services;
 
 /// <summary>
-/// 米游社通行证网站扫码登录：创建二维码 → 轮询状态 → 从确认响应头 Set-Cookie 读取
-/// account_id / mid / ltoken / cookie_token → 组装 Cookie。账号校验优先使用社区接口，
-/// 避免旧的绑定接口在缺少 cookie_token 时返回 -100。
+/// 米游社通行证 App 扫码登录：app/createQRLogin 创建二维码 → app/queryQRLoginStatus 轮询 →
+/// Confirmed 响应给出 stoken（tokens[].token_type=1）与 user_info{aid,mid} → 用通行证 V2
+/// 换票接口 account/ma-cn-session/app/exchange 把 stoken 换成 ltoken_v2 / cookie_token_v2
+/// 后组装 Cookie。账号校验优先使用社区接口，避免旧的绑定接口在缺少 cookie_token 时返回 -100。
 /// </summary>
 public sealed class MiHoYoLoginService
 {
     private const string QrSalt = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs";
-    private const string AppLoginSalt = "6s25p5ox5y14umn1p61aqyyvbvvl3lrt";
+    private const string ExchangeSalt = "JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS";
     private const string AppId = "bll8iq97cem8";
-    private const string BbsVersion = "2.115.0";
+    private const string BbsVersion = "2.119.0";
+    private const string PassportSdkVersion = "2.44.0";
+    private const string BbsUaMobile = "Mozilla/5.0 (Linux; Android 12) Mobile miHoYoBBS/2.119.0";
+    private const string BbsUaPc = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) miHoYoBBS/2.119.0";
+    private static readonly string LifecycleId = Guid.NewGuid().ToString();
     private static readonly string DeviceName = "MIKOMIKO" + RandomLetters(4);
     private static readonly string DeviceModel = RandomLetters(6);
     private static readonly string DeviceId = Guid.NewGuid().ToString("N");
@@ -37,7 +42,7 @@ public sealed class MiHoYoLoginService
     {
         var body = "{}";
         var res = await SendAsync(HttpMethod.Post,
-            "https://passport-api.mihoyo.com/account/ma-cn-passport/web/createQRLogin",
+            "https://passport-api.mihoyo.com/account/ma-cn-passport/app/createQRLogin",
             body, BuildQrHeaders(body)).ConfigureAwait(false);
         if (res is null || GetInt(res, "retcode") != 0) return null;
         var data = GetObject(res, "data");
@@ -51,7 +56,7 @@ public sealed class MiHoYoLoginService
     {
         var body = "{\"ticket\":\"" + ticket + "\"}";
         var res = await SendRawAsync(HttpMethod.Post,
-            "https://passport-api.mihoyo.com/account/ma-cn-passport/web/queryQRLoginStatus",
+            "https://passport-api.mihoyo.com/account/ma-cn-passport/app/queryQRLoginStatus",
             body, BuildQrHeaders(body)).ConfigureAwait(false);
         if (res?.Body is null) return new LoginResult("Error", "网络异常，请重试", null);
 
@@ -67,7 +72,8 @@ public sealed class MiHoYoLoginService
             case "Scanned":
                 return new LoginResult("Scanned", "已扫码，请在手机上确认", null);
             case "Confirmed":
-                // 网站扫码接口把登录 Cookie 放在 Set-Cookie 响应头里，tokens 始终为空。
+                // App 扫码接口在 data.tokens[] 返回 stoken，data.user_info 返回 aid / mid，
+                // 再走通行证 V2 换票拿到 ltoken_v2 与 cookie_token_v2。
                 var cookie = await BuildCookieAsync(data, res.SetCookies).ConfigureAwait(false);
                 return cookie is null
                     ? new LoginResult("Error", "登录凭证解析失败，请重新扫码", null)
@@ -80,47 +86,38 @@ public sealed class MiHoYoLoginService
     // ---------------------------------------------------------------- Cookie 组装
 
     /// <summary>
-    /// 旧登录流程可能只拿到 ltoken 而缺 cookie_token。发布网页需要 cookie_token 才会识别登录态，
-    /// 这里用已保存的 stoken 重新换一次网页 Cookie，失败时保留原值。
+    /// 已保存 Cookie 缺 ltoken_v2 / cookie_token_v2 时，用 stoken 走通行证 V2 换票补齐；
+    /// 凭据齐全或换票失败时返回 null，由调用方保留原值。
     /// </summary>
     public async Task<string?> RefreshWebCookieAsync(string cookie)
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var part in cookie.Split(';'))
-        {
-            var index = part.IndexOf('=');
-            if (index <= 0) continue;
-            map[part[..index].Trim()] = part[(index + 1)..].Trim();
-        }
-
-        var aid = map.GetValueOrDefault("account_id") ?? map.GetValueOrDefault("ltuid") ?? map.GetValueOrDefault("stuid");
+        var map = ParseCookieString(cookie);
+        var aid = map.GetValueOrDefault("account_id") ?? map.GetValueOrDefault("account_id_v2")
+                  ?? map.GetValueOrDefault("ltuid") ?? map.GetValueOrDefault("ltuid_v2")
+                  ?? map.GetValueOrDefault("stuid");
         var mid = map.GetValueOrDefault("mid") ?? map.GetValueOrDefault("ltmid_v2") ?? map.GetValueOrDefault("account_mid_v2");
         var stoken = map.GetValueOrDefault("stoken") ?? string.Empty;
         if (string.IsNullOrEmpty(aid) || string.IsNullOrEmpty(mid) || string.IsNullOrEmpty(stoken)) return null;
 
-        var stokenV2 = map.GetValueOrDefault("stoken_v2") ?? string.Empty;
-        if (string.IsNullOrEmpty(stokenV2))
-            stokenV2 = await UpgradeStokenAsync(mid, aid, stoken).ConfigureAwait(false);
+        var cookieToken = map.GetValueOrDefault("cookie_token_v2") ?? map.GetValueOrDefault("cookie_token") ?? string.Empty;
+        var ltoken = map.GetValueOrDefault("ltoken_v2") ?? map.GetValueOrDefault("ltoken") ?? string.Empty;
+        var needCookie = string.IsNullOrEmpty(cookieToken);
+        var needLToken = string.IsNullOrEmpty(ltoken);
+        if (!needCookie && !needLToken) return null;
 
-        var cookieToken = map.GetValueOrDefault("cookie_token") ?? map.GetValueOrDefault("cookie_token_v2") ?? string.Empty;
-        if (string.IsNullOrEmpty(cookieToken))
-            cookieToken = await GetCookieTokenAsync(mid, aid, stoken, stokenV2).ConfigureAwait(false);
+        if (needCookie)
+        {
+            var exchanged = await ExchangeAsync(stoken, mid, 4).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(exchanged)) cookieToken = exchanged;
+        }
+        if (needLToken)
+        {
+            var exchanged = await ExchangeAsync(stoken, mid, 2).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(exchanged)) ltoken = exchanged;
+        }
 
-        var ltoken = map.GetValueOrDefault("ltoken") ?? map.GetValueOrDefault("ltoken_v2") ?? string.Empty;
-        if (string.IsNullOrEmpty(ltoken))
-            ltoken = await GetLTokenAsync(mid, aid, stoken, stokenV2).ConfigureAwait(false);
-
-        if (string.IsNullOrEmpty(cookieToken)) return null;
-
-        var sb = new StringBuilder();
-        sb.Append($"account_id={aid}; stuid={aid}; ltuid={aid}; mid={mid}; stoken={stoken}; ");
-        if (!string.IsNullOrEmpty(ltoken)) sb.Append($"ltoken={ltoken}; ");
-        sb.Append($"cookie_token={cookieToken}; ");
-        sb.Append($"ltuid_v2={aid}; account_id_v2={aid}; account_mid_v2={mid}; ");
-        if (!string.IsNullOrEmpty(stokenV2)) sb.Append($"stoken_v2={stokenV2}; ");
-        if (!string.IsNullOrEmpty(ltoken)) sb.Append($"ltoken_v2={ltoken}; ");
-        sb.Append($"cookie_token_v2={cookieToken}; ltmid_v2={mid}");
-        return sb.ToString();
+        if (string.IsNullOrEmpty(cookieToken) && string.IsNullOrEmpty(ltoken)) return null;
+        return BuildCookieString(aid, mid, stoken, ltoken, cookieToken, map.GetValueOrDefault("stoken_v2") ?? "");
     }
 
     private async Task<string?> BuildCookieAsync(JsonElement data, IReadOnlyList<string> setCookies)
@@ -132,19 +129,16 @@ public sealed class MiHoYoLoginService
         var aid = GetString(user, "aid");
         if (string.IsNullOrEmpty(aid)) aid = CookieValue(map, "account_id", "account_id_v2", "ltuid", "ltuid_v2", "stuid");
 
+        // App 扫码 Confirmed：tokens[].token_type=1 即 stoken；Set-Cookie 仅作旧版网站接口兜底。
         var stoken = CookieValue(map, "stoken", "stoken_v2");
-        if (string.IsNullOrEmpty(stoken))
+        if (string.IsNullOrEmpty(stoken) && data.TryGetProperty("tokens", out var list) && list.ValueKind == JsonValueKind.Array)
         {
-            var tokens = data.TryGetProperty("tokens", out var list) && list.ValueKind == JsonValueKind.Array ? list : default;
-            if (tokens.ValueKind == JsonValueKind.Array)
+            foreach (var token in list.EnumerateArray())
             {
-                foreach (var token in tokens.EnumerateArray())
+                if (GetInt(token, "token_type") == 1)
                 {
-                    if (GetInt(token, "token_type") == 1)
-                    {
-                        stoken = GetString(token, "token");
-                        break;
-                    }
+                    stoken = GetString(token, "token");
+                    break;
                 }
             }
         }
@@ -153,19 +147,70 @@ public sealed class MiHoYoLoginService
         var ltoken = CookieValue(map, "ltoken", "ltoken_v2");
         var stokenV2 = CookieValue(map, "stoken_v2");
 
-        // 兼容只给 stoken 的情况：再尝试换出 cookie_token 与 ltoken，失败则用已有值继续。
-        if (string.IsNullOrEmpty(cookieToken) && !string.IsNullOrEmpty(stoken))
+        // stoken → ltoken_v2（dst_token_type=2）/ cookie_token_v2（dst_token_type=4）。
+        if (!string.IsNullOrEmpty(stoken) && !string.IsNullOrEmpty(mid))
         {
-            if (string.IsNullOrEmpty(stokenV2))
-                stokenV2 = await UpgradeStokenAsync(mid, aid, stoken).ConfigureAwait(false);
-            cookieToken = await GetCookieTokenAsync(mid, aid, stoken, stokenV2).ConfigureAwait(false);
             if (string.IsNullOrEmpty(ltoken))
-                ltoken = await GetLTokenAsync(mid, aid, stoken, stokenV2).ConfigureAwait(false);
+                ltoken = await ExchangeAsync(stoken, mid, 2).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(cookieToken))
+                cookieToken = await ExchangeAsync(stoken, mid, 4).ConfigureAwait(false);
         }
 
         if (string.IsNullOrEmpty(aid)) return null;
         if (string.IsNullOrEmpty(cookieToken) && string.IsNullOrEmpty(ltoken)) return null;
+        return BuildCookieString(aid, mid, stoken, ltoken, cookieToken, stokenV2);
+    }
 
+    /// <summary>
+    /// 通行证 V2 换票：stoken（token_type=1）换 ltoken_v2（dst=2）或 cookie_token_v2（dst=4）。
+    /// </summary>
+    private async Task<string?> ExchangeAsync(string stoken, string mid, int dstTokenType)
+    {
+        var body = JsonSerializer.Serialize(new
+        {
+            dst_token_type = dstTokenType,
+            src_token = new { token = stoken, token_type = 1 },
+            mid,
+        });
+
+        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var r = RandomString(6);
+        var ds = $"{t},{r},{Md5($"salt={ExchangeSalt}&t={t}&r={r}&b={body}&q=")}";
+        var res = await SendAsync(HttpMethod.Post,
+            "https://passport-api.mihoyo.com/account/ma-cn-session/app/exchange",
+            body, new Dictionary<string, string>
+            {
+                ["accept"] = "application/json",
+                ["content-type"] = "application/json",
+                ["DS"] = ds,
+                ["user-agent"] = BbsUaMobile,
+                ["x-rpc-app_version"] = BbsVersion,
+                ["x-rpc-client_type"] = "2",
+                ["x-rpc-app_id"] = AppId,
+                ["x-rpc-game_biz"] = "bbs_cn",
+                ["x-rpc-sys_version"] = "12",
+                ["x-rpc-sdk_version"] = PassportSdkVersion,
+                ["x-rpc-account_version"] = PassportSdkVersion,
+                ["x-rpc-lifecycle_id"] = LifecycleId,
+                ["x-rpc-device_id"] = DeviceId,
+                ["x-rpc-device_name"] = DeviceName,
+                ["x-rpc-device_model"] = DeviceModel,
+            }).ConfigureAwait(false);
+        if (res is null || GetInt(res, "retcode") != 0) return null;
+
+        var token = GetString(GetObject(res, "data"), "token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            // data.token.token 嵌套结构再取一次。
+            token = GetString(GetObject(GetObject(res, "data"), "token"), "token");
+        }
+        return string.IsNullOrWhiteSpace(token) ? null : token;
+    }
+
+    private static string BuildCookieString(string aid, string mid, string? stoken, string? ltoken,
+        string? cookieToken, string? stokenV2)
+    {
+        stoken ??= ""; ltoken ??= ""; cookieToken ??= ""; stokenV2 ??= "";
         var sb = new StringBuilder();
         sb.Append($"account_id={aid}; stuid={aid}; ltuid={aid}; ");
         if (!string.IsNullOrEmpty(mid)) sb.Append($"mid={mid}; ltmid_v2={mid}; ");
@@ -208,97 +253,19 @@ public sealed class MiHoYoLoginService
         return "";
     }
 
-    private async Task<string> UpgradeStokenAsync(string mid, string aid, string stoken)
+    /// <summary>把保存的 Cookie 字符串解析成键值表（忽略大小写）。</summary>
+    private static Dictionary<string, string> ParseCookieString(string cookie)
     {
-        const string url = "https://passport-api.mihoyo.com/account/ma-cn-session/app/getTokenBySToken";
-        var res = await SendAsync(HttpMethod.Post, url, "{}", BuildAppLoginHeaders(aid, mid, stoken)).ConfigureAwait(false);
-        if (res is null || GetInt(res, "retcode") != 0) return "";
-        var data = GetObject(res, "data");
-        var token = GetObject(data, "token");
-        var value = GetString(token, "token");
-        return string.IsNullOrEmpty(value) ? GetString(data, "token") : value;
-    }
-
-    private async Task<string> GetCookieTokenAsync(string mid, string aid, string stoken, string stokenV2)
-    {
-        if (!string.IsNullOrEmpty(stokenV2))
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in cookie.Split(';'))
         {
-            var res = await SendAsync(HttpMethod.Get,
-                "https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken",
-                null, BuildAppLoginHeaders(aid, mid, stokenV2)).ConfigureAwait(false);
-            if (res is not null && GetInt(res, "retcode") == 0)
-            {
-                var token = GetString(GetObject(res, "data"), "cookie_token");
-                if (!string.IsNullOrEmpty(token)) return token;
-            }
+            var index = part.IndexOf('=');
+            if (index <= 0) continue;
+            var name = part[..index].Trim();
+            var value = part[(index + 1)..].Trim();
+            if (!string.IsNullOrEmpty(name) && !map.ContainsKey(name)) map[name] = value;
         }
-
-        var query = $"uid={Uri.EscapeDataString(aid)}&stoken={Uri.EscapeDataString(stoken)}";
-        foreach (var url in new[]
-                 {
-                     $"https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoBySToken?{query}",
-                     $"https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken?{query}",
-                 })
-        {
-            var res = await SendAsync(HttpMethod.Get, url, null, BuildPlainHeaders(aid, mid, stoken)).ConfigureAwait(false);
-            if (res is not null && GetInt(res, "retcode") == 0)
-            {
-                var token = GetString(GetObject(res, "data"), "cookie_token");
-                if (!string.IsNullOrEmpty(token)) return token;
-            }
-        }
-
-        // 兜底：stoken → game_token → cookie_token
-        var game = await SendAsync(HttpMethod.Get, "https://api-takumi.mihoyo.com/auth/api/getGameToken",
-            null, BuildPlainHeaders(aid, mid, stoken)).ConfigureAwait(false);
-        var gameToken = game is null ? "" : GetString(GetObject(game, "data"), "game_token");
-        if (!string.IsNullOrEmpty(gameToken))
-        {
-            var url = $"https://api-takumi.mihoyo.com/auth/api/getCookieAccountInfoByGameToken?account_id={Uri.EscapeDataString(aid)}&game_token={Uri.EscapeDataString(gameToken)}";
-            var res = await SendAsync(HttpMethod.Get, url, null, new Dictionary<string, string>
-            {
-                ["user-agent"] = $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) miHoYoBBS/{BbsVersion}",
-                ["x-rpc-app_version"] = BbsVersion,
-                ["x-rpc-client_type"] = "5",
-                ["referer"] = "https://user.mihoyo.com/",
-            }).ConfigureAwait(false);
-            if (res is not null && GetInt(res, "retcode") == 0)
-                return GetString(GetObject(res, "data"), "cookie_token");
-        }
-
-        return "";
-    }
-
-    private async Task<string> GetLTokenAsync(string mid, string aid, string stoken, string stokenV2)
-    {
-        if (!string.IsNullOrEmpty(stokenV2))
-        {
-            var res = await SendAsync(HttpMethod.Get,
-                "https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken",
-                null, BuildAppLoginHeaders(aid, mid, stokenV2)).ConfigureAwait(false);
-            if (res is not null && GetInt(res, "retcode") == 0)
-            {
-                var token = GetString(GetObject(res, "data"), "ltoken");
-                if (!string.IsNullOrEmpty(token)) return token;
-            }
-        }
-
-        var query = $"uid={Uri.EscapeDataString(aid)}&stoken={Uri.EscapeDataString(stoken)}";
-        foreach (var url in new[]
-                 {
-                     $"https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken?{query}",
-                     $"https://api-takumi.mihoyo.com/auth/api/getLTokenBySToken?{query}",
-                 })
-        {
-            var res = await SendAsync(HttpMethod.Get, url, null, BuildPlainHeaders(aid, mid, stoken)).ConfigureAwait(false);
-            if (res is not null && GetInt(res, "retcode") == 0)
-            {
-                var token = GetString(GetObject(res, "data"), "ltoken");
-                if (!string.IsNullOrEmpty(token)) return token;
-            }
-        }
-
-        return "";
+        return map;
     }
 
     // ---------------------------------------------------------------- 资料
@@ -554,6 +521,8 @@ public sealed class MiHoYoLoginService
         return new Dictionary<string, string>
         {
             ["user-agent"] = $"Mozilla/5.0 miHoYoBBS/{BbsVersion} Capture/2.2.0",
+            ["accept"] = "*/*",
+            ["accept-language"] = "zh-cn",
             ["content-type"] = "application/json",
             ["x-rpc-client_type"] = "3",
             ["x-rpc-app_version"] = BbsVersion,
@@ -568,39 +537,6 @@ public sealed class MiHoYoLoginService
             ["referer"] = "https://app.mihoyo.com",
         };
     }
-
-    private Dictionary<string, string> BuildAppLoginHeaders(string aid, string mid, string stoken)
-    {
-        var t = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var r = RandomNumberGenerator.GetInt32(100000, 199999).ToString();
-        var ds = $"{t},{r},{Md5($"salt={AppLoginSalt}&t={t}&r={r}")}";
-        return new Dictionary<string, string>
-        {
-            ["user-agent"] = $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) miHoYoBBS/{BbsVersion}",
-            ["accept"] = "application/json",
-            ["x-rpc-app_version"] = BbsVersion,
-            ["x-rpc-client_type"] = "2",
-            ["x-rpc-app_id"] = AppId,
-            ["x-rpc-device_id"] = DeviceId,
-            ["x-rpc-device_name"] = DeviceName,
-            ["x-rpc-device_model"] = DeviceModel,
-            ["x-requested-with"] = "com.mihoyo.hyperion",
-            ["referer"] = "https://user.mihoyo.com/",
-            ["DS"] = ds,
-            ["cookie"] = $"stuid={aid}; ltuid={aid}; account_id={aid}; mid={mid}; stoken={stoken}; ltuid_v2={aid}; ltmid_v2={mid};",
-        };
-    }
-
-    private static Dictionary<string, string> BuildPlainHeaders(string aid, string mid, string stoken) => new()
-    {
-        ["user-agent"] = $"Mozilla/5.0 (Windows NT 10.0; Win64; x64) miHoYoBBS/{BbsVersion}",
-        ["x-rpc-app_version"] = BbsVersion,
-        ["x-rpc-client_type"] = "5",
-        ["x-rpc-app_id"] = AppId,
-        ["x-requested-with"] = "com.mihoyo.hyperion",
-        ["referer"] = "https://user.mihoyo.com/",
-        ["cookie"] = $"stuid={aid}; ltuid={aid}; account_id={aid}; mid={mid}; stoken={stoken};",
-    };
 
     private sealed class ApiResponse
     {
@@ -661,6 +597,16 @@ public sealed class MiHoYoLoginService
     private static string RandomLetters(int count)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var bytes = RandomNumberGenerator.GetBytes(count);
+        var builder = new StringBuilder(count);
+        foreach (var b in bytes) builder.Append(chars[b % chars.Length]);
+        return builder.ToString();
+    }
+
+    /// <summary>通行证换票 DS 用的 6 位随机串（数字 + 小写字母）。</summary>
+    private static string RandomString(int count)
+    {
+        const string chars = "0123456789abcdefghijklmnopqrstuvwxyz";
         var bytes = RandomNumberGenerator.GetBytes(count);
         var builder = new StringBuilder(count);
         foreach (var b in bytes) builder.Append(chars[b % chars.Length]);

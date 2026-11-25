@@ -214,6 +214,24 @@ public sealed class MiyousheApi
         (10, "星布谷地", "#7FB6E8", new[] { (949, "官方"), (950, "星空街市"), (951, "交友区") }),
     };
 
+    /// <summary>分区小图标：按 GameId 优先、游戏名兜底；未提供图标的分区返回空串。</summary>
+    private static string ForumIconPath(int gameId, string name)
+    {
+        var file = gameId switch
+        {
+            2 => "ic_genshin",
+            1 => "ic_honkai3",
+            6 => "ic_starrail",
+            8 => "ic_zzz",
+            _ => name.Contains("原神") ? "ic_genshin"
+                : name.Contains("崩坏3") || name.Contains("崩坏三") ? "ic_honkai3"
+                : name.Contains("星穹") || name.Contains("星铁") ? "ic_starrail"
+                : name.Contains("绝区零") ? "ic_zzz"
+                : "",
+        };
+        return string.IsNullOrEmpty(file) ? "" : $"pack://application:,,,/Assets/Games/{file}.png";
+    }
+
     /// <summary>九个官方分区与各自版块。优先读 getAllGamesForums，接口不可用时回退到本地快照。</summary>
     public async Task<List<ForumSection>> GetForumSectionsAsync(CancellationToken ct = default)
     {
@@ -222,6 +240,7 @@ public sealed class MiyousheApi
             GameId = g.Id,
             Name = g.Name,
             AccentHex = g.Accent,
+            IconPath = ForumIconPath(g.Id, g.Name),
             Boards = g.Boards.Select(b => new ForumBoard { Id = b.Id, Name = b.Name }).ToList(),
         }).ToList();
 

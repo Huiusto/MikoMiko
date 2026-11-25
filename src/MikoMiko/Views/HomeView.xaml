@@ -177,6 +177,18 @@
                 </StackPanel>
             </Button>
         </DataTemplate>
+
+        <!-- 0.1.29：分区下拉项前显示游戏小图标，无图标的分区仅显示名称。 -->
+        <DataTemplate x:Key="SectionItem">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="17" Height="17" CornerRadius="4" ClipToBounds="True"
+                        Margin="0,0,7,0" VerticalAlignment="Center"
+                        Visibility="{Binding IconPath, Converter={StaticResource NotEmptyToVis}}">
+                    <Image Source="{Binding IconPath}" Stretch="UniformToFill" />
+                </Border>
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid Background="{DynamicResource Brush.WindowBg}">
@@ -209,6 +221,7 @@
                               Margin="0,0,7,0" />
                         <ComboBox Style="{StaticResource FilterCombo}" Width="190"
                                   ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection, Mode=TwoWay}" IsSynchronizedWithCurrentItem="False"
+                                  ItemTemplate="{StaticResource SectionItem}"
                                   />
                     </StackPanel>
 

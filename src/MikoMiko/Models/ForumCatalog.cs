@@ -6,6 +6,8 @@ public sealed class ForumSection
     public int GameId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string AccentHex { get; set; } = "#4EA4DD";
+    /// <summary>分区小图标（pack URI），无图标时为空串。</summary>
+    public string IconPath { get; set; } = string.Empty;
     public List<ForumBoard> Boards { get; set; } = new();
 
     public string BoardsText => Boards.Count == 0

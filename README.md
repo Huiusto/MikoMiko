@@ -1,6 +1,6 @@
 # MikoMiko
 
-> 当前版本 **0.1.23** · 主色 **#4EA4DD（米蓝）**
+> 当前版本 **0.1.29** · 主色 **#4EA4DD（米蓝）**
 
 一个基于 **WPF (.NET 8)** 的米游社第三方桌面客户端，界面参考 [TeyvatGuide](https://github.com/BTMuli/TeyvatGuide) 的「米游社」板块，账号页参考 [Starward](https://github.com/Scighost/Starward)。
 
@@ -32,6 +32,11 @@
 - 接口失败自动回落到内置演示数据，离线也能浏览界面
 
 ## 更新日志
+
+### v0.1.29（2026-11-25）
+- 修复扫码登录失败（Cookie 无效）：改用 App 端 createQRLogin / queryQRLoginStatus 接口，确认后从 tokens 取 stoken，再走通行证 V2 换票接口换取 ltoken_v2 与 cookie_token_v2，不再依赖旧的 Set-Cookie 读取与已失效的 stoken 升级 / 直连换票接口
+- 米游社版本号对齐 2.119.0，换票请求使用通行证 SDK 2.44.0 签名头
+- 首页「帖子」分区下拉的游戏名前新增小图标：原神、崩坏3、崩坏：星穹铁道、绝区零
 
 ### v0.1.23（2026-11-25）
 - 「追番/影视」整体重做为 Flutter 规则采集模块，类似 Kazumi：自定义规则、番剧目录、搜索、分集播放
