@@ -73,6 +73,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
         Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
+        Navigation.Add(new NavItem("Messages", "Nav.Messages", "message"));
         Navigation.Add(new NavItem("Mine", "Nav.Mine", "mine"));
         FooterNavigation.Add(new NavItem("Upload", "Nav.Upload", "upload"));
         FooterNavigation.Add(new NavItem("Settings", "Nav.Settings", "settings"));
@@ -201,7 +202,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void ShowAnimePage()
     {
-        AnimePage ??= new Views.FlutterAnimeView(OpenAnimeFromRule);
+        AnimePage ??= new Views.FlutterAnimeView(OpenAnimeFromRule, OpenBilibiliInApp);
         IsAnimePageOpen = true;
         ShowGlobalSearch = false;
     }
@@ -277,6 +278,33 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             AnimePage?.Resume();
             IsAnimePageOpen = true;
+        }
+    }
+
+    /// <summary>在软件内打开哔哩哔哩番剧/视频页，播放、弹幕与评论由官方页面同步。</summary>
+    private void OpenBilibiliInApp(string url, string title)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+        try
+        {
+            CloseAnimePlayer();
+            CloseAnimeSitePlayer();
+            AnimePage?.Suspend();
+            IsAnimePageOpen = false;
+            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
+                url,
+                "https://www.bilibili.com/",
+                title,
+                "哔哩哔哩 · 弹幕与评论同步",
+                "哔哩哔哩",
+                CloseAnimeSitePlayer);
+            IsAnimeSitePlayerOpen = true;
+        }
+        catch (Exception ex)
+        {
+            AnimePage?.Resume();
+            IsAnimePageOpen = true;
+            AnimePage?.ShowToast("打开哔哩哔哩播放页失败：" + ex.Message);
         }
     }
 
@@ -377,10 +405,42 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         "Video" => new Views.VideoView(_video, _settings),
         "Moment" => new Views.MomentView(_moment),
+        "Messages" => CreateMessagesView(),
         "Mine" => new Views.MineView(_mine),
         "Settings" => new Views.SettingsView(_settingsVm),
         _ => new Views.HomeView(_home),
     };
+
+    private Views.MessagesView CreateMessagesView()
+    {
+        var view = new Views.MessagesView(_settings.Cookie);
+        view.OpenWebRequested = OpenMiyousheMessagePage;
+        return view;
+    }
+
+    /// <summary>消息中心用软件内 WebView2 打开米游社网页版，消息与账号登录态保持同步。</summary>
+    private void OpenMiyousheMessagePage(string url, string title)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+        try
+        {
+            CloseAnimePlayer();
+            CloseAnimeSitePlayer();
+            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
+                url,
+                "https://www.miyoushe.com/",
+                title,
+                "米游社 · 消息同步",
+                "米游社",
+                CloseAnimeSitePlayer);
+            IsAnimeSitePlayerOpen = true;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("打开米游社页面失败：" + ex.Message, "MikoMiko",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+        }
+    }
 
     private async Task EnsureLoadedAsync(string key)
     {

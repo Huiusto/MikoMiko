@@ -21,6 +21,7 @@ public partial class FlutterAnimeView : UserControl
     private const string VirtualHost = "miko.anime";
     private const string ProxyHost = "https://miko.proxy/";
     private readonly Action<AnimeItem, bool> _playRequested;
+    private readonly Action<string, string> _bilibiliRequested;
     private readonly HttpClient _http;
     private readonly DispatcherTimer _toastTimer;
     private readonly DispatcherTimer _bridgeTimer;
@@ -39,10 +40,11 @@ public partial class FlutterAnimeView : UserControl
         catch { }
     }
 
-    public FlutterAnimeView(Action<AnimeItem, bool> playRequested)
+    public FlutterAnimeView(Action<AnimeItem, bool> playRequested, Action<string, string> bilibiliRequested)
     {
         InitializeComponent();
         _playRequested = playRequested;
+        _bilibiliRequested = bilibiliRequested;
         _http = CreateHttpClient();
         _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.2) };
         _toastTimer.Tick += (_, _) =>
@@ -132,7 +134,7 @@ public partial class FlutterAnimeView : UserControl
         };
         var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(28) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 MikoMiko/0.1.32");
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 MikoMiko/0.1.33");
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "zh-CN,zh;q=0.9");
         return client;
     }
@@ -413,6 +415,16 @@ public partial class FlutterAnimeView : UserControl
                     break;
                 case "toast":
                     ShowToast(Read(root, "text"));
+                    break;
+                case "openBilibili":
+                    var url = Read(root, "url");
+                    if (!Uri.TryCreate(url, UriKind.Absolute, out var biliUri) ||
+                        !(biliUri.Host.EndsWith("bilibili.com", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        ShowToast("哔哩哔哩地址无效。");
+                        return;
+                    }
+                    _bilibiliRequested(url, Read(root, "title", "哔哩哔哩"));
                     break;
                 case "openRuleFolder":
                     OpenRuleFolder();

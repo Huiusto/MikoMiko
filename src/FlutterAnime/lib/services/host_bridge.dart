@@ -27,6 +27,14 @@ class HostBridge {
     });
   }
 
+  static void openBilibili(String url, String title) {
+    _post(<String, dynamic>{
+      'type': 'openBilibili',
+      'url': url,
+      'title': title,
+    });
+  }
+
   static void toast(String text) {
     _post(<String, dynamic>{'type': 'toast', 'text': text});
   }
