@@ -19,6 +19,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly HomeViewModel _home;
     private readonly VideoViewModel _video;
     private readonly AnimeViewModel _anime;
+    private readonly AnimeStreamService _animeStreams = new();
     private readonly AnimeFollowService _animeFollows;
     private readonly AnimeDanmakuService _animeDanmaku;
 
@@ -96,8 +97,8 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private bool _showGlobalSearch = true;
 
-    /// <summary>追番/影视是首页内的独立覆盖页，不占用主导航。</summary>
-    [ObservableProperty] private Views.AnimeView? _animePage;
+    /// <summary>追番/影视是首页内的独立覆盖页，0.1.23 起由 Flutter 模块承载。</summary>
+    [ObservableProperty] private Views.FlutterAnimeView? _animePage;
     [ObservableProperty] private bool _isAnimePageOpen;
 
     /// <summary>软件内阅读器（帖子 / 视频帖都在这里打开，不跳页、不弹独立窗口）。</summary>
@@ -176,7 +177,6 @@ public sealed partial class ShellViewModel : ObservableObject
                 if (IsAnimePageOpen) return;
             }
             ShowAnimePage();
-            await _anime.InitializeAsync();
             return;
         }
 
@@ -197,17 +197,40 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void ShowAnimePage()
     {
-        AnimePage ??= new Views.AnimeView(_anime);
+        AnimePage ??= new Views.FlutterAnimeView(OpenAnimeFromRule);
         IsAnimePageOpen = true;
         ShowGlobalSearch = false;
     }
 
     private void CloseAnimePage()
     {
-        // 离开追番页时连带关闭播放器，停止 WebView2 中的声音与请求。
+        // 离开追番页时连带关闭播放器与 Flutter 宿主，停止 WebView2 中的请求。
         CloseAnimePlayer();
+        AnimePage?.Shutdown();
+        AnimePage = null;
         IsAnimePageOpen = false;
         ShowGlobalSearch = true;
+    }
+
+    /// <summary>Flutter 模块点击选集后，由 WPF 解析真实视频流并打开内置播放器。</summary>
+    private async void OpenAnimeFromRule(AnimeItem item, bool anime4K)
+    {
+        try
+        {
+            AnimePage?.ShowToast($"正在解析《{item.Title}》的播放地址…");
+            var playback = await _animeStreams.ResolveAsync(item);
+            if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
+            {
+                AnimePage?.ShowToast($"《{item.Title}》暂时取不到视频流，请在 Flutter 模块中换一条线路。");
+                return;
+            }
+
+            ShowAnimePlayer(playback, anime4K);
+        }
+        catch (Exception)
+        {
+            AnimePage?.ShowToast("解析播放地址失败，请稍后重试。");
+        }
     }
 
     public void Navigate(string key, bool pushHistory = true)
@@ -221,7 +244,6 @@ public sealed partial class ShellViewModel : ObservableObject
                 if (HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key == "Anime")
                 {
                     ShowAnimePage();
-                    _ = _anime.InitializeAsync();
                 }
                 else
                 {
@@ -291,7 +313,7 @@ public sealed partial class ShellViewModel : ObservableObject
         switch (key)
         {
             case "Home":
-                if (IsAnimePageOpen) await _anime.InitializeAsync();
+                if (IsAnimePageOpen) { /* Flutter 模块自行加载内置规则 */ }
                 else if (_home.IsPostsTab) await _home.ActivatePostsAsync();
                 else if (_home.Items.Count == 0) await _home.LoadAsync(_home.IsLatest);
                 break;
@@ -444,12 +466,43 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     /// <summary>追番/影视在软件内播放：先提取真实视频流，再交给内置播放器，不展示第三方网页。</summary>
-    private void ShowAnimePlayer(AnimePlayback playback)
+    private void ShowAnimePlayer(AnimePlayback playback) => ShowAnimePlayer(playback, false);
+
+    /// <summary>开发期截图入口：用公开测试流检查 Anime4K 播放链路。</summary>
+    public void OpenAnime4KDemo()
+    {
+        try
+        {
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "miko-flutter.log"),
+                $"{DateTime.Now:HH:mm:ss.fff} OpenAnime4KDemo{Environment.NewLine}");
+        }
+        catch { }
+        ShowAnimePlayer(new AnimePlayback
+        {
+            Title = "Anime4K 实时超分测试",
+            Episode = "第 1 集",
+            Source = "Miko 测试流",
+            StreamUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+            Referer = "https://test-streams.mux.dev/",
+            Description = "用于验证 WebGL2 自适应边缘超分、播放控制与弹幕层是否正常工作。",
+        }, true);
+    }
+
+    private void ShowAnimePlayer(AnimePlayback playback, bool anime4K = false)
     {
         if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl)) return;
         CloseAnimePlayer();
-        AnimePlayerView = new Views.AnimePlayerView(playback, _anime.Providers, _animeFollows, _animeDanmaku, CloseAnimePlayer);
+        AnimePlayerView = new Views.AnimePlayerView(playback, _anime.Providers, _animeFollows,
+            _animeDanmaku, CloseAnimePlayer, anime4K);
+        // WebView2 是原生子窗口，会盖在 WPF 内容之上；播放时必须先隐藏 Flutter 宿主。
+        IsAnimePageOpen = false;
         IsAnimePlayerOpen = true;
+        try
+        {
+            System.IO.File.AppendAllText(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "miko-flutter.log"),
+                $"{DateTime.Now:HH:mm:ss.fff} player-open={IsAnimePlayerOpen} view={AnimePlayerView is not null} url={playback.StreamUrl}{Environment.NewLine}");
+        }
+        catch { }
     }
 
     [RelayCommand]
@@ -459,6 +512,8 @@ public sealed partial class ShellViewModel : ObservableObject
         AnimePlayerView.Shutdown();
         AnimePlayerView = null;
         IsAnimePlayerOpen = false;
+        // 播放器关闭后回到 Flutter 追番页。
+        if (AnimePage is not null) IsAnimePageOpen = true;
     }
 
     /// <summary>打开上传内容弹层；再次打开时回到第一步。</summary>

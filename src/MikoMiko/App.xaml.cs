@@ -166,7 +166,7 @@ public partial class App : Application
                 MainWindow.Top = 0;
                 Log(path, "resized");
                 var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" or "UserProfile" or "UserGame" ? "Home"
-                    : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? "Home"
+                    : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap" ? "Home"
                     : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
@@ -174,10 +174,22 @@ public partial class App : Application
                     : page is "Upload" or "UploadType" or "UploadArticle" ? "Home"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
-                if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch")
+                if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap")
                 {
                     var animeTab = Shell.HomeTabs.FirstOrDefault(t => t.Key == "Anime");
                     if (animeTab is not null) Shell.SelectTabCommand.Execute(animeTab);
+                    if (page == "AnimeTap")
+                    {
+                        var tapDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(7) };
+                        tapDelay.Tick += (_, _) => { tapDelay.Stop(); Shell.AnimePage?.DebugTap(140, 650); Log(path, "anime-tap"); };
+                        tapDelay.Start();
+                    }
+                    if (page == "Anime4K")
+                    {
+                        var demoDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                        demoDelay.Tick += (_, _) => { demoDelay.Stop(); Log(path, "anime4k-demo"); Shell.OpenAnime4KDemo(); Log(path, "anime4k-demo-called"); };
+                        demoDelay.Start();
+                    }
                     if (page is "AnimeDownload" or "AnimeSearch")
                     {
                         var downloadDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
@@ -384,14 +396,19 @@ public partial class App : Application
                         MainWindow!.UpdateLayout();
                     }
                     if (page is not ("VideoPlay" or "VideoOptions" or "VideoComments")) Shell.Video.IsPlaying = false; // 截图时停在封面，避免抓到解码中的黑帧
-                    var settle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+                    var settle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(
+                        page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 7000
+                        : page == "Anime4K" ? 22000 : page == "AnimeTap" ? 26000 : 400) };
                     settle.Tick += (_, _) =>
                     {
                         settle.Stop();
                         Shell.AnimePage?.ResetScroll();
                         if (page == "ReaderComments") Shell.ReaderView?.ScrollToComments();
                         MainWindow!.UpdateLayout();
-                        CaptureWindow(path);
+                        if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap")
+                            CaptureWindowFromScreen(path);
+                        else
+                            CaptureWindow(path);
                         Log(path, "saved");
                         Shutdown();
                         Environment.Exit(0);
@@ -439,5 +456,32 @@ public partial class App : Application
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(path);
         encoder.Save(stream);
+    }
+
+    /// <summary>WebView2 是独立子窗口，RenderTargetBitmap 抓不到，改用屏幕抓取。</summary>
+    private void CaptureWindowFromScreen(string path)
+    {
+        var window = MainWindow!;
+        window.Activate();
+        window.Topmost = true;
+        window.Topmost = false;
+        var handle = new System.Windows.Interop.WindowInteropHelper(window).Handle;
+        if (!NativeMethods.GetWindowRect(handle, out var rect)) return;
+        var width = rect.Right - rect.Left;
+        var height = rect.Bottom - rect.Top;
+        if (width <= 0 || height <= 0) return;
+        using var bitmap = new System.Drawing.Bitmap(width, height);
+        using var graphics = System.Drawing.Graphics.FromImage(bitmap);
+        graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, bitmap.Size);
+        bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+    }
+
+    private static class NativeMethods
+    {
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        public struct Rect { public int Left, Top, Right, Bottom; }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern bool GetWindowRect(IntPtr hWnd, out Rect rect);
     }
 }

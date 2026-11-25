@@ -87,6 +87,11 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ToggleButton x:Name="Anime4KToggle" Content="Anime4K 超分" Height="26" Padding="10,0"
+                                  Margin="0,0,8,0" FontSize="10" Cursor="Hand"
+                                  Background="#172637" Foreground="#8FD3F4" BorderBrush="#29485E"
+                                  BorderThickness="1" Checked="Anime4K_Toggled" Unchecked="Anime4K_Toggled"
+                                  ToolTip="开启实时 Anime4K 自适应边缘超分" />
                     <Border Background="#172637" CornerRadius="9" Padding="9,4" Margin="0,0,8,0">
                         <TextBlock x:Name="ModeText" FontSize="10" Foreground="#8FD3F4" />
                     </Border>

@@ -10,7 +10,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
-    <Version>0.1.22</Version>
+    <Version>0.1.23</Version>
     <Product>MikoMiko</Product>
     <AssemblyTitle>MikoMiko</AssemblyTitle>
     <Company>Huiusto</Company>
@@ -46,6 +46,9 @@
 
   <ItemGroup>
     <Content Include="Assets\Anime\anime-module.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Anime\flutter\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

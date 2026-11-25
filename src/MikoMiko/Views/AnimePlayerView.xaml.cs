@@ -33,9 +33,11 @@ public partial class AnimePlayerView : UserControl
     private bool _switching;
     private bool _isFollowing;
     private bool _disposed;
+    private bool _anime4K;
 
     public AnimePlayerView(AnimePlayback playback, IReadOnlyList<AnimeProvider> providers,
-        AnimeFollowService follows, AnimeDanmakuService danmaku, Action? closeRequested = null)
+        AnimeFollowService follows, AnimeDanmakuService danmaku, Action? closeRequested = null,
+        bool anime4K = false)
     {
         InitializeComponent();
         _playback = playback;
@@ -43,7 +45,9 @@ public partial class AnimePlayerView : UserControl
         _danmaku = danmaku;
         _providers = providers;
         _referer = playback.Referer;
+        _anime4K = anime4K;
         CloseRequested = closeRequested;
+        Anime4KToggle.IsChecked = anime4K;
 
         UpdateHeader();
         UpdateDetails();
@@ -53,6 +57,15 @@ public partial class AnimePlayerView : UserControl
     }
 
     public Action? CloseRequested { get; set; }
+
+    private void Anime4K_Toggled(object sender, RoutedEventArgs e)
+    {
+        _anime4K = Anime4KToggle.IsChecked == true;
+        UpdateHeader();
+        if (!_webReady) return;
+        _ = Web.CoreWebView2.ExecuteScriptAsync(
+            $"window.mikoSetAnime4K({(_anime4K ? "true" : "false")})");
+    }
 
     /// <summary>壳层关闭播放器时调用，确保 WebView 释放、声音立即停止。</summary>
     public void Shutdown()
@@ -398,7 +411,7 @@ public partial class AnimePlayerView : UserControl
     {
         TitleText.Text = _playback.Title;
         MetaText.Text = $"{_playback.Episode} · {_playback.Source}";
-        ModeText.Text = _playback.IsHls ? "HLS 直连" : "MP4 直连";
+        ModeText.Text = (_playback.IsHls ? "HLS 直连" : "MP4 直连") + (_anime4K ? " · Anime4K" : "");
     }
 
     private void UpdateDetails()
@@ -462,6 +475,8 @@ public partial class AnimePlayerView : UserControl
             {
                 LoadingPanel.Visibility = Visibility.Collapsed;
                 _webReady = true;
+                _ = Web.CoreWebView2.ExecuteScriptAsync(
+                    $"window.mikoSetAnime4K({(_anime4K ? "true" : "false")})");
                 _ = PushDanmakuAsync();
             };
             core.WebMessageReceived += Web_MessageReceived;
@@ -540,6 +555,19 @@ public partial class AnimePlayerView : UserControl
   html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; background:#000; }
   #stage { position:relative; width:100vw; height:100vh; background:#000; }
   video { width:100%; height:100%; object-fit:contain; background:#000; outline:none; }
+  #glCanvas { position:absolute; inset:0; width:100%; height:100%; background:#000;
+              display:none; pointer-events:none; }
+  #playerBar { position:absolute; left:0; right:0; bottom:0; height:46px; z-index:12;
+               display:none; align-items:center; gap:12px; padding:0 16px; box-sizing:border-box;
+               background:linear-gradient(180deg, rgba(4,10,16,.10), rgba(4,10,16,.88) 60%);
+               color:#DDEBF6; font:12px "Microsoft YaHei UI", sans-serif; }
+  #playerBar button { border:0; border-radius:7px; height:26px; padding:0 10px; cursor:pointer;
+                      color:#EAF6FF; background:rgba(78,164,221,.18); font:11.5px "Microsoft YaHei UI", sans-serif; }
+  #playerBar button:hover { background:rgba(78,164,221,.36); }
+  #seekBar { flex:1; min-width:90px; accent-color:#4EA4DD; cursor:pointer; }
+  #timeText { min-width:94px; text-align:center; color:#B9CEDD; font-variant-numeric:tabular-nums; }
+  #a4kBadge { color:#8FD3F4; border:1px solid rgba(143,211,244,.35); border-radius:5px;
+              padding:2px 6px; font-size:10px; }
   #status { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); min-width:210px;
             padding:16px 22px; border-radius:14px; background:rgba(12,20,31,.86); color:#c7d8e7;
             font:13px/1.7 "Microsoft YaHei UI", "Segoe UI", sans-serif; text-align:center;
@@ -567,6 +595,15 @@ public partial class AnimePlayerView : UserControl
 <body>
 <div id="stage">
   <video id="video" controls autoplay playsinline preload="auto"></video>
+  <canvas id="glCanvas"></canvas>
+  <div id="playerBar">
+    <button id="ppBtn" type="button">暂停</button>
+    <span id="timeText">00:00 / 00:00</span>
+    <input id="seekBar" type="range" min="0" max="1000" value="0" step="1">
+    <span id="a4kBadge">Anime4K</span>
+    <button id="muteBtn" type="button">静音</button>
+    <button id="fullBtn" type="button">全屏</button>
+  </div>
   <div id="dmLayer"></div>
   <div id="caption">{{title}} · {{episode}}</div>
   <div id="dmTools">
@@ -581,16 +618,223 @@ public partial class AnimePlayerView : UserControl
   const initial = {{source}};
   const initialCaption = {{caption}};
   const initialDanmaku = {{danmaku}};
+  const initialAnime4K = {{(_anime4K ? "true" : "false")}};
+  const stage = document.getElementById('stage');
   const video = document.getElementById('video');
   const status = document.getElementById('status');
   const caption = document.getElementById('caption');
   const dmLayer = document.getElementById('dmLayer');
   const dmInput = document.getElementById('dmInput');
   const dmSend = document.getElementById('dmSend');
+  const glCanvas = document.getElementById('glCanvas');
+  const playerBar = document.getElementById('playerBar');
+  const ppBtn = document.getElementById('ppBtn');
+  const timeText = document.getElementById('timeText');
+  const seekBar = document.getElementById('seekBar');
+  const muteBtn = document.getElementById('muteBtn');
+  const fullBtn = document.getElementById('fullBtn');
   let hls = null;
   let retried = 0;
   let dmPool = [];
   let dmCursor = 0;
+  let a4k = false;
+  let gl = null, glProgram = null, glTexture = null, glTexel = null;
+  let glReady = false, glWidth = 0, glHeight = 0, rafId = 0, lastDraw = 0;
+
+  function formatTime(value) {
+    const total = Math.max(0, Math.floor(value || 0));
+    const m = Math.floor(total / 60), s = total % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function syncTime() {
+    const duration = isFinite(video.duration) ? video.duration : 0;
+    const current = video.currentTime || 0;
+    timeText.textContent = formatTime(current) + ' / ' + formatTime(duration);
+    if (!seekBar.dataset.dragging)
+      seekBar.value = duration > 0 ? Math.round(current / duration * 1000) : 0;
+    ppBtn.textContent = video.paused ? '播放' : '暂停';
+    muteBtn.textContent = video.muted || video.volume === 0 ? '已静音' : '静音';
+  }
+  video.addEventListener('timeupdate', syncTime);
+  video.addEventListener('durationchange', syncTime);
+  video.addEventListener('play', syncTime);
+  video.addEventListener('pause', syncTime);
+  video.addEventListener('volumechange', syncTime);
+
+  ppBtn.addEventListener('click', function () {
+    if (video.paused) { const p = video.play(); if (p && p.catch) p.catch(function () {}); }
+    else video.pause();
+  });
+  muteBtn.addEventListener('click', function () { video.muted = !video.muted; });
+  fullBtn.addEventListener('click', function () {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (stage.requestFullscreen) stage.requestFullscreen();
+  });
+  seekBar.addEventListener('input', function () {
+    seekBar.dataset.dragging = '1';
+    const duration = isFinite(video.duration) ? video.duration : 0;
+    if (duration > 0) video.currentTime = duration * (Number(seekBar.value) || 0) / 1000;
+  });
+  ['change', 'pointerup', 'touchend'].forEach(function (name) {
+    seekBar.addEventListener(name, function () { delete seekBar.dataset.dragging; syncTime(); });
+  });
+  document.addEventListener('fullscreenchange', function () {
+    fullBtn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+    glWidth = 0; glHeight = 0;
+    setTimeout(function () { if (a4k) drawGL(); }, 80);
+  });
+
+  function compileShader(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const message = gl.getShaderInfoLog(shader);
+      gl.deleteShader(shader);
+      throw new Error(message || 'shader compile failed');
+    }
+    return shader;
+  }
+
+  function initGL() {
+    if (glReady) return true;
+    try {
+      gl = glCanvas.getContext('webgl2', {
+        alpha: false, antialias: false, depth: false, stencil: false,
+        preserveDrawingBuffer: false, powerPreference: 'high-performance'
+      });
+      if (!gl) return false;
+      const vsSource = '#version 300 es\n' +
+        'in vec2 a_pos; out vec2 v_uv;\n' +
+        'void main(){ v_uv = a_pos * 0.5 + 0.5; gl_Position = vec4(a_pos, 0.0, 1.0); }';
+      const fsSource = '#version 300 es\n' +
+        'precision mediump float;\n' +
+        'in vec2 v_uv; out vec4 outColor;\n' +
+        'uniform sampler2D u_tex; uniform vec2 u_texel;\n' +
+        'float lum(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }\n' +
+        'void main() {\n' +
+        '  vec2 t = u_texel;\n' +
+        '  vec3 c = texture(u_tex, v_uv).rgb;\n' +
+        '  vec3 l = texture(u_tex, v_uv - vec2(t.x, 0.0)).rgb;\n' +
+        '  vec3 r = texture(u_tex, v_uv + vec2(t.x, 0.0)).rgb;\n' +
+        '  vec3 u = texture(u_tex, v_uv + vec2(0.0, t.y)).rgb;\n' +
+        '  vec3 d = texture(u_tex, v_uv - vec2(0.0, t.y)).rgb;\n' +
+        '  vec3 tl = texture(u_tex, v_uv + vec2(-t.x, t.y)).rgb;\n' +
+        '  vec3 tr = texture(u_tex, v_uv + vec2(t.x, t.y)).rgb;\n' +
+        '  vec3 bl = texture(u_tex, v_uv + vec2(-t.x, -t.y)).rgb;\n' +
+        '  vec3 br = texture(u_tex, v_uv + vec2(t.x, -t.y)).rgb;\n' +
+        '  vec3 blur = (l + r + u + d) * 0.15 + (tl + tr + bl + br) * 0.1;\n' +
+        '  vec3 detail = c - blur;\n' +
+        '  float edge = length(c - blur);\n' +
+        '  float amount = clamp(0.28 + edge * 2.4, 0.28, 1.25);\n' +
+        '  vec3 sharp = c + detail * amount;\n' +
+        '  vec3 lo = min(min(min(l, r), min(u, d)), c);\n' +
+        '  vec3 hi = max(max(max(l, r), max(u, d)), c);\n' +
+        '  sharp = clamp(sharp, lo, hi);\n' +
+        '  float lineEdge = smoothstep(0.018, 0.11, edge);\n' +
+        '  float g = lum(sharp);\n' +
+        '  sharp = mix(sharp, vec3(g) * 0.95, lineEdge * 0.22);\n' +
+        '  outColor = vec4(clamp(sharp, 0.0, 1.0), 1.0);\n' +
+        '}';
+      const program = gl.createProgram();
+      gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vsSource));
+      gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fsSource));
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return false;
+      glProgram = program;
+      gl.useProgram(program);
+
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const position = gl.getAttribLocation(program, 'a_pos');
+      gl.enableVertexAttribArray(position);
+      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+      glTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, glTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      glTexel = gl.getUniformLocation(program, 'u_texel');
+      gl.uniform1i(gl.getUniformLocation(program, 'u_tex'), 0);
+      glReady = true;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function resizeGL() {
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+    let w = Math.max(2, Math.round(stage.clientWidth * ratio));
+    let h = Math.max(2, Math.round(stage.clientHeight * ratio));
+    const cap = 2560 * 1440;
+    if (w * h > cap) {
+      const scale = Math.sqrt(cap / (w * h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+    }
+    if (w === glWidth && h === glHeight) return;
+    glWidth = w; glHeight = h;
+    glCanvas.width = w; glCanvas.height = h;
+  }
+
+  function drawGL() {
+    if (!a4k || !glReady || !video.videoWidth || video.readyState < 2) return;
+    resizeGL();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, glTexture);
+    try {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+    } catch (e) {
+      window.mikoSetAnime4K(false);
+      show('Anime4K 无法读取当前视频帧（跨域限制），已自动关闭。');
+      return;
+    }
+    gl.uniform2f(glTexel, 1.0 / video.videoWidth, 1.0 / video.videoHeight);
+    const cw = glCanvas.width, ch = glCanvas.height;
+    const va = video.videoWidth / video.videoHeight, ca = cw / ch;
+    let vx = 0, vy = 0, vw = cw, vh = ch;
+    if (ca > va) { vw = Math.round(ch * va); vx = Math.round((cw - vw) / 2); }
+    else { vh = Math.round(cw / va); vy = Math.round((ch - vh) / 2); }
+    gl.viewport(vx, vy, vw, vh);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  function a4kLoop(timestamp) {
+    if (!a4k) return;
+    if (timestamp - lastDraw > 28) { drawGL(); lastDraw = timestamp; }
+    rafId = requestAnimationFrame(a4kLoop);
+  }
+
+  window.mikoSetAnime4K = function (on) {
+    if (on && !initGL()) {
+      show('Anime4K 初始化失败，当前设备不支持 WebGL2 超分。');
+      on = false;
+    }
+    a4k = !!on;
+    if (a4k) {
+      video.controls = false;
+      glCanvas.style.display = 'block';
+      playerBar.style.display = 'flex';
+      lastDraw = 0;
+      if (!rafId) rafId = requestAnimationFrame(a4kLoop);
+      drawGL();
+      syncTime();
+    } else {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = 0;
+      glCanvas.style.display = 'none';
+      playerBar.style.display = 'none';
+      video.controls = true;
+    }
+  };
+
 
   function show(text) {
     status.textContent = text;
@@ -717,7 +961,9 @@ public partial class AnimePlayerView : UserControl
 
   try {
     window.mikoSetDanmaku(initialDanmaku);
+    window.mikoSetAnime4K(initialAnime4K);
     window.mikoPlay(initial, initialCaption);
+    syncTime();
   } catch (e) {
     show('播放失败：' + (e && e.message ? e.message : e));
   }

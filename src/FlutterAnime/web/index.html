@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="MikoMiko Flutter 规则追番模块">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <title>MikoMiko · 追番</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    html, body { margin:0; background:#F5FAFD; font-family:"Microsoft YaHei UI","Segoe UI",sans-serif; }
+    #boot { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; color:#2F86B9; font-size:13px; letter-spacing:.4px; }
+  </style>
+</head>
+<body>
+  <div id="boot">正在启动 Flutter 规则模块…</div>
+  <script>
+    window.mikoPost = function (message) {
+      try {
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage(message);
+        }
+      } catch (_) {}
+    };
+    window.mikoDownload = function (name, content) {
+      try {
+        const blob = new Blob([content], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name || 'rule.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      } catch (_) {}
+    };
+    window.addEventListener('flutter-first-frame', function () {
+      const boot = document.getElementById('boot');
+      if (boot) boot.remove();
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

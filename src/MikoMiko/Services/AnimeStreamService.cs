@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -467,15 +468,15 @@ public sealed class AnimeStreamService
         {
             using var document = JsonDocument.Parse(match.Groups["json"].Value);
             var root = document.RootElement;
+            var encryptValue = 0;
             if (root.TryGetProperty("encrypt", out var encrypt))
             {
-                var encrypted = encrypt.ValueKind switch
+                encryptValue = encrypt.ValueKind switch
                 {
-                    JsonValueKind.Number => encrypt.GetInt32() != 0,
-                    JsonValueKind.String => encrypt.GetString() is not (null or "" or "0"),
-                    _ => true,
+                    JsonValueKind.Number => encrypt.GetInt32(),
+                    JsonValueKind.String => int.TryParse(encrypt.GetString(), out var n) ? n : 0,
+                    _ => 0,
                 };
-                if (encrypted) return string.Empty;
             }
 
             foreach (var key in new[] { "url", "url_next" })
@@ -483,6 +484,13 @@ public sealed class AnimeStreamService
                 if (!root.TryGetProperty(key, out var urlNode)) continue;
                 var url = urlNode.GetString() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(url)) continue;
+                if (encryptValue > 0)
+                {
+                    url = DecodeMacCmsUrl(url, encryptValue);
+                    if (string.IsNullOrWhiteSpace(url)) continue;
+                    // 加密字段多数是另一个播放页，只有直链才直接当视频流返回。
+                    if (!MediaPattern.IsMatch(url)) continue;
+                }
                 return Normalize(url, pageUrl);
             }
         }
@@ -491,6 +499,31 @@ public sealed class AnimeStreamService
             // 页面数据不是完整 JSON 时继续尝试直链。
         }
         return string.Empty;
+    }
+
+    private static string DecodeMacCmsUrl(string value, int encrypt)
+    {
+        try
+        {
+            var text = value.Trim();
+            if (encrypt == 2)
+            {
+                // MacCMS encrypt=2：base64 后的百分号编码地址，可能连续编码两次。
+                var bytes = Convert.FromBase64String(text);
+                text = Encoding.UTF8.GetString(bytes);
+            }
+            for (var i = 0; i < 3 && text.Contains('%'); i++)
+            {
+                var decoded = WebUtility.UrlDecode(text);
+                if (decoded == text) break;
+                text = decoded;
+            }
+            return text.Trim();
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     private static string ParseDirectMedia(string html, string pageUrl)
