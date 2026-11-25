@@ -148,7 +148,7 @@ class _AnimeDetailPageState extends State<AnimeDetailPage> {
                         FilledButton.icon(
                           onPressed: episodes.isEmpty
                               ? null
-                              : () => HostBridge.play(detail, episodes.first),
+                              : () => _play(detail, episodes.first),
                           icon: const Icon(Icons.play_arrow_rounded, size: 19),
                           label: const Text('开始播放'),
                         ),
@@ -232,7 +232,7 @@ class _AnimeDetailPageState extends State<AnimeDetailPage> {
                 for (var i = 0; i < episodes.length; i++)
                   _EpisodeChip(
                     text: episodes[i].name,
-                    onTap: () => HostBridge.play(detail, episodes[i]),
+                    onTap: () => _play(detail, episodes[i]),
                   ),
               ],
             ),
@@ -303,6 +303,22 @@ class _AnimeDetailPageState extends State<AnimeDetailPage> {
 
   int _currentEpisodeIndex(List<AnimeEpisode> episodes) {
     return 0;
+  }
+
+  void _play(AnimeDetail detail, AnimeEpisode episode) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 2),
+        content: Text('正在打开 ${episode.name}…'),
+      ),
+    );
+    try {
+      HostBridge.play(detail, episode);
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(duration: const Duration(seconds: 10), content: Text('播放桥接失败：$error')),
+      );
+    }
   }
 
   void _toggleWatch(AnimeDetail detail) {

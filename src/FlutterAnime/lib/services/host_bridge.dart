@@ -1,8 +1,15 @@
+import 'dart:js_interop';
+
 import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:js_util' as js;
 
 import '../models/anime_rule.dart';
+
+/// WPF 注入的全局回调。dart2js 下 js_util.callMethod(window, ...) 在部分
+/// WebView2 版本里会抛异常并被吞掉，导致点选集完全没有反应，这里改为静态绑定。
+@JS('mikoPost')
+external void _hostPost(String message);
 
 /// 与 WPF Shell 通信：播放交给原生内置播放器，文件导出交给 WebView2。
 class HostBridge {
@@ -59,8 +66,26 @@ class HostBridge {
   }
 
   static void _post(Map<String, dynamic> payload) {
+    // window.postMessage 是最稳定的 DOM 通道，由 index.html 转发给 mikoPost。
     try {
-      js.callMethod(html.window, 'mikoPost', [jsonEncode(payload)]);
+      html.window.postMessage(<String, dynamic>{
+        '__mikoHost': true,
+        'payload': payload,
+      }, '*');
+      return;
+    } catch (_) {}
+    final message = jsonEncode(payload);
+    try {
+      html.window.dispatchEvent(html.CustomEvent('miko-host-post', detail: message));
+      return;
+    } catch (_) {}
+    try {
+      _hostPost(message);
+      return;
+    } catch (_) {}
+    // 浏览器调试环境没有注入 mikoPost，退回通用调用。
+    try {
+      js.callMethod(html.window, 'mikoPost', [message]);
     } catch (_) {
       // 浏览器调试环境下静默忽略。
     }

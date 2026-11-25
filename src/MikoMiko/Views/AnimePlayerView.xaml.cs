@@ -22,6 +22,7 @@ public partial class AnimePlayerView : UserControl
     private readonly AnimeFollowService _follows;
     private readonly AnimeDanmakuService _danmaku;
     private readonly IReadOnlyList<AnimeProvider> _providers;
+    private readonly Action<string>? _webFallback;
     private AnimePlayback _playback;
     private string _referer;
     private string _providerName = string.Empty;
@@ -34,10 +35,11 @@ public partial class AnimePlayerView : UserControl
     private bool _isFollowing;
     private bool _disposed;
     private bool _anime4K;
+    private bool _fallbackRequested;
 
     public AnimePlayerView(AnimePlayback playback, IReadOnlyList<AnimeProvider> providers,
         AnimeFollowService follows, AnimeDanmakuService danmaku, Action? closeRequested = null,
-        bool anime4K = false)
+        bool anime4K = false, Action<string>? webFallback = null)
     {
         InitializeComponent();
         _playback = playback;
@@ -46,6 +48,7 @@ public partial class AnimePlayerView : UserControl
         _providers = providers;
         _referer = playback.Referer;
         _anime4K = anime4K;
+        _webFallback = webFallback;
         CloseRequested = closeRequested;
         Anime4KToggle.IsChecked = anime4K;
 
@@ -378,7 +381,13 @@ public partial class AnimePlayerView : UserControl
         {
             using var doc = JsonDocument.Parse(e.WebMessageAsJson);
             var root = doc.RootElement;
-            if (!root.TryGetProperty("type", out var type) || type.GetString() != "danmaku") return;
+            var type = root.TryGetProperty("type", out var typeNode) ? typeNode.GetString() : null;
+            if (type == "playerError")
+            {
+                RequestWebFallback();
+                return;
+            }
+            if (type != "danmaku") return;
             var text = root.TryGetProperty("text", out var textNode) ? textNode.GetString() ?? string.Empty : string.Empty;
             var time = root.TryGetProperty("time", out var timeNode) && timeNode.TryGetDouble(out var value) ? value : 0;
             var entry = _danmaku.Add(_playback.Title, _playback.Episode, time, text);
@@ -517,6 +526,22 @@ public partial class AnimePlayerView : UserControl
     }
 
     private void Close_Click(object sender, RoutedEventArgs e) => CloseRequested?.Invoke();
+
+    private void WebFallback_Click(object sender, RoutedEventArgs e) => RequestWebFallback();
+
+    /// <summary>直连流反复失败时，关闭本站播放器，改用站点的网页播放页。</summary>
+    private void RequestWebFallback()
+    {
+        if (_fallbackRequested) return;
+        var url = _playback.SelectedEpisode?.PageUrl;
+        if (string.IsNullOrWhiteSpace(url)) url = _playback.CatalogItem?.PlayUrl;
+        if (string.IsNullOrWhiteSpace(url)) url = _playback.CatalogItem?.Url;
+        if (string.IsNullOrWhiteSpace(url) || _webFallback is null) return;
+        _fallbackRequested = true;
+        var callback = _webFallback;
+        // 不要在 WebMessageReceived 回调里直接 Dispose 当前 WebView2，延后到消息处理结束。
+        Dispatcher.BeginInvoke(new Action(() => callback(url)));
+    }
 
     private static string LoadHlsJs()
     {
@@ -909,6 +934,11 @@ public partial class AnimePlayerView : UserControl
   video.addEventListener('waiting', function () { show('正在缓冲视频…'); });
   video.addEventListener('error', function () {
     show('视频加载失败，可能是源站限制或地址已失效。');
+    try {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ type: 'playerError' });
+      }
+    } catch (_) {}
   });
 
   window.mikoPlay = function (src, text) {
@@ -944,6 +974,11 @@ public partial class AnimePlayerView : UserControl
             return;
           }
           show('视频加载失败：' + (data.details || '未知错误'));
+          try {
+            if (window.chrome && window.chrome.webview) {
+              window.chrome.webview.postMessage({ type: 'playerError' });
+            }
+          } catch (_) {}
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = src;

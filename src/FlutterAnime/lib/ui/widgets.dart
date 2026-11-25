@@ -34,7 +34,10 @@ class MikoPoster extends StatelessWidget {
             child: SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: MikoColors.primary),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: MikoColors.primary,
+              ),
             ),
           ),
         );
@@ -86,6 +89,10 @@ class AnimePosterCard extends StatefulWidget {
     this.onWatch,
     this.watching = false,
     this.trailing,
+    this.showSource = true,
+    this.showHeart = true,
+    this.badgeText = '',
+    this.radius = 14,
   });
 
   final AnimeCard card;
@@ -93,6 +100,10 @@ class AnimePosterCard extends StatefulWidget {
   final VoidCallback? onWatch;
   final bool watching;
   final Widget? trailing;
+  final bool showSource;
+  final bool showHeart;
+  final String badgeText;
+  final double radius;
 
   @override
   State<AnimePosterCard> createState() => _AnimePosterCardState();
@@ -121,11 +132,13 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(widget.radius),
                     color: const Color(0xFFE8F3FB),
                     boxShadow: [
                       BoxShadow(
-                        color: MikoColors.primaryDeep.withValues(alpha: _hover ? 0.20 : 0.08),
+                        color: MikoColors.primaryDeep.withValues(
+                          alpha: _hover ? 0.20 : 0.08,
+                        ),
                         blurRadius: _hover ? 22 : 12,
                         offset: Offset(0, _hover ? 9 : 4),
                       ),
@@ -174,22 +187,31 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                             ),
                           ),
                         ),
-                      Positioned(
-                        left: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF06151F).withValues(alpha: 0.72),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            card.source,
-                            style: const TextStyle(color: Color(0xF2FFFFFF), fontSize: 9.5),
+                      if (widget.showSource)
+                        Positioned(
+                          left: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF06151F,
+                              ).withValues(alpha: 0.72),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              card.source,
+                              style: const TextStyle(
+                                color: Color(0xF2FFFFFF),
+                                fontSize: 9.5,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      if (widget.onWatch != null)
+                      if (widget.onWatch != null && widget.showHeart)
                         Positioned(
                           right: 6,
                           top: 6,
@@ -198,8 +220,37 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
                             onTap: widget.onWatch!,
                           ),
                         ),
+                      if (widget.badgeText.isNotEmpty)
+                        Positioned(
+                          right: 7,
+                          bottom: 7,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF1B2430,
+                              ).withValues(alpha: 0.80),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              widget.badgeText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
                       if (widget.trailing != null)
-                        Positioned(right: 8, bottom: 8, child: widget.trailing!),
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: widget.trailing!,
+                        ),
                     ],
                   ),
                 ),
@@ -217,10 +268,15 @@ class _AnimePosterCardState extends State<AnimePosterCard> {
               ),
               const SizedBox(height: 3),
               Text(
-                card.note.isEmpty ? card.source : '${card.source} · ${card.note}',
+                card.note.isEmpty
+                    ? card.source
+                    : '${card.source} · ${card.note}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: MikoColors.tertiary, fontSize: 10.5),
+                style: const TextStyle(
+                  color: MikoColors.tertiary,
+                  fontSize: 10.5,
+                ),
               ),
             ],
           ),
@@ -243,7 +299,9 @@ class _HeartButton extends StatelessWidget {
         width: 28,
         height: 28,
         decoration: BoxDecoration(
-          color: const Color(0xFF06151F).withValues(alpha: active ? 0.82 : 0.46),
+          color: const Color(
+            0xFF06151F,
+          ).withValues(alpha: active ? 0.82 : 0.46),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(
@@ -281,12 +339,22 @@ class SectionHeading extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: MikoColors.ink)),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: MikoColors.ink,
+          ),
+        ),
         if (subtitle.isNotEmpty) ...[
           const SizedBox(width: 10),
           Padding(
             padding: const EdgeInsets.only(bottom: 1),
-            child: Text(subtitle, style: const TextStyle(fontSize: 11, color: MikoColors.tertiary)),
+            child: Text(
+              subtitle,
+              style: const TextStyle(fontSize: 11, color: MikoColors.tertiary),
+            ),
           ),
         ],
         const Spacer(),
@@ -332,12 +400,19 @@ class EmptyPanel extends StatelessWidget {
             child: Icon(icon, color: MikoColors.primaryDeep, size: 28),
           ),
           const SizedBox(height: 16),
-          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 7),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, height: 1.7, color: MikoColors.secondary),
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.7,
+              color: MikoColors.secondary,
+            ),
           ),
           if (action != null) ...[const SizedBox(height: 18), action!],
         ],
@@ -347,7 +422,12 @@ class EmptyPanel extends StatelessWidget {
 }
 
 class TagChip extends StatelessWidget {
-  const TagChip({super.key, required this.text, this.color = MikoColors.primarySoft, this.foreground = MikoColors.primaryDeep});
+  const TagChip({
+    super.key,
+    required this.text,
+    this.color = MikoColors.primarySoft,
+    this.foreground = MikoColors.primaryDeep,
+  });
   final String text;
   final Color color;
   final Color foreground;
@@ -356,8 +436,18 @@ class TagChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
-      child: Text(text, style: TextStyle(color: foreground, fontSize: 10.5, fontWeight: FontWeight.w600)),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

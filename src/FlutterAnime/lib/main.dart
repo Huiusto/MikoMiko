@@ -72,14 +72,18 @@ class _AnimeShellState extends State<AnimeShell> {
     final rules = RuleStore.instance.enabledRules;
     final results = <AnimeCard>[];
     final errors = <String>[];
-    await Future.wait(rules.map((rule) async {
-      try {
-        final cards = await MikoApi.instance.search(rule, value, limit: 16).timeout(const Duration(seconds: 22));
-        results.addAll(cards);
-      } catch (error) {
-        errors.add('${rule.title}：${_friendly(error)}');
-      }
-    }));
+    await Future.wait(
+      rules.map((rule) async {
+        try {
+          final cards = await MikoApi.instance
+              .search(rule, value, limit: 16)
+              .timeout(const Duration(seconds: 22));
+          results.addAll(cards);
+        } catch (error) {
+          errors.add('${rule.title}：${_friendly(error)}');
+        }
+      }),
+    );
 
     if (!mounted) return;
     final deduped = <String, AnimeCard>{};
@@ -102,7 +106,8 @@ class _AnimeShellState extends State<AnimeShell> {
     if (text.contains('TimeoutException')) return '请求超时';
     if (text.contains('403')) return '站点拒绝访问（403）';
     if (text.contains('404')) return '页面不存在（404）';
-    if (text.contains('Failed to fetch') || text.contains('XMLHttpRequest')) return '代理请求失败';
+    if (text.contains('Failed to fetch') || text.contains('XMLHttpRequest'))
+      return '代理请求失败';
     return text.length > 48 ? '${text.substring(0, 48)}…' : text;
   }
 
@@ -153,7 +158,10 @@ class _AnimeShellState extends State<AnimeShell> {
                 }
                 switch (_mode) {
                   case _Mode.home:
-                    return HomePage(onSearch: _runSearch, onOpenRules: () => _switch(_Mode.rules));
+                    return HomePage(
+                      onSearch: _runSearch,
+                      onOpenRules: () => _switch(_Mode.rules),
+                    );
                   case _Mode.rules:
                     return const RulesPage();
                   case _Mode.watch:
@@ -171,10 +179,14 @@ class _AnimeShellState extends State<AnimeShell> {
 
   void _exportRules() {
     final payload = const JsonEncoder.withIndent('  ').convert(
-      RuleStore.instance.rules.map((rule) => rule.toJson(includeRuntime: true)).toList(),
+      RuleStore.instance.rules
+          .map((rule) => rule.toJson(includeRuntime: true))
+          .toList(),
     );
     HostBridge.download('mikomiko-anime-rules.json', payload);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已导出全部规则')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('已导出全部规则')));
   }
 }
 
@@ -200,47 +212,43 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 62,
+      height: 58,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: MikoColors.border)),
+        border: Border(bottom: BorderSide(color: Color(0xFFEDEFF3))),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF7CC8F0), MikoColors.primaryDeep],
-              ),
-              borderRadius: BorderRadius.circular(11),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _NavPill(
+                  label: '首页',
+                  selected: mode == _Mode.home && !hasSearch,
+                  onTap: () => onMode(_Mode.home),
+                ),
+                const SizedBox(width: 6),
+                _NavPill(
+                  label: '规则库',
+                  selected: mode == _Mode.rules && !hasSearch,
+                  onTap: () => onMode(_Mode.rules),
+                ),
+                const SizedBox(width: 6),
+                _NavPill(
+                  label: '我的追剧',
+                  selected: mode == _Mode.watch && !hasSearch,
+                  onTap: () => onMode(_Mode.watch),
+                ),
+              ],
             ),
-            child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 23),
           ),
-          const SizedBox(width: 10),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text('追番 / 影视', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: MikoColors.ink)),
-              SizedBox(height: 2),
-              Text('Flutter 规则模块', style: TextStyle(fontSize: 9, color: MikoColors.tertiary, letterSpacing: 0.3)),
-            ],
-          ),
-          const SizedBox(width: 26),
-          _NavPill(label: '首页', selected: mode == _Mode.home && !hasSearch, onTap: () => onMode(_Mode.home)),
-          const SizedBox(width: 6),
-          _NavPill(label: '规则库', selected: mode == _Mode.rules && !hasSearch, onTap: () => onMode(_Mode.rules)),
-          const SizedBox(width: 6),
-          _NavPill(label: '我的追剧', selected: mode == _Mode.watch && !hasSearch, onTap: () => onMode(_Mode.watch)),
-          const Spacer(),
           SizedBox(
-            width: 330,
-            height: 38,
+            width: 460,
+            height: 36,
             child: TextField(
               controller: search,
               textInputAction: TextInputAction.search,
@@ -248,36 +256,61 @@ class _TopBar extends StatelessWidget {
               style: const TextStyle(fontSize: 12),
               decoration: InputDecoration(
                 hintText: '搜索番剧、电影、电视剧',
-                hintStyle: const TextStyle(fontSize: 11.5, color: MikoColors.tertiary),
-                prefixIcon: const Icon(Icons.search_rounded, size: 18, color: MikoColors.tertiary),
+                hintStyle: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFFA6AEB8),
+                ),
+                filled: true,
+                fillColor: const Color(0xFFF7F8FA),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 18,
+                  color: Color(0xFF7C8794),
+                ),
                 suffixIcon: hasSearch
-                    ? IconButton(onPressed: onClear, icon: const Icon(Icons.close_rounded, size: 15), tooltip: '清空')
-                    : null,
+                    ? IconButton(
+                        onPressed: onClear,
+                        icon: const Icon(Icons.close_rounded, size: 15),
+                        tooltip: '清空',
+                      )
+                    : IconButton(
+                        onPressed: searching
+                            ? null
+                            : () => onSearch(search.text),
+                        icon: const Icon(
+                          Icons.search_rounded,
+                          size: 18,
+                          color: Color(0xFF7C8794),
+                        ),
+                        tooltip: '搜索',
+                      ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(19), borderSide: const BorderSide(color: MikoColors.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(19), borderSide: const BorderSide(color: MikoColors.border)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(19), borderSide: const BorderSide(color: MikoColors.primary, width: 1.2)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: const BorderSide(color: Color(0xFFE1E4E8)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: const BorderSide(color: Color(0xFFE1E4E8)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(7),
+                  borderSide: const BorderSide(
+                    color: MikoColors.primary,
+                    width: 1.1,
+                  ),
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          SizedBox(
-            height: 38,
-            child: FilledButton(
-              onPressed: searching ? null : () => onSearch(search.text),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
-              ),
-              child: Text(searching ? '搜索中' : '搜索'),
+          Align(
+            alignment: Alignment.centerRight,
+            child: _IconButton(
+              icon: Icons.settings_outlined,
+              tooltip: '模块设置',
+              active: mode == _Mode.settings,
+              onTap: () => onMode(_Mode.settings),
             ),
-          ),
-          const SizedBox(width: 14),
-          _IconButton(
-            icon: Icons.settings_outlined,
-            tooltip: '模块设置',
-            active: mode == _Mode.settings,
-            onTap: () => onMode(_Mode.settings),
           ),
         ],
       ),
@@ -286,7 +319,11 @@ class _TopBar extends StatelessWidget {
 }
 
 class _NavPill extends StatelessWidget {
-  const _NavPill({required this.label, required this.selected, required this.onTap});
+  const _NavPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
   final String label;
   final bool selected;
   final VoidCallback onTap;
@@ -316,7 +353,12 @@ class _NavPill extends StatelessWidget {
 }
 
 class _IconButton extends StatelessWidget {
-  const _IconButton({required this.icon, required this.tooltip, required this.onTap, this.active = false});
+  const _IconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+    this.active = false,
+  });
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
@@ -336,7 +378,11 @@ class _IconButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(9),
             border: Border.all(color: MikoColors.border),
           ),
-          child: Icon(icon, size: 17, color: active ? MikoColors.primaryDeep : MikoColors.secondary),
+          child: Icon(
+            icon,
+            size: 17,
+            color: active ? MikoColors.primaryDeep : MikoColors.secondary,
+          ),
         ),
       ),
     );

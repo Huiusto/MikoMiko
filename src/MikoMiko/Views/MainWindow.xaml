@@ -229,6 +229,12 @@
                             Focusable="False"
                             Visibility="{Binding IsAnimePlayerOpen, Converter={StaticResource BoolToVis}}" />
 
+            <!-- ==================== 追番/影视站点网页播放（直连流失败时的兜底） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding AnimeSitePlayerView}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False"
+                            Visibility="{Binding IsAnimeSitePlayerOpen, Converter={StaticResource BoolToVis}}" />
+
             <!-- ==================== 上传内容弹层（先选板块，再选发布类型） ==================== -->
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding UploadView}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"

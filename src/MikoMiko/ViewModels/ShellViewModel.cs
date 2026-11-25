@@ -118,6 +118,10 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private Views.AnimePlayerView? _animePlayerView;
     [ObservableProperty] private bool _isAnimePlayerOpen;
 
+    /// <summary>站点网页播放兜底：直接打开播放页，交给站点自己的播放器。</summary>
+    [ObservableProperty] private Views.AnimeSitePlayerView? _animeSitePlayerView;
+    [ObservableProperty] private bool _isAnimeSitePlayerOpen;
+
     /// <summary>上传内容弹层（不新开窗口，先选板块再选发布类型）。</summary>
     [ObservableProperty] private Views.UploadView? _uploadView;
     [ObservableProperty] private bool _isUploadOpen;
@@ -206,30 +210,100 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         // 离开追番页时连带关闭播放器与 Flutter 宿主，停止 WebView2 中的请求。
         CloseAnimePlayer();
+        CloseAnimeSitePlayer();
         AnimePage?.Shutdown();
         AnimePage = null;
         IsAnimePageOpen = false;
         ShowGlobalSearch = true;
     }
 
-    /// <summary>Flutter 模块点击选集后，由 WPF 解析真实视频流并打开内置播放器。</summary>
+    /// <summary>Flutter 模块点击选集后，先尝试提取直连流；取不到就转站内网页播放。</summary>
     private async void OpenAnimeFromRule(AnimeItem item, bool anime4K)
+    {
+        if (item is null) return;
+        var pageUrl = string.IsNullOrWhiteSpace(item.PlayUrl) ? item.Url : item.PlayUrl;
+        if (string.IsNullOrWhiteSpace(pageUrl)) return;
+
+        AnimePage?.ShowToast($"正在打开《{item.Title}》…");
+        AnimePlayback? playback = null;
+        using var timeoutSource = new CancellationTokenSource();
+        try
+        {
+            var resolve = _animeStreams.ResolveAsync(item, timeoutSource.Token);
+            // 部分站点会直接掐断 .NET 请求，不能让用户干等 18 秒，6 秒拿不到就走网页播放。
+            var first = await Task.WhenAny(resolve, Task.Delay(TimeSpan.FromSeconds(6)));
+            if (first == resolve)
+            {
+                playback = await resolve;
+            }
+            else
+            {
+                timeoutSource.Cancel();
+            }
+        }
+        catch
+        {
+            playback = null;
+        }
+
+        if (playback is not null && !string.IsNullOrWhiteSpace(playback.StreamUrl))
+        {
+            ShowAnimePlayer(playback, anime4K);
+            return;
+        }
+
+        ShowAnimeSitePlayer(item, pageUrl);
+    }
+
+    /// <summary>直连流播放器报错时，切到同一集的站点网页播放。</summary>
+    private void ShowAnimeSiteFromPlayback(AnimePlayback playback, string pageUrl)
     {
         try
         {
-            AnimePage?.ShowToast($"正在解析《{item.Title}》的播放地址…");
-            var playback = await _animeStreams.ResolveAsync(item);
-            if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
-            {
-                AnimePage?.ShowToast($"《{item.Title}》暂时取不到视频流，请在 Flutter 模块中换一条线路。");
-                return;
-            }
-
-            ShowAnimePlayer(playback, anime4K);
+            CloseAnimePlayer();
+            CloseAnimeSitePlayer();
+            AnimePage?.Suspend();
+            IsAnimePageOpen = false;
+            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
+                pageUrl,
+                playback.Referer,
+                playback.Title,
+                playback.Episode,
+                playback.Source,
+                CloseAnimeSitePlayer);
+            IsAnimeSitePlayerOpen = true;
         }
-        catch (Exception)
+        catch
         {
-            AnimePage?.ShowToast("解析播放地址失败，请稍后重试。");
+            AnimePage?.Resume();
+            IsAnimePageOpen = true;
+        }
+    }
+
+    /// <summary>直连流不可用时，用软件内 WebView2 打开站点播放页。</summary>
+    private void ShowAnimeSitePlayer(AnimeItem item, string pageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(pageUrl)) return;
+        try
+        {
+            CloseAnimePlayer();
+            CloseAnimeSitePlayer();
+            AnimePage?.Suspend();
+            IsAnimePageOpen = false;
+            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
+                pageUrl,
+                item.Url,
+                item.Title,
+                item.Note,
+                item.Source,
+                CloseAnimeSitePlayer);
+            IsAnimeSitePlayerOpen = true;
+        }
+        catch (Exception ex)
+        {
+            AnimePage?.Resume();
+            IsAnimePageOpen = true;
+            AnimePage?.ShowToast("网页播放器打开失败：" + ex.Message);
         }
     }
 
@@ -492,9 +566,12 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl)) return;
         CloseAnimePlayer();
+        CloseAnimeSitePlayer();
         AnimePlayerView = new Views.AnimePlayerView(playback, _anime.Providers, _animeFollows,
-            _animeDanmaku, CloseAnimePlayer, anime4K);
+            _animeDanmaku, CloseAnimePlayer, anime4K,
+            url => ShowAnimeSiteFromPlayback(playback, url));
         // WebView2 是原生子窗口，会盖在 WPF 内容之上；播放时必须先隐藏 Flutter 宿主。
+        AnimePage?.Suspend();
         IsAnimePageOpen = false;
         IsAnimePlayerOpen = true;
         try
@@ -508,12 +585,36 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     public void CloseAnimePlayer()
     {
-        if (AnimePlayerView is null) return;
+        if (AnimePlayerView is null)
+        {
+            if (IsAnimePlayerOpen) IsAnimePlayerOpen = false;
+            return;
+        }
         AnimePlayerView.Shutdown();
         AnimePlayerView = null;
         IsAnimePlayerOpen = false;
         // 播放器关闭后回到 Flutter 追番页。
-        if (AnimePage is not null) IsAnimePageOpen = true;
+        if (AnimePage is not null && !IsAnimeSitePlayerOpen)
+        {
+            AnimePage.Resume();
+            IsAnimePageOpen = true;
+        }
+    }
+
+    [RelayCommand]
+    public void CloseAnimeSitePlayer()
+    {
+        if (AnimeSitePlayerView is not null)
+        {
+            AnimeSitePlayerView.Shutdown();
+            AnimeSitePlayerView = null;
+        }
+        IsAnimeSitePlayerOpen = false;
+        if (AnimePage is not null)
+        {
+            AnimePage.Resume();
+            IsAnimePageOpen = true;
+        }
     }
 
     /// <summary>打开上传内容弹层；再次打开时回到第一步。</summary>

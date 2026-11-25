@@ -13,16 +13,50 @@
     html, body { margin:0; background:#F5FAFD; font-family:"Microsoft YaHei UI","Segoe UI",sans-serif; }
     #boot { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; color:#2F86B9; font-size:13px; letter-spacing:.4px; }
   </style>
+  <script>
+    // 模块随 EXE 升级，旧 Service Worker 会把上一版 main.dart.js 一直留在缓存里。
+    (function () {
+      try {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function (regs) {
+            if (!regs.length) return;
+            Promise.all(regs.map(function (reg) { return reg.unregister(); })).then(function () {
+              if (!sessionStorage.getItem('miko-sw-cleared')) {
+                sessionStorage.setItem('miko-sw-cleared', '1');
+                location.reload();
+              }
+            });
+          }).catch(function () {});
+        }
+        if (window.caches && caches.keys) {
+          caches.keys().then(function (keys) {
+            keys.forEach(function (key) {
+              if (key.indexOf('flutter') >= 0) caches.delete(key);
+            });
+          }).catch(function () {});
+        }
+      } catch (_) {}
+    })();
+  </script>
 </head>
 <body>
   <div id="boot">正在启动 Flutter 规则模块…</div>
   <script>
+    window.mikoQueue = [];
     window.mikoPost = function (message) {
       try {
-        if (window.chrome && window.chrome.webview) {
-          window.chrome.webview.postMessage(message);
-        }
+        window.mikoQueue.push(String(message));
       } catch (_) {}
+    };
+    // WPF 端用 ExecuteScriptAsync 轮询取走消息，绕开不可靠的 WebMessageReceived。
+    window.__mikoDrain = function () {
+      try {
+        var items = window.mikoQueue || [];
+        window.mikoQueue = [];
+        return JSON.stringify(items);
+      } catch (_) {
+        return '[]';
+      }
     };
     window.mikoDownload = function (name, content) {
       try {
@@ -37,11 +71,21 @@
         setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
       } catch (_) {}
     };
+    window.addEventListener('miko-host-post', function (event) {
+      try { window.mikoPost(event.detail); } catch (_) {}
+    });
+    window.addEventListener('message', function (event) {
+      var data = event && event.data;
+      if (data && typeof data === 'object' && data.__mikoHost) {
+        try { window.mikoPost(JSON.stringify(data.payload)); } catch (_) {}
+      }
+    });
     window.addEventListener('flutter-first-frame', function () {
       const boot = document.getElementById('boot');
       if (boot) boot.remove();
     });
   </script>
-  <script src="flutter_bootstrap.js" async></script>
+  <script src="flutter_bootstrap.js?v=0132" async></script>
 </body>
 </html>
+

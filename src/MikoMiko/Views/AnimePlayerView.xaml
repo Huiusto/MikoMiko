@@ -87,6 +87,11 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="WebFallbackButton" Content="网页播放" Height="26" Padding="10,0"
+                            Margin="0,0,8,0" FontSize="10" Cursor="Hand"
+                            Background="#172637" Foreground="#B9CADA" BorderBrush="#29485E"
+                            BorderThickness="1" Click="WebFallback_Click"
+                            ToolTip="直连流播放异常时，打开站点原播放页" />
                     <ToggleButton x:Name="Anime4KToggle" Content="Anime4K 超分" Height="26" Padding="10,0"
                                   Margin="0,0,8,0" FontSize="10" Cursor="Hand"
                                   Background="#172637" Foreground="#8FD3F4" BorderBrush="#29485E"

@@ -23,6 +23,9 @@ public partial class FlutterAnimeView : UserControl
     private readonly Action<AnimeItem, bool> _playRequested;
     private readonly HttpClient _http;
     private readonly DispatcherTimer _toastTimer;
+    private readonly DispatcherTimer _bridgeTimer;
+    private bool _bridgePolling;
+    private CoreWebView2? _core;
     private bool _initialized;
     private bool _disposed;
 
@@ -47,6 +50,10 @@ public partial class FlutterAnimeView : UserControl
             _toastTimer.Stop();
             ToastPanel.Visibility = Visibility.Collapsed;
         };
+        // WebView2 的 WebMessageReceived 在个别运行时版本里收不到消息，
+        // 用 JS 队列轮询兜底，保证选集与 toast 一定能回到宿主。
+        _bridgeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(350) };
+        _bridgeTimer.Tick += async (_, _) => await PollBridge();
         Loaded += OnLoaded;
     }
 
@@ -55,7 +62,26 @@ public partial class FlutterAnimeView : UserControl
         if (_disposed) return;
         _disposed = true;
         _toastTimer.Stop();
+        _bridgeTimer.Stop();
         try { Web.Dispose(); } catch { }
+    }
+
+    /// <summary>
+    /// 打开原生播放器前先把 WebView2 子窗口隐藏，否则它会一直盖在 WPF 播放器上方。
+    /// 这里不销毁内核，只收起控件，返回时能立即恢复模块现场。
+    /// </summary>
+    public void Suspend()
+    {
+        if (_disposed) return;
+        _toastTimer.Stop();
+        ToastPanel.Visibility = Visibility.Collapsed;
+        Web.Visibility = Visibility.Collapsed;
+    }
+
+    public void Resume()
+    {
+        if (_disposed) return;
+        Web.Visibility = Visibility.Visible;
     }
 
     /// <summary>截图工具兼容入口：Flutter 页面由自身滚动，不在这里复位。</summary>
@@ -106,7 +132,7 @@ public partial class FlutterAnimeView : UserControl
         };
         var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(28) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 MikoMiko/0.1.31");
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 MikoMiko/0.1.32");
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "zh-CN,zh;q=0.9");
         return client;
     }
@@ -124,11 +150,14 @@ public partial class FlutterAnimeView : UserControl
             await Web.EnsureCoreWebView2Async(environment);
 
             var core = Web.CoreWebView2;
+            _core = core;
             core.Settings.AreDefaultContextMenusEnabled = false;
+            core.Settings.IsWebMessageEnabled = true;
             core.Settings.IsStatusBarEnabled = false;
             core.Settings.AreDevToolsEnabled = true;
             core.Settings.AreBrowserAcceleratorKeysEnabled = true;
             core.Settings.IsZoomControlEnabled = false;
+            _bridgeTimer.Start();
 
             var assetRoot = Path.Combine(AppContext.BaseDirectory, "Assets", "Anime", "flutter");
             Log("assetRoot=" + assetRoot + " exists=" + Directory.Exists(assetRoot));
@@ -169,7 +198,8 @@ public partial class FlutterAnimeView : UserControl
             try
             {
                 await core.Profile.ClearBrowsingDataAsync(
-                    Microsoft.Web.WebView2.Core.CoreWebView2BrowsingDataKinds.DiskCache);
+                    Microsoft.Web.WebView2.Core.CoreWebView2BrowsingDataKinds.DiskCache |
+                    Microsoft.Web.WebView2.Core.CoreWebView2BrowsingDataKinds.ServiceWorkers);
             }
             catch (Exception ex)
             {
@@ -317,9 +347,46 @@ public partial class FlutterAnimeView : UserControl
 
     private void Web_MessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
+        HandleMessage(e.WebMessageAsJson);
+    }
+
+    private async Task PollBridge()
+    {
+        if (_bridgePolling || _disposed || _core is null) return;
+        _bridgePolling = true;
         try
         {
-            using var doc = JsonDocument.Parse(e.WebMessageAsJson);
+            var raw = await _core.ExecuteScriptAsync(
+                "window.__mikoDrain ? window.__mikoDrain() : '[]'");
+            if (string.IsNullOrWhiteSpace(raw)) return;
+            // ExecuteScriptAsync 返回的是 JSON 字符串，需要先解一层。
+            var payload = JsonSerializer.Deserialize<string>(raw);
+            if (string.IsNullOrWhiteSpace(payload) || payload == "[]") return;
+            using var doc = JsonDocument.Parse(payload);
+            if (doc.RootElement.ValueKind != JsonValueKind.Array) return;
+            foreach (var item in doc.RootElement.EnumerateArray())
+            {
+                var message = item.ValueKind == JsonValueKind.String
+                    ? item.GetString() ?? string.Empty
+                    : item.GetRawText();
+                HandleMessage(message);
+            }
+        }
+        catch
+        {
+            // 页面切换或脚本尚未就绪时静默重试。
+        }
+        finally
+        {
+            _bridgePolling = false;
+        }
+    }
+
+    private void HandleMessage(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             var type = root.TryGetProperty("type", out var typeNode) ? typeNode.GetString() : string.Empty;
             switch (type)
