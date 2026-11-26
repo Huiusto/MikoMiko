@@ -16,7 +16,7 @@ public sealed class VideoAuthorHistory
 
     public VideoAuthorHistory(string? filePath = null, TimeSpan? cooldown = null)
     {
-        _cooldown = cooldown ?? TimeSpan.FromDays(3);
+        _cooldown = cooldown ?? TimeSpan.FromDays(2);
         _filePath = filePath ?? Path.Combine(SettingsService.DataDirectory, "video-author-history.json");
         Load();
     }

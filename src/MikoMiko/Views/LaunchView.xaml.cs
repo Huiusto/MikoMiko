@@ -51,6 +51,11 @@ public partial class LaunchView : UserControl
     private bool _showReserve = true;
     private bool _showMhyy = true;
     private readonly HashSet<string> _runningGames = new();
+    private List<string> _gameOrder = new();
+    private Dictionary<string, GameUpdateService.UpdateState> _updateStates = new();
+
+    /// <summary>启动页需要在内置浏览器打开的网址（米哈云游等），由 Shell 接管。</summary>
+    public event Action<string>? OpenUrlRequested;
 
     private static readonly Dictionary<string, string> UninstallBiz = new()
     {
@@ -73,6 +78,7 @@ public partial class LaunchView : UserControl
         MikoNestBridge.Reload();
         _showReserve = LauncherBackgroundService.LoadUiFlag("showReserve", true);
         _showMhyy = LauncherBackgroundService.LoadUiFlag("showMhyy", true);
+        _gameOrder = LauncherBackgroundService.LoadGameOrder();
         if (_webReady)
         {
             PushState();
@@ -118,6 +124,7 @@ public partial class LaunchView : UserControl
                 PushState();
                 await EnsureCurrentVideoAsync();
                 _ = LauncherBackgroundService.PrefetchAllAsync();
+                _ = RefreshUpdateStatesAsync();
             };
             Web.CoreWebView2.Navigate($"https://{VirtualHost}/launch/launch.html");
         }
@@ -167,7 +174,10 @@ public partial class LaunchView : UserControl
     {
         var result = new List<NestGame>();
         var remaining = MikoNestBridge.Games.ToList();
-        foreach (var key in MikoNestBridge.Settings.LaunchGameOrder ?? new List<string>())
+        var preferred = _gameOrder.Count > 0
+            ? _gameOrder
+            : MikoNestBridge.Settings.LaunchGameOrder ?? new List<string>();
+        foreach (var key in preferred)
         {
             var game = remaining.FirstOrDefault(g => g.Key == key);
             if (game == null) continue;
@@ -231,27 +241,38 @@ public partial class LaunchView : UserControl
             name = game.Name,
             located = IsLocated(game.Key),
             running = _runningGames.Contains(game.Key),
+            preDownload = _updateStates.TryGetValue(game.Key, out var update) && update.HasPreDownload,
+            preDownloadVersion = _updateStates.TryGetValue(game.Key, out var version) ? version.PreVersion : "",
             icon = IconFiles.TryGetValue(game.Key, out var iconFile)
                 ? ToUrl(Path.Combine(SettingsService.DataDirectory, "launch", "assets", "icons", iconFile))
                 : null,
         }).ToList();
 
         var items = new List<object>();
-        foreach (var item in _bgItems)
+        var custom = LauncherBackgroundService.LoadCustomBackground(_selectedKey);
+        if (custom != null)
         {
-            if (item.ImagePath == null) continue;
-            items.Add(new
-            {
-                id = item.Id,
-                image = ToUrl(item.ImagePath),
-                video = ToUrl(item.VideoPath),
-            });
+            items.Add(new { id = "custom", image = ToUrl(custom), video = (string?)null });
+            _bgIndex = 0;
         }
-        if (items.Count == 0)
+        else
         {
-            var fallback = LauncherBackgroundService.FallbackImage(_selectedKey);
-            if (fallback != null)
-                items.Add(new { id = "fallback", image = ToUrl(fallback), video = (string?)null });
+            foreach (var item in _bgItems)
+            {
+                if (item.ImagePath == null) continue;
+                items.Add(new
+                {
+                    id = item.Id,
+                    image = ToUrl(item.ImagePath),
+                    video = ToUrl(item.VideoPath),
+                });
+            }
+            if (items.Count == 0)
+            {
+                var fallback = LauncherBackgroundService.FallbackImage(_selectedKey);
+                if (fallback != null)
+                    items.Add(new { id = "fallback", image = ToUrl(fallback), video = (string?)null });
+            }
         }
 
         if (_bgIndex >= items.Count) _bgIndex = Math.Max(0, items.Count - 1);
@@ -268,11 +289,25 @@ public partial class LaunchView : UserControl
             located = selectedExe != null,
         };
 
+        var preloadImages = new List<string>();
+        foreach (var gameKey in new[] { "genshin", "starrail", "zzz", "bh3" })
+        {
+            var cached = LauncherBackgroundService.GetCached(gameKey);
+            if (cached == null) continue;
+            foreach (var item in cached.Items)
+            {
+                if (item.ImagePath == null) continue;
+                var url = ToUrl(item.ImagePath);
+                if (url != null && !preloadImages.Contains(url)) preloadImages.Add(url);
+            }
+        }
+
         var state = new
         {
             games,
             selected = _selectedKey,
             backgrounds = items,
+            preloadImages,
             index = _bgIndex,
             paused = _paused,
             preparing = _preparing,
@@ -280,6 +315,7 @@ public partial class LaunchView : UserControl
             hint = BuildHint(),
             showReserve = _showReserve,
             showMhyy = _showMhyy,
+            customBackground = custom != null,
             gameInfo,
         };
 
@@ -304,7 +340,7 @@ public partial class LaunchView : UserControl
     {
         if (_runningGames.Contains(_selectedKey)) return "游戏运行中，退出游戏后按钮会自动恢复。";
         var dir = MikoNestBridge.GetGameDir(_selectedKey);
-        if (dir == null) return "未找到本地游戏，点击「获取游戏」打开官网下载；安装后点「定位游戏」选择目录即可直接启动。";
+        if (dir == null) return "未找到本地游戏，点「获取游戏」可直接在 MikoMiko 内安装；安装后也能点「定位游戏」选择已有目录。";
         if (MikoNestBridge.FindGameExe(_selectedKey) == null)
             return "已找到游戏目录，但没有找到主程序：" + dir + "；点「定位游戏」重新选择包含游戏程序的文件夹。";
         return "已定位：" + dir;
@@ -391,9 +427,59 @@ public partial class LaunchView : UserControl
                     break;
 
                 case "install":
-                    OpenUrl(Websites[_selectedKey]);
-                    Toast("已打开官网下载页；安装完成后回到本页点「定位游戏」");
+                    InstallGame();
                     break;
+
+                case "predownload":
+                {
+                    var biz = UninstallBiz.TryGetValue(_selectedKey, out var value) ? value : null;
+                    if (biz != null)
+                    {
+                        OpenOfficialLauncher(biz);
+                        Toast("已打开米哈游官方启动器，预下载进度可在官方启动器查看");
+                    }
+                    break;
+                }
+
+                case "customBg":
+                {
+                    var dlg = new Microsoft.Win32.OpenFileDialog
+                    {
+                        Title = "选择启动页背景图片",
+                        Filter = "图片文件|*.png;*.jpg;*.jpeg;*.webp;*.bmp|所有文件|*.*",
+                    };
+                    if (dlg.ShowDialog() == true)
+                    {
+                        LauncherBackgroundService.SaveCustomBackground(_selectedKey, dlg.FileName);
+                        PushState();
+                        Toast("已更换自定义背景");
+                    }
+                    break;
+                }
+
+                case "restoreBg":
+                    LauncherBackgroundService.ClearCustomBackground(_selectedKey);
+                    PushState();
+                    Toast("已恢复官方壁纸");
+                    break;
+
+                case "moveGame":
+                {
+                    var key = ReadString(e.WebMessageAsJson, "key");
+                    var delta = (int)ReadNumber(e.WebMessageAsJson, "delta");
+                    if (string.IsNullOrEmpty(key) || delta == 0) break;
+                    var ordered = OrderedGames().Select(g => g.Key).ToList();
+                    var index = ordered.IndexOf(key);
+                    if (index < 0) break;
+                    var target = Math.Clamp(index + delta, 0, ordered.Count - 1);
+                    if (target == index) break;
+                    ordered.RemoveAt(index);
+                    ordered.Insert(target, key);
+                    _gameOrder = ordered;
+                    LauncherBackgroundService.SaveGameOrder(ordered);
+                    PushState();
+                    break;
+                }
 
                 case "locate":
                     PickGame();
@@ -420,13 +506,13 @@ public partial class LaunchView : UserControl
                 }
 
                 case "mhyy":
-                    OpenUrl("https://mhyy.mihoyo.com/");
+                    OpenUrlRequested?.Invoke("https://mhyy.mihoyo.com/");
                     break;
 
                 case "reserve":
                 {
                     var url = ReadString(e.WebMessageAsJson, "url");
-                    if (!string.IsNullOrEmpty(url)) OpenUrl(url);
+                    if (!string.IsNullOrEmpty(url)) OpenUrlRequested?.Invoke(url);
                     break;
                 }
             }
@@ -627,13 +713,75 @@ public partial class LaunchView : UserControl
         return null;
     }
 
+    private void InstallGame()
+    {
+        var game = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
+        if (game == null) return;
+        var dialog = new InstallGameDialog(_selectedKey, game.Name)
+        {
+            Owner = Window.GetWindow(this),
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        var path = dialog.InstalledPath;
+        if (!string.IsNullOrWhiteSpace(path) && MikoNestBridge.FindGameExe(_selectedKey) != null)
+        {
+            MikoNestBridge.SetLocalGamePath(_selectedKey, path);
+            _updateStates.Remove(_selectedKey);
+            PushState();
+            Toast("游戏安装完成，可以开始游戏了");
+        }
+    }
+
+    private void OpenOfficialLauncher(string biz)
+    {
+        var launcher = FindLauncher(MikoNestBridge.GetGameDir(_selectedKey) ?? "");
+        if (launcher is null)
+        {
+            var common = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "miHoYo", "miHoYo Launcher", "launcher.exe");
+            if (File.Exists(common)) launcher = common;
+        }
+        if (launcher is null)
+        {
+            OpenUrl("https://mhyy.mihoyo.com/");
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = launcher,
+                WorkingDirectory = Path.GetDirectoryName(launcher) ?? "",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            Toast("打开官方启动器失败：" + ex.Message);
+        }
+    }
+
+    private async Task RefreshUpdateStatesAsync()
+    {
+        try
+        {
+            _updateStates = await GameUpdateService.GetStatesAsync();
+            if (_webReady) PushState();
+        }
+        catch
+        {
+            // 官方接口不可用时保持无预下载角标
+        }
+    }
+
     private async Task StartGameAsync()
     {
         var exe = MikoNestBridge.FindGameExe(_selectedKey);
         if (exe == null)
         {
-            OpenUrl(Websites[_selectedKey]);
-            Toast("未找到本地游戏，已打开官网下载页");
+            InstallGame();
             return;
         }
         if (_runningGames.Contains(_selectedKey)) return;

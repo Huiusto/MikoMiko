@@ -32,7 +32,7 @@ public partial class DailyTaskView : UserControl
         public required HoyoAccount Account;
         public List<SignRole> Roles = new();
         public required Border RowBorder;
-        public required TextBlock Avatar;
+        public required Border Avatar;
         public required TextBlock Name;
         public required TextBlock Meta;
         public required TextBlock Status;
@@ -172,6 +172,28 @@ public partial class DailyTaskView : UserControl
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
+            var avatarText = new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(account.Nickname) ? "米" : account.Nickname[..1],
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = (Brush)FindResource("Brush.Accent"),
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            var avatarGrid = new Grid();
+            avatarGrid.Children.Add(avatarText);
+            if (!string.IsNullOrWhiteSpace(account.AvatarUrl))
+            {
+                var avatarImage = new Image
+                {
+                    Stretch = System.Windows.Media.Stretch.UniformToFill,
+                    Clip = new System.Windows.Media.EllipseGeometry(
+                        new System.Windows.Point(17, 17), 17, 17),
+                };
+                MikoMiko.Controls.AsyncImage.SetUrl(avatarImage, account.AvatarUrl);
+                avatarGrid.Children.Add(avatarImage);
+            }
             var avatar = new Border
             {
                 Width = 34,
@@ -179,15 +201,8 @@ public partial class DailyTaskView : UserControl
                 CornerRadius = new CornerRadius(17),
                 Background = new SolidColorBrush(Color.FromRgb(0xE3, 0xF4, 0xFE)),
                 VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock
-                {
-                    Text = string.IsNullOrWhiteSpace(account.Nickname) ? "米" : account.Nickname[..1],
-                    FontSize = 13,
-                    FontWeight = FontWeights.Bold,
-                    Foreground = (Brush)FindResource("Brush.Accent"),
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center,
-                },
+                ClipToBounds = true,
+                Child = avatarGrid,
             };
             Grid.SetColumn(avatar, 0);
             grid.Children.Add(avatar);
@@ -251,7 +266,7 @@ public partial class DailyTaskView : UserControl
                 Account = account,
                 Roles = result.Roles,
                 RowBorder = row,
-                Avatar = (TextBlock)((Border)grid.Children[0]).Child,
+                Avatar = (Border)grid.Children[0],
                 Name = name,
                 Meta = meta,
                 Status = status,
@@ -755,34 +770,6 @@ public partial class DailyTaskView : UserControl
         }
     }
 
-    private void BtnSwitchAccount_Click(object sender, RoutedEventArgs e)
-    {
-        if (_accountRows.Count == 0)
-        {
-            AppendLog(new SignLogEntry { Text = "还没有可切换的账号，请先添加账号。", Level = "WARN" });
-            return;
-        }
-        var menu = new ContextMenu
-        {
-            PlacementTarget = BtnSwitchAccount,
-            Placement = PlacementMode.Bottom,
-        };
-        foreach (var row in _accountRows)
-        {
-            var active = _account?.Uid == row.Account.Uid;
-            var item = new MenuItem
-            {
-                Header = $"{(active ? "● " : "○ ")}{row.Account.DisplayName}",
-                FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal,
-                IsEnabled = !row.Busy,
-            };
-            var target = row;
-            item.Click += async (_, _) => await SelectAccountAsync(target, true);
-            menu.Items.Add(item);
-        }
-        menu.IsOpen = true;
-    }
-
     private async void BtnMissionReload_Click(object sender, RoutedEventArgs e)
     {
         if (_account is null) return;
@@ -804,7 +791,6 @@ public partial class DailyTaskView : UserControl
         _runningAll = true;
         BtnRunAll.IsEnabled = false;
         BtnAddAccount.IsEnabled = false;
-        BtnSwitchAccount.IsEnabled = false;
         BtnRefresh.IsEnabled = false;
         foreach (var row in _accountRows) row.Run.IsEnabled = false;
         try
@@ -827,7 +813,6 @@ public partial class DailyTaskView : UserControl
             _runningAll = false;
             BtnRunAll.IsEnabled = true;
             BtnAddAccount.IsEnabled = true;
-            BtnSwitchAccount.IsEnabled = true;
             BtnRefresh.IsEnabled = true;
             foreach (var row in _accountRows) row.Run.IsEnabled = true;
         }

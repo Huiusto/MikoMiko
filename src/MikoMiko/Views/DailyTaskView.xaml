@@ -123,17 +123,6 @@
                                    Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
-                <Button x:Name="BtnSwitchAccount" Style="{StaticResource HeaderActionButton}" Margin="8,0,0,0"
-                        Click="BtnSwitchAccount_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <Border Width="22" Height="22" CornerRadius="7" Background="{DynamicResource Brush.AccentSoft}">
-                            <TextBlock Text="⇄" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Brush.Accent}"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <TextBlock Text="切换账号" FontSize="12.5" FontWeight="SemiBold" Margin="7,0,0,0"
-                                   Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
-                    </StackPanel>
-                </Button>
                 <Button x:Name="BtnRefresh" Content="刷新" Style="{StaticResource TaskButton}" Margin="8,0,0,0"
                         Padding="16,8" Click="BtnRefresh_Click" />
             </StackPanel>

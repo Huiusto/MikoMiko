@@ -37,6 +37,7 @@ public partial class VideoView : UserControl
     private string _commentLightboxUrl = string.Empty;
     private bool _commentLightboxPanning;
     private Point _commentLightboxLastPoint;
+    private Window? _hostWindow;
 
     public VideoView(VideoViewModel viewModel, AppSettings settings)
     {
@@ -58,12 +59,69 @@ public partial class VideoView : UserControl
             ApplyPlayerSettings();
             SyncSelected();
             _positionTimer.Start();
+            _hostWindow = Window.GetWindow(this);
+            if (_hostWindow is not null) _hostWindow.PreviewKeyDown += OnHostPreviewKeyDown;
         };
         Unloaded += (_, _) =>
         {
             PausePlayback();
             Media.Source = null;
+            if (_hostWindow is not null) _hostWindow.PreviewKeyDown -= OnHostPreviewKeyDown;
+            _hostWindow = null;
         };
+    }
+
+    /// <summary>Q 点赞 / E 收藏 / W 或 ↑ 上一个 / S 或 ↓ 下一个；输入框聚焦时不拦截。</summary>
+    private async void OnHostPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        // 只在本页的输入框（评论框等）里让出按键；顶部搜索框聚焦时也要能用快捷键。
+        var focused = Keyboard.FocusedElement as DependencyObject;
+        if (focused is not null && IsAncestorOf(focused) &&
+            (focused is System.Windows.Controls.TextBox ||
+             focused is System.Windows.Controls.PasswordBox ||
+             focused is System.Windows.Controls.ComboBox ||
+             FindAncestor<System.Windows.Controls.TextBox>(focused) is not null))
+            return;
+        if (CommentLightbox.Visibility == Visibility.Visible) return;
+
+        switch (e.Key)
+        {
+            case Key.Q:
+                _vm.LikeCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.E:
+                _vm.FavoriteCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.W:
+            case Key.Up:
+                _vm.Previous();
+                if (_settings.AutoPlayOnSwipe)
+                {
+                    _playRequested = true;
+                    _vm.IsPlaying = true;
+                }
+                e.Handled = true;
+                break;
+            case Key.S:
+            case Key.Down:
+                await _vm.NextAsync();
+                if (_settings.AutoPlayOnSwipe)
+                {
+                    _playRequested = true;
+                    _vm.IsPlaying = true;
+                }
+                e.Handled = true;
+                break;
+        }
+    }
+
+    private void ClosePlayerMenus_Click(object sender, MouseButtonEventArgs e)
+    {
+        _vm.IsQualityOpen = false;
+        _vm.IsSpeedOpen = false;
+        e.Handled = true;
     }
 
     /// <summary>离开视频页 / 切到别的页面时暂停播放与进度刷新。</summary>
@@ -187,6 +245,18 @@ public partial class VideoView : UserControl
                 _retriedSource = false;
                 SyncSelected();
                 break;
+            case nameof(VideoViewModel.SourceVersion):
+            {
+                if (_vm.Selected is null) break;
+                var playing = _vm.IsPlaying;
+                _pendingSeekSeconds = Media.Source is null ? -1 : Media.Position.TotalSeconds;
+                _lastSelectedPostId = _vm.Selected.PostId;
+                _retriedSource = false;
+                _playRequested = playing;
+                SyncSelected();
+                if (playing) _vm.IsPlaying = true;
+                break;
+            }
             case nameof(VideoViewModel.HasSource):
                 if (_vm.HasSource && Media.Source is null) SyncSelected();
                 break;

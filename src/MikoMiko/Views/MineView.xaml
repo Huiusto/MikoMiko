@@ -132,6 +132,25 @@
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock Text="{Binding Profile.Nickname}" FontSize="23" FontWeight="Bold"
                                                        Foreground="White" VerticalAlignment="Center" />
+                                            <Button x:Name="BtnSwitchMineAccount" Width="30" Height="30" Margin="10,0,0,0"
+                                                    Background="#33FFFFFF" BorderThickness="0" Cursor="Hand"
+                                                    ToolTip="切换米游社账号" Click="SwitchAccount_Click"
+                                                    VerticalAlignment="Center">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Bd" CornerRadius="15" Background="#33FFFFFF">
+                                                            <TextBlock Text="⇄" FontSize="15" FontWeight="Bold"
+                                                                       Foreground="White" HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center" />
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Bd" Property="Background" Value="#59FFFFFF" />
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Profile.Uid, StringFormat=米游社 UID {0}}" FontSize="12"
                                                    Foreground="#E8FFFFFF" Margin="0,7,0,0" />

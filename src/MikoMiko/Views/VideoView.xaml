@@ -341,6 +341,26 @@
                     </Grid>
                 </Border>
 
+                <!-- 清晰度/倍速浮层的透明遮罩：点击播放器其它位置自动收起 -->
+                <Border Background="Transparent" MouseLeftButtonDown="ClosePlayerMenus_Click"
+                        Visibility="{Binding IsQualityOpen, Converter={StaticResource BoolToVis}}" />
+                <Border Background="Transparent" MouseLeftButtonDown="ClosePlayerMenus_Click"
+                        Visibility="{Binding IsSpeedOpen, Converter={StaticResource BoolToVis}}" />
+
+                <!-- 下载完成提示：视频正中央显示 3 秒 -->
+                <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Background="#E6151B23" CornerRadius="12" Padding="24,15"
+                        Visibility="{Binding DownloadText, Converter={StaticResource NotEmptyToVis}}"
+                        IsHitTestVisible="False">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="M0 0 L6 6 L14 -4" Stroke="#6BE08F" StrokeThickness="2.2"
+                              Width="16" Height="12" Stretch="Uniform" Margin="0,0,10,0"
+                              VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding DownloadText}" Foreground="#F0FFFFFF" FontSize="14"
+                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
                 <!-- 清晰度与下载抽屉（底部倍速旁展开） -->
                 <Border Width="176" HorizontalAlignment="Right" VerticalAlignment="Bottom"
                         Margin="0,0,54,58" Background="#F2181820" CornerRadius="10" Padding="6"
@@ -393,9 +413,6 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
-                        <TextBlock Text="{Binding DownloadText}" Foreground="#B3FFFFFF" FontSize="10.5"
-                                   TextWrapping="Wrap" Margin="10,6,10,4" MaxWidth="150"
-                                   Visibility="{Binding DownloadText, Converter={StaticResource NotEmptyToVis}}" />
                     </StackPanel>
                 </Border>
                 <Border Width="140" HorizontalAlignment="Right" VerticalAlignment="Bottom"

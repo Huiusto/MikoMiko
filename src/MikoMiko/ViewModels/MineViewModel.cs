@@ -351,6 +351,18 @@ public sealed partial class MineViewModel : ObservableObject
         await SyncUserAsync();
     }
 
+    /// <summary>与「每日任务」共用米游社账号列表：切换后立即刷新我的页资料。</summary>
+    public async Task SwitchAccountAsync(HoyoAccount account)
+    {
+        if (string.IsNullOrWhiteSpace(account.Cookie)) return;
+        HoyoAccountService.SetActive(account.Uid);
+        _settings.Cookie = account.Cookie;
+        _settings.Nickname = account.Nickname;
+        _settings.Avatar = account.AvatarUrl ?? _settings.Avatar;
+        _content.RebuildApi();
+        await LoadAsync();
+    }
+
     // ---------------------------------------------------------------- 内嵌扫码登录
 
     [RelayCommand]

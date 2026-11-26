@@ -3,7 +3,6 @@ using MikoMiko.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using Button = System.Windows.Controls.Button;
 
 namespace MikoMiko.Views;
@@ -40,7 +39,15 @@ public partial class WebHubView : UserControl
             new WebLink("原神伤害计算", "https://genshincalc.yunlu18.net/", "角色伤害模拟计算"),
             new WebLink("原神中英日词典", "https://genshin-dictionary.com/zh-CN", "多语言名词查询"),
             new WebLink("米哈游游戏库", "https://indienova.com/gamedb/company/mihoyo/p/1", "米哈游所有游戏"),
-            new WebLink("原神 B 服请愿", "https://change.org/GenshinImpact", "change.org 玩家请愿"),
+        };
+        SoloLinks.ItemsSource = new[]
+        {
+            new WebLink("原神 B 服请愿", "https://change.org/GenshinImpact", "change.org · 米哈游原神 B 服玩家请愿"),
+        };
+        // 离开网页页时收起推荐列表，避免弹层残留在其它页面上。
+        IsVisibleChanged += (_, _) =>
+        {
+            if (!IsVisible) LinksPopup.IsOpen = false;
         };
     }
 
@@ -64,17 +71,14 @@ public partial class WebHubView : UserControl
 
             InjectAccountCookies();
 
-            Web.CoreWebView2.NavigationStarting += (_, args) =>
+            Web.CoreWebView2.NavigationStarting += (_, __) =>
             {
-                AddressInput.Text = args.Uri;
                 LoadingPanel.Visibility = Visibility.Visible;
                 LinksPopup.IsOpen = false;
             };
             Web.CoreWebView2.NavigationCompleted += (_, __) =>
             {
                 LoadingPanel.Visibility = Visibility.Collapsed;
-                if (!string.IsNullOrWhiteSpace(Web.CoreWebView2.Source))
-                    AddressInput.Text = Web.CoreWebView2.Source;
                 UpdateNavigation();
             };
             Web.CoreWebView2.NewWindowRequested += (_, args) =>
@@ -88,7 +92,6 @@ public partial class WebHubView : UserControl
         catch (Exception)
         {
             LoadingPanel.Visibility = Visibility.Collapsed;
-            AddressInput.Text = "网页组件初始化失败，请在设置中检查 WebView2 运行库";
         }
     }
 
@@ -118,31 +121,6 @@ public partial class WebHubView : UserControl
             // 地址非法时保持当前页面
         }
     }
-
-    private void Go_Click(object sender, RoutedEventArgs e)
-    {
-        var text = AddressInput.Text?.Trim() ?? string.Empty;
-        if (string.IsNullOrEmpty(text)) return;
-
-        if (!text.Contains("://", StringComparison.Ordinal))
-        {
-            // 不像网址时交给 Bing 搜索，避免把普通关键词当作域名。
-            text = text.Contains('.') && !text.Contains(' ')
-                ? "https://" + text
-                : "https://www.bing.com/search?q=" + Uri.EscapeDataString(text);
-        }
-        Navigate(text);
-    }
-
-    private void AddressInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter) return;
-        e.Handled = true;
-        Go_Click(sender, e);
-    }
-
-    private void AddressInput_GotFocus(object sender, KeyboardFocusChangedEventArgs e)
-        => AddressInput.SelectAll();
 
     private void Back_Click(object sender, RoutedEventArgs e)
     {

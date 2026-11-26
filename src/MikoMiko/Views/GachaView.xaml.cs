@@ -223,7 +223,7 @@ public partial class GachaView : UserControl
         PoolGrid.Children.Clear();
         PoolGrid.ColumnDefinitions.Clear();
         for (var i = 0; i < stats.Count; i++)
-            PoolGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            PoolGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PoolColumnWidth(stats.Count)) });
 
         for (var i = 0; i < stats.Count; i++)
         {
@@ -231,6 +231,15 @@ public partial class GachaView : UserControl
             Grid.SetColumn(card, i);
             PoolGrid.Children.Add(card);
         }
+    }
+
+    /// <summary>卡池较少时等分铺满，四列及以上固定 286 宽并横向滚动。</summary>
+    private double PoolColumnWidth(int count)
+    {
+        var available = PoolScroll.ActualWidth > 0 ? PoolScroll.ActualWidth : ActualWidth;
+        if (count <= 3 && available > 0)
+            return Math.Max(286, available / count);
+        return 286;
     }
 
     private int TopRank => _game is "genshin" or "starrail" ? 5 : 4;
@@ -693,7 +702,7 @@ public partial class GachaView : UserControl
         var open = new MenuItem { Header = "打开 MikoNest 数据目录" };
         open.Click += (_, _) => OpenDataDir();
         var about = new MenuItem { Header = "数据来源：MikoNest gacha_records.json" };
-        about.Click += (_, _) => ShowToast("MikoMiko 0.1.37 · 抽卡数据来自 MikoNest 本地记录");
+        about.Click += (_, _) => ShowToast("MikoMiko 0.1.38 · 抽卡数据来自 MikoNest 本地记录");
         menu.Items.Add(reload);
         menu.Items.Add(open);
         menu.Items.Add(new Separator());

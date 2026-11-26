@@ -35,7 +35,7 @@ public sealed partial class VideoViewModel : ObservableObject
         _authorHistory = authorHistory ?? new VideoAuthorHistory();
         _officialHistory = officialHistory ?? new VideoAuthorHistory(
             Path.Combine(SettingsService.DataDirectory, "video-official-history.json"),
-            TimeSpan.FromHours(1));
+            TimeSpan.FromHours(5));
         DanmakuPlaceholder = PickPlaceholder();
         _placeholderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
         _placeholderTimer.Tick += (_, _) => DanmakuPlaceholder = PickPlaceholder();
@@ -76,6 +76,8 @@ public sealed partial class VideoViewModel : ObservableObject
     [ObservableProperty] private string _commentStatus = string.Empty;
     [ObservableProperty] private bool _canComment;
     [ObservableProperty] private string _qualityText = "自动";
+    /// <summary>清晰度切换后递增，播放器据此重新取源并保持当前进度。</summary>
+    [ObservableProperty] private int _sourceVersion;
     [ObservableProperty] private bool _isBuffering;
     [ObservableProperty] private bool _isQualityOpen;
     [ObservableProperty] private bool _isSpeedOpen;
@@ -144,6 +146,22 @@ public sealed partial class VideoViewModel : ObservableObject
                 if (Videos.Count >= 12) break;
             }
             IsDemo = _content.IsDemo;
+
+            // 36 条候选可能全部来自刚刷过的作者。此时宁可临时放宽作者冷却，也不能让视频页空白。
+            if (Videos.Count == 0)
+            {
+                foreach (var item in fetched)
+                {
+                    var key = AuthorKeyOf(item);
+                    if (key.Length > 0 && _batchAuthors.Contains(key)) continue;
+                    _seen.Add(item.PostId);
+                    if (key.Length > 0) _batchAuthors.Add(key);
+                    _all.Add(item);
+                    Videos.Add(item);
+                    if (Videos.Count >= 12) break;
+                }
+            }
+
             if (Videos.Count > 0)
             {
                 Select(Videos[0]);
@@ -151,7 +169,7 @@ public sealed partial class VideoViewModel : ObservableObject
             }
             else
             {
-                StatusText = "最近刷到的作者仍在冷却中，官方账号需间隔 1 小时、普通作者需间隔 3 天";
+                StatusText = "暂时没有可推荐的视频，请稍后刷新";
             }
         }
         catch
@@ -172,7 +190,7 @@ public sealed partial class VideoViewModel : ObservableObject
 
     public void Select(FeedItem item)
     {
-        // 真正展示给用户时才写入后台记录：普通作者 3 天、官方账号 1 小时内不再推送。
+        // 真正展示给用户时才写入后台记录：普通作者 2 天、官方账号 5 小时内不再推送。
         if (item.IsOfficial) _officialHistory.Remember(item.AuthorUid, item.Author);
         else _authorHistory.Remember(item.AuthorUid, item.Author);
         _batchAuthors.Add(AuthorKeyOf(item));
@@ -341,7 +359,7 @@ public sealed partial class VideoViewModel : ObservableObject
         _openUser?.Invoke(comment.UserId);
     }
 
-    /// <summary>普通作者 3 天、官方账号 1 小时内只推送一次；同一批次内也不重复。</summary>
+    /// <summary>普通作者 2 天、官方账号 5 小时内只推送一次；同一批次内也不重复。</summary>
     private bool CanPushAuthor(FeedItem item)
     {
         var key = AuthorKeyOf(item);
@@ -419,14 +437,15 @@ public sealed partial class VideoViewModel : ObservableObject
                 ? $"{Selected.Author}_{Selected.PostId}"
                 : Selected.Title;
             var path = await DownloadService.DownloadAsync(Selected.VideoUrl, directory, name, ".mp4");
-            var shown = $"已保存到：{path}";
-            DownloadText = shown;
-            await Task.Delay(1000);
-            if (DownloadText == shown) DownloadText = string.Empty;
+            DownloadText = "下载完成";
+            await Task.Delay(3000);
+            if (DownloadText == "下载完成") DownloadText = string.Empty;
         }
         catch (Exception ex)
         {
             DownloadText = "下载失败：" + ex.Message;
+            await Task.Delay(3000);
+            DownloadText = string.Empty;
         }
         finally
         {
@@ -441,9 +460,10 @@ public sealed partial class VideoViewModel : ObservableObject
         IsQualityOpen = false;
         if (QualityText == quality) return;
         QualityText = quality;
-        _content.Api.Quality = quality == "自动" ? "1080P" : quality;
+        _content.Api.Quality = quality == "自动" ? "" : quality;
         var wasPlaying = IsPlaying;
         await RefreshSourceAsync();
+        SourceVersion++;
         if (wasPlaying) IsPlaying = true;
     }
 
@@ -478,8 +498,9 @@ public sealed partial class VideoViewModel : ObservableObject
             _ => "自动",
         };
         QualityText = next;
-        _content.Api.Quality = next == "自动" ? "1080P" : next;
+        _content.Api.Quality = next == "自动" ? "" : next;
         await RefreshSourceAsync();
+        SourceVersion++;
     }
 
     /// <summary>预加载后三个视频的详情与播放直链，下滑时无需再等接口。</summary>

@@ -296,6 +296,8 @@ public static class LauncherBackgroundService
     {
         public Dictionary<string, int> Index { get; set; } = new();
         public Dictionary<string, bool> Flags { get; set; } = new();
+        public List<string> GameOrder { get; set; } = new();
+        public Dictionary<string, string> CustomBackground { get; set; } = new();
     }
 
     public static int LoadIndex(string gameKey)
@@ -364,6 +366,97 @@ public static class LauncherBackgroundService
         catch
         {
             // 仅影响下次启动页的显示状态
+        }
+    }
+
+    public static List<string> LoadGameOrder()
+    {
+        try
+        {
+            if (!File.Exists(UiStateFile)) return new List<string>();
+            var state = JsonSerializer.Deserialize<LaunchUiState>(File.ReadAllText(UiStateFile));
+            return state?.GameOrder ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    public static void SaveGameOrder(IEnumerable<string> keys)
+    {
+        try
+        {
+            Directory.CreateDirectory(SettingsService.CacheDirectory);
+            var state = File.Exists(UiStateFile)
+                ? JsonSerializer.Deserialize<LaunchUiState>(File.ReadAllText(UiStateFile)) ?? new()
+                : new LaunchUiState();
+            state.GameOrder = keys.Where(k => !string.IsNullOrWhiteSpace(k)).Distinct().ToList();
+            File.WriteAllText(UiStateFile, JsonSerializer.Serialize(state));
+        }
+        catch
+        {
+            // 排序保存失败时保持当前会话顺序
+        }
+    }
+
+    public static string? LoadCustomBackground(string gameKey)
+    {
+        try
+        {
+            if (!File.Exists(UiStateFile)) return null;
+            var state = JsonSerializer.Deserialize<LaunchUiState>(File.ReadAllText(UiStateFile));
+            if (state?.CustomBackground is null ||
+                !state.CustomBackground.TryGetValue(gameKey, out var path)) return null;
+            return File.Exists(path) ? path : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static string? SaveCustomBackground(string gameKey, string sourceFile)
+    {
+        Directory.CreateDirectory(CacheDir);
+        var ext = Path.GetExtension(sourceFile);
+        if (string.IsNullOrWhiteSpace(ext)) ext = ".png";
+        var target = Path.Combine(CacheDir, $"custom-{gameKey}-{DateTime.Now:yyyyMMddHHmmss}{ext}");
+        File.Copy(sourceFile, target, true);
+
+        var state = File.Exists(UiStateFile)
+            ? JsonSerializer.Deserialize<LaunchUiState>(File.ReadAllText(UiStateFile)) ?? new()
+            : new LaunchUiState();
+        if (state.CustomBackground is null) state.CustomBackground = new Dictionary<string, string>();
+        var old = state.CustomBackground.TryGetValue(gameKey, out var previous) ? previous : null;
+        state.CustomBackground[gameKey] = target;
+        File.WriteAllText(UiStateFile, JsonSerializer.Serialize(state));
+        try
+        {
+            if (old != null && File.Exists(old) && old != target) File.Delete(old);
+        }
+        catch
+        {
+            // 旧图被占用时忽略
+        }
+        return target;
+    }
+
+    public static void ClearCustomBackground(string gameKey)
+    {
+        try
+        {
+            if (!File.Exists(UiStateFile)) return;
+            var state = JsonSerializer.Deserialize<LaunchUiState>(File.ReadAllText(UiStateFile));
+            if (state?.CustomBackground is null ||
+                !state.CustomBackground.TryGetValue(gameKey, out var old)) return;
+            state.CustomBackground.Remove(gameKey);
+            File.WriteAllText(UiStateFile, JsonSerializer.Serialize(state));
+            try { if (File.Exists(old)) File.Delete(old); } catch { }
+        }
+        catch
+        {
+            // 清理失败不影响官方壁纸恢复
         }
     }
 

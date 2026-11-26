@@ -130,6 +130,11 @@
         <ScrollViewer x:Name="MomentScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,6,0">
             <StackPanel Margin="26,18,18,30" MaxWidth="1160" HorizontalAlignment="Stretch">
 
+                <!-- 板块状态提示 -->
+                <TextBlock Text="该板块内容缺失，正在优化中~"
+                           Foreground="#E04848" FontSize="12.5" FontWeight="SemiBold"
+                           Margin="2,0,0,10" TextWrapping="Wrap" />
+
                 <!-- 头部 -->
                 <StackPanel Orientation="Horizontal" Margin="2,0,0,16">
                     <TextBlock Text="{Binding [Moment.Title], Source={x:Static loc:Loc.Instance}}"

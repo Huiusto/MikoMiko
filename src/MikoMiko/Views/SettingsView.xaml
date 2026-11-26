@@ -173,32 +173,6 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,8,0,10">
-                            <TextBlock Text="{Binding [S.AccentColor], Source={x:Static loc:Loc.Instance}}"
-                                       Style="{StaticResource RowLabel}" />
-                            <TextBlock Text="{Binding [S.AccentHint], Source={x:Static loc:Loc.Instance}}"
-                                       Style="{StaticResource RowHint}" Margin="4,0,0,0" />
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding AccentOptions}" Margin="0,0,0,8">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Style="{StaticResource ChipButton}"
-                                            Command="{Binding DataContext.SelectAccentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="11" Height="11" Fill="{Binding Swatch}" VerticalAlignment="Center" />
-                                            <TextBlock Text="{Binding Label}" Margin="6,0,0,0" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
                         <StackPanel Orientation="Horizontal" Margin="0,12,0,10">
                             <TextBlock Text="{Binding [S.Font], Source={x:Static loc:Loc.Instance}}"
                                        Style="{StaticResource RowLabel}" />
@@ -246,6 +220,8 @@
                         <CheckBox Content="{Binding [S.AutoStart], Source={x:Static loc:Loc.Instance}}"
                                   Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.AutoStart}" />
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                            <RadioButton Content="{Binding [S.StartLaunch], Source={x:Static loc:Loc.Instance}}"
+                                         GroupName="StartPage" IsChecked="{Binding Settings.StartOnLaunch}" Margin="0,0,20,0" />
                             <RadioButton Content="{Binding [S.StartHome], Source={x:Static loc:Loc.Instance}}"
                                          GroupName="StartPage" IsChecked="{Binding Settings.StartOnHome}" Margin="0,0,24,0" />
                             <RadioButton Content="启动时默认进入视频" GroupName="StartPage"

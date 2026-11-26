@@ -76,6 +76,13 @@
   .menu .item .sub.ok { color: #6be08f; }
   .menu .item .sub.no { color: #ffb44d; }
   .menu .item .check { width: 18px; text-align: center; color: var(--accent); font-size: 14px; }
+  .menu .item .order { display: flex; gap: 3px; margin-left: 4px; }
+  .menu .item .order button {
+    width: 23px; height: 23px; border-radius: 6px; padding: 0; cursor: pointer;
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+    color: rgba(255,255,255,.86); font-size: 11px; line-height: 1;
+  }
+  .menu .item .order button:hover { background: rgba(255,255,255,.20); border-color: var(--accent-line); }
 
   .brand { font-size: 10px; letter-spacing: 2.4px; color: rgba(255,255,255,.58);
            text-shadow: 0 1px 4px rgba(0,0,0,.6); }
@@ -140,11 +147,23 @@
   .reserve .card b { display: block; font-size: 13px; letter-spacing: .2px; }
   .reserve .card span { display: block; font-size: 10.5px; color: #ffd166; margin-top: 4px; letter-spacing: .3px; }
 
-  .actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; min-width: 280px; }
+  .actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; min-width: 280px; margin-left: auto; }
   .actions .hint { font-size: 11.5px; color: rgba(255,255,255,.85); max-width: 464px;
                    text-align: right; line-height: 1.5;
                    text-shadow: 0 1px 3px rgba(0,0,0,.55); }
   .main-row { display: flex; align-items: center; gap: 10px; position: relative; }
+  .pre-btn {
+    width: 50px; height: 50px; padding: 0; flex: none; border-radius: 13px; display: none;
+    align-items: center; justify-content: center; position: relative;
+    background: rgba(18,20,26,.58); border: 1px solid rgba(255,209,102,.50);
+    box-shadow: 0 8px 22px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.10);
+    backdrop-filter: blur(12px) saturate(1.05); color: #ffd166;
+  }
+  .pre-btn.on { display: flex; }
+  .pre-btn:hover { background: rgba(80,66,30,.72); border-color: #ffd166; }
+  .pre-btn svg { width: 24px; height: 24px; }
+  .pre-btn .dot { position: absolute; right: -3px; top: -3px; width: 9px; height: 9px; border-radius: 50%;
+                  background: #ff6b6b; box-shadow: 0 0 0 2px rgba(10,12,18,.85); }
   .main-btn {
     font-size: 17px; font-weight: 700; padding: 14px 48px; min-width: 210px; border-radius: 13px;
     letter-spacing: .8px;
@@ -240,8 +259,9 @@
 </head>
 <body>
 <div class="bg">
-  <img id="bgImage" alt="">
+  <img id="bgImage" alt="" loading="eager" decoding="sync">
   <video id="bgVideo" muted loop playsinline preload="auto"></video>
+  <div id="preloadBox" style="display:none"></div>
 </div>
 
 <div class="page" id="page">
@@ -266,6 +286,10 @@
     </div>
     <div class="actions">
       <div class="main-row">
+        <button class="btn pre-btn" id="btnPre" title="官方预下载" aria-label="预下载">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M6.8 10.2 12 15.4l5.2-5.2"/><path d="M4 18.5h16"/></svg>
+          <span class="dot"></span>
+        </button>
         <button class="btn accent main-btn" id="btnMain"><span id="mainText">开始游戏</span></button>
         <button class="btn settings-btn" id="btnGameSettings" title="游戏设置" aria-label="游戏设置">
           <span class="bars"><i></i><i></i><i></i></span>
@@ -292,6 +316,19 @@
       <div class="gs-section">启动页显示</div>
       <label class="check"><input type="checkbox" id="chkReserve"> 显示「预约游戏」卡片（左下角）</label>
       <label class="check"><input type="checkbox" id="chkMhyy"> 显示「米哈云游」按钮（左上角）</label>
+      <div class="divider"></div>
+      <div class="gs-section">启动页背景</div>
+      <div class="kv"><div class="key">当前背景</div><div class="val" id="gsBg">官方壁纸</div></div>
+      <div class="gs-actions" style="margin-top:14px">
+        <button class="gs-btn" id="gsCustomBg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="M4.5 17l5-5 4 4 3-2.6 3 3.1"/></svg>
+          自定义背景
+        </button>
+        <button class="gs-btn" id="gsRestoreBg">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M5 9.8A7.6 7.6 0 1 1 4.8 14"/></svg>
+          恢复官方壁纸
+        </button>
+      </div>
       <div class="gs-actions">
         <button class="gs-btn" id="gsOpenDir">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.2c0-1 .8-1.8 1.8-1.8h4l2 2.2h7.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8H5.3c-1 0-1.8-.8-1.8-1.8Z"/><path d="M3.8 10.4h16.4"/></svg>
@@ -325,6 +362,28 @@
   let state = null;
   const $ = id => document.getElementById(id);
   const bgImage = $('bgImage'), bgVideo = $('bgVideo');
+  const preloadedImages = [];
+
+  function preloadBackgrounds() {
+    if (!state) return;
+    const box = $('preloadBox');
+    box.innerHTML = '';
+    preloadedImages.length = 0;
+    const urls = (state.preloadImages || []).concat((state.backgrounds || []).map(x => x.image));
+    urls.forEach(src => {
+      if (!src) return;
+      const img = new Image();
+      img.decoding = 'sync';
+      img.src = src;
+      preloadedImages.push(img);
+      box.appendChild(img);
+    });
+    const item = curBg();
+    if (item && item.image) {
+      bgImage.loading = 'eager';
+      if (bgImage.getAttribute('src') !== item.image) bgImage.src = item.image;
+    }
+  }
 
   function send(obj) {
     if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage(obj);
@@ -398,6 +457,7 @@
   function renderDots() {
     const box = $('dots');
     box.innerHTML = '';
+    box.style.display = state.customBackground ? 'none' : '';
     const list = state.backgrounds || [];
     for (let i = 0; i < list.length; i++) {
       const d = document.createElement('div');
@@ -413,16 +473,38 @@
     menu.innerHTML = '';
     const tip = document.createElement('div');
     tip.className = 'menu-tip';
-    tip.textContent = '选择要启动的游戏';
+    tip.textContent = '选择要启动的游戏 · 用 ↑ ↓ 调整顺序';
     menu.appendChild(tip);
 
-    state.games.forEach(g => {
+    state.games.forEach((g, index) => {
       const item = document.createElement('div');
       item.className = 'item';
       const iconHtml = g.icon ? `<img class="gicon" src="${g.icon}" alt="">` : '';
       item.innerHTML = `${iconHtml}<div class="meta"><div class="name">${g.name}</div>
         <div class="sub ${g.located ? 'ok' : 'no'}">${g.located ? '● 已定位' : '○ 未定位'}${g.running ? ' · 运行中' : ''}</div></div>
         <span class="check">${g.key === state.selected ? '✓' : ''}</span>`;
+      const order = document.createElement('div');
+      order.className = 'order';
+      const up = document.createElement('button');
+      up.textContent = '↑';
+      up.title = '上移';
+      up.disabled = index === 0;
+      up.onclick = e => {
+        e.stopPropagation();
+        if (index > 0) send({ type: 'moveGame', key: g.key, delta: -1 });
+      };
+      const down = document.createElement('button');
+      down.textContent = '↓';
+      down.title = '下移';
+      down.disabled = index === state.games.length - 1;
+      down.onclick = e => {
+        e.stopPropagation();
+        if (index < state.games.length - 1) send({ type: 'moveGame', key: g.key, delta: 1 });
+      };
+      order.appendChild(up);
+      order.appendChild(down);
+      order.onclick = e => e.stopPropagation();
+      item.appendChild(order);
       item.onclick = () => {
         menu.classList.remove('on');
         if (g.key !== state.selected) send({ type: 'selectGame', key: g.key });
@@ -447,6 +529,12 @@
     $('gameLabel').textContent = `当前游戏：${g.name || ''}`;
     $('hintText').textContent = state.hint || '';
     $('btnLocate').style.display = '';
+    const pre = $('btnPre');
+    pre.classList.toggle('on', !!g.preDownload);
+    pre.disabled = !g.preDownload;
+    pre.title = g.preDownload
+      ? `官方预下载${g.preDownloadVersion ? ' · ' + g.preDownloadVersion : ''}，点击打开米哈游官方预下载`
+      : '当前没有官方预下载';
   }
 
   function applyUiFlags() {
@@ -465,6 +553,8 @@
     $('gsFree').textContent = info.free || '—';
     $('chkReserve').checked = state.showReserve !== false;
     $('chkMhyy').checked = state.showMhyy !== false;
+    $('gsBg').textContent = state.customBackground ? '自定义背景（已启用）' : '官方壁纸';
+    $('gsRestoreBg').disabled = !state.customBackground;
   }
 
   function openSettings() {
@@ -498,6 +588,7 @@
     if (!state.backgrounds) state.backgrounds = [];
     if (typeof state.index !== 'number') state.index = 0;
     applyAccent(state.accent);
+    preloadBackgrounds();
     render();
   };
 
@@ -506,6 +597,8 @@
     const prevVideo = curBg() ? curBg().video : null;
     state = Object.assign({}, state, patch);
     if (patch.accent) applyAccent(state.accent);
+    if (patch.backgrounds || patch.index !== undefined || patch.customBackground !== undefined)
+      preloadBackgrounds();
     render();
     const nowVideo = curBg() ? curBg().video : null;
     if (prevVideo !== nowVideo && nowVideo && !state.paused) {
@@ -524,6 +617,7 @@
   $('gameMenu').onclick = e => e.stopPropagation();
   document.addEventListener('click', () => $('gameMenu').classList.remove('on'));
   $('btnMhyy').onclick = () => send({ type: 'mhyy' });
+  $('btnPre').onclick = () => send({ type: 'predownload' });
   $('btnMain').onclick = () => {
     const game = state.games.find(x => x.key === state.selected);
     return send({ type: game && game.located ? 'start' : 'install' });
@@ -541,6 +635,8 @@
   $('gsOpenDir').onclick = () => send({ type: 'openDir' });
   $('gsRelocate').onclick = () => send({ type: 'locate' });
   $('gsUninstall').onclick = () => send({ type: 'uninstall' });
+  $('gsCustomBg').onclick = () => send({ type: 'customBg' });
+  $('gsRestoreBg').onclick = () => send({ type: 'restoreBg' });
   $('chkReserve').onchange = e => setUiFlag('showReserve', e.target.checked);
   $('chkMhyy').onchange = e => setUiFlag('showMhyy', e.target.checked);
 

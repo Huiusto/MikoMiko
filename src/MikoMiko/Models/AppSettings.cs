@@ -16,6 +16,7 @@ public sealed partial class AppSettings : ObservableObject
     [ObservableProperty] private bool _autoStart;
     [ObservableProperty] private bool _startOnHome = true;
     [ObservableProperty] private bool _startOnVideo;
+    [ObservableProperty] private bool _startOnLaunch;
     [ObservableProperty] private bool _autoNextVideo = true;
     [ObservableProperty] private bool _autoPlayOnSwipe = true;
     [ObservableProperty] private bool _autoCheckUpdate = true;
@@ -25,15 +26,32 @@ public sealed partial class AppSettings : ObservableObject
     [ObservableProperty] private string _lastPage = "Home";
     [ObservableProperty] private string _closeAction = "Tray";    // Tray / Exit / Ask
 
-    /// <summary>启动首页与启动视频页互斥：勾选其一时自动取消另一个。</summary>
+    /// <summary>启动首页、视频页与启动页三选一：勾选其一时自动取消另外两个。</summary>
     partial void OnStartOnHomeChanged(bool value)
     {
-        if (value && StartOnVideo) StartOnVideo = false;
+        if (value)
+        {
+            StartOnVideo = false;
+            StartOnLaunch = false;
+        }
     }
 
     partial void OnStartOnVideoChanged(bool value)
     {
-        if (value && StartOnHome) StartOnHome = false;
+        if (value)
+        {
+            StartOnHome = false;
+            StartOnLaunch = false;
+        }
+    }
+
+    partial void OnStartOnLaunchChanged(bool value)
+    {
+        if (value)
+        {
+            StartOnHome = false;
+            StartOnVideo = false;
+        }
     }
 
     // 窗口

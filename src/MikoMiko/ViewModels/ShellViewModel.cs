@@ -458,9 +458,16 @@ public sealed partial class ShellViewModel : ObservableObject
         _ = EnsureLoadedAsync(key);
     }
 
+    private Views.LaunchView CreateLaunchView()
+    {
+        var view = new Views.LaunchView();
+        view.OpenUrlRequested += url => OpenLink(url);
+        return view;
+    }
+
     private object CreateView(string key) => key switch
     {
-        "Launch" => new Views.LaunchView(),
+        "Launch" => CreateLaunchView(),
         "Video" => new Views.VideoView(_video, _settings),
         "Moment" => new Views.MomentView(_moment),
         "Gacha" => new Views.GachaView(),
@@ -499,13 +506,15 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        var start = _settings.StartOnVideo
-            ? "Video"
-            : _settings.StartOnHome
-                ? "Home"
-                : _settings.RememberLastPage
-                    ? _settings.LastPage
-                    : "Home";
+        var start = _settings.StartOnLaunch
+            ? "Launch"
+            : _settings.StartOnVideo
+                ? "Video"
+                : _settings.StartOnHome
+                    ? "Home"
+                    : _settings.RememberLastPage
+                        ? _settings.LastPage
+                        : "Home";
         if (Navigation.Concat(FooterNavigation).All(i => i.Key != start)) start = "Home";
         Navigate(start, pushHistory: false);
         await EnsureLoadedAsync(start);
