@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MikoMiko 启动页</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0d12; }
+  body {
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    color: #fff; user-select: none; cursor: default;
+    --accent: #4ea4dd;
+    --accent-soft: rgba(78,164,221,.34);
+    --accent-glow: rgba(78,164,221,.42);
+    --accent-line: rgba(78,164,221,.55);
+  }
+
+  /* 官方壁纸：静态图垫底，动态 webm 由 Chromium 直接播放 */
+  .bg { position: fixed; inset: 0; overflow: hidden; background: #10131a; }
+  .bg img, .bg video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center;
+    transition: opacity .35s ease;
+  }
+  .bg video { display: none; }
+  .bg video.on { display: block; }
+  .bg img.hide { opacity: 0; }
+
+  .page { position: fixed; inset: 0; display: flex; flex-direction: column;
+          padding: 18px 22px 22px;
+          background: linear-gradient(to top, rgba(6,8,12,.42) 0%, rgba(6,8,12,.16) 13%, rgba(6,8,12,0) 28%); }
+  .top { display: flex; align-items: center; justify-content: space-between; }
+  .top-left { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    border: 1px solid rgba(255,255,255,.22);
+    background: rgba(18,20,26,.46);
+    color: #fff; font-size: 13px; padding: 10px 20px; border-radius: 12px;
+    cursor: pointer; backdrop-filter: blur(12px) saturate(1.05);
+    box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.10);
+    transition: background .18s ease, border-color .18s ease, transform .12s ease, box-shadow .18s ease;
+    white-space: nowrap; letter-spacing: .2px;
+  }
+  .btn:hover { background: rgba(46,50,62,.66); border-color: rgba(255,255,255,.42);
+               transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,0,0,.3); }
+  .btn:active { transform: translateY(0) scale(.985); }
+  .btn.accent {
+    background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 46%), var(--accent);
+    border-color: rgba(255,255,255,.18); font-weight: 600;
+    box-shadow: 0 8px 22px rgba(0,0,0,.28), 0 4px 14px var(--accent-soft);
+  }
+  .btn.accent:hover { filter: brightness(1.08); box-shadow: 0 12px 28px rgba(0,0,0,.32), 0 6px 18px var(--accent-glow); }
+  .btn.ghost { background: rgba(12,14,18,.52); }
+  .game-label { font-size: 13px; font-weight: 600; margin-left: 8px; color: rgba(255,255,255,.92);
+                text-shadow: 0 1px 4px rgba(0,0,0,.7); display: flex; align-items: center; gap: 7px; }
+  .game-label::before { content: ""; width: 6px; height: 6px; border-radius: 50%;
+                        background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+
+  .menu {
+    position: absolute; top: 56px; left: 118px; min-width: 252px;
+    background: rgba(20,23,30,.94); border: 1px solid rgba(255,255,255,.16);
+    border-radius: 12px; padding: 7px; display: none; z-index: 30;
+    box-shadow: 0 14px 34px rgba(0,0,0,.45);
+  }
+  .menu.on { display: block; }
+  .menu-tip { padding: 4px 10px 8px; font-size: 10.5px; color: rgba(255,255,255,.42);
+              border-bottom: 1px solid rgba(255,255,255,.08); margin-bottom: 4px; }
+  .menu .item { display: flex; align-items: center; gap: 10px; padding: 9px 10px 9px 12px;
+                border-radius: 9px; cursor: pointer; transition: background .14s ease; }
+  .menu .item:hover { background: rgba(255,255,255,.1); }
+  .menu .item .gicon { flex: none; width: 30px; height: 30px; border-radius: 8px;
+                       object-fit: cover; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .menu .item .meta { flex: 1; min-width: 0; }
+  .menu .item .name { font-size: 13.5px; font-weight: 600; }
+  .menu .item .sub { font-size: 10.5px; margin-top: 3px; }
+  .menu .item .sub.ok { color: #6be08f; }
+  .menu .item .sub.no { color: #ffb44d; }
+  .menu .item .check { width: 18px; text-align: center; color: var(--accent); font-size: 14px; }
+
+  .brand { font-size: 10px; letter-spacing: 2.4px; color: rgba(255,255,255,.58);
+           text-shadow: 0 1px 4px rgba(0,0,0,.6); }
+
+  .spacer { flex: 1; }
+
+  /* 左侧壁纸控制条：鼠标靠近左边缘时浮现 */
+  .side {
+    position: fixed; left: 22px; top: 50%; transform: translateY(-50%) translateX(-6px);
+    width: 46px; height: 238px; padding: 10px 6px;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    border-radius: 23px;
+    background: rgba(14,16,22,.52);
+    border: 1px solid rgba(255,255,255,.16);
+    box-shadow: 0 10px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.12);
+    backdrop-filter: blur(14px) saturate(1.1);
+    opacity: 0; pointer-events: none; z-index: 20;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .side.on { opacity: 1; pointer-events: auto; transform: translateY(-50%) translateX(0); }
+  .side::before {
+    content: ""; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 18px; height: 2px; border-radius: 2px; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-soft);
+  }
+  .side .dots {
+    height: 132px; margin-top: 14px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
+    overflow: hidden;
+  }
+  .side .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex: none; position: relative;
+    background: rgba(255,255,255,.42); cursor: pointer;
+    transition: transform .16s ease, background .16s ease;
+  }
+  .side .dot:hover { background: #fff; transform: scale(1.22); }
+  .side .dot.on { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); transform: scale(1.34); }
+  .side .divider { width: 20px; height: 1px; margin: 4px 0 8px; background: rgba(255,255,255,.16); flex: none; }
+  .side .icon {
+    width: 32px; height: 32px; border-radius: 12px; border: none; flex: none;
+    background: rgba(255,255,255,.09); color: #fff; font-size: 13px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    margin-top: 6px; transition: background .15s ease, transform .12s ease, opacity .15s ease;
+  }
+  .side .icon:hover { background: rgba(255,255,255,.24); transform: translateY(-1px); }
+  .side .icon[disabled] { opacity: .32; cursor: default; transform: none; }
+
+  .bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+  .reserve { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .reserve .title { font-size: 15px; font-weight: 600;
+                    text-shadow: 0 1px 4px rgba(0,0,0,.6); margin-right: 4px; }
+  .reserve .card {
+    padding: 11px 18px; border-radius: 12px; cursor: pointer;
+    background: rgba(18,20,26,.48); border: 1px solid rgba(255,255,255,.20);
+    backdrop-filter: blur(12px) saturate(1.05);
+    box-shadow: 0 6px 18px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.08);
+    transition: background .16s ease, transform .14s ease, border-color .16s ease;
+  }
+  .reserve .card:hover { background: rgba(48,52,64,.62); transform: translateY(-2px);
+                         border-color: var(--accent-line);
+                         box-shadow: 0 10px 26px rgba(0,0,0,.3), 0 0 0 1px var(--accent-soft) inset; }
+  .reserve .card b { display: block; font-size: 13px; letter-spacing: .2px; }
+  .reserve .card span { display: block; font-size: 10.5px; color: #ffd166; margin-top: 4px; letter-spacing: .3px; }
+
+  .actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; min-width: 280px; }
+  .actions .hint { font-size: 11.5px; color: rgba(255,255,255,.85); max-width: 464px;
+                   text-align: right; line-height: 1.5;
+                   text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+  .main-row { display: flex; align-items: center; gap: 10px; position: relative; }
+  .main-btn {
+    font-size: 17px; font-weight: 700; padding: 14px 48px; min-width: 210px; border-radius: 13px;
+    letter-spacing: .8px;
+    background: linear-gradient(180deg, rgba(255,255,255,.20), rgba(255,255,255,0) 52%), var(--accent);
+    border-color: rgba(255,255,255,.24);
+    box-shadow: 0 14px 36px rgba(0,0,0,.38), 0 6px 20px var(--accent-soft),
+                0 0 0 1px rgba(255,255,255,.16) inset;
+  }
+  .main-btn:hover { transform: translateY(-2px);
+    box-shadow: 0 18px 44px rgba(0,0,0,.44), 0 8px 26px var(--accent-glow),
+                0 0 0 1px rgba(255,255,255,.20) inset; }
+  .main-btn:active { transform: translateY(0) scale(.99); }
+  .main-btn[disabled] { opacity: .76; cursor: default; transform: none; }
+
+  .locate { font-size: 11.5px; padding: 5px 14px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(14px);
+    background: rgba(16,18,24,.94); border: 1px solid rgba(255,255,255,.18);
+    padding: 9px 18px; border-radius: 10px; font-size: 12.5px;
+    opacity: 0; transition: all .2s ease; pointer-events: none; z-index: 50;
+    box-shadow: 0 10px 28px rgba(0,0,0,.4);
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .saving {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.28); z-index: 40; font-size: 13px; letter-spacing: .5px;
+  }
+  .saving.on { display: flex; }
+</style>
+</head>
+<body>
+<div class="bg">
+  <img id="bgImage" alt="">
+  <video id="bgVideo" muted loop playsinline preload="auto"></video>
+</div>
+
+<div class="page" id="page">
+  <div class="top">
+    <div class="top-left">
+      <button class="btn accent" id="btnMhyy">米哈云游</button>
+      <button class="btn ghost" id="btnAllGames">全部游戏 ▾</button>
+      <div class="menu" id="gameMenu"></div>
+      <span class="game-label" id="gameLabel">当前游戏：原神</span>
+    </div>
+    <div class="brand">MIKOMIKO · LAUNCHER</div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="bottom">
+    <div class="reserve">
+      <span class="title">预约游戏</span>
+      <div class="card" data-url="https://planet.mihoyo.com/home"><b>星布谷地</b><span>未上线 · 预约</span></div>
+      <div class="card" data-url="https://nodusfall.mihoyo.com/home"><b>源初之结</b><span>未上线 · 预约</span></div>
+      <div class="card" data-url="https://yyjl.mihoyo.com/"><b>因缘精灵</b><span>未上线 · 预约</span></div>
+    </div>
+    <div class="actions">
+      <div class="main-row">
+        <button class="btn accent main-btn" id="btnMain"><span id="mainText">开始游戏</span></button>
+      </div>
+      <button class="btn ghost locate" id="btnLocate">定位游戏</button>
+      <div class="hint" id="hintText"></div>
+    </div>
+  </div>
+</div>
+
+<div class="side" id="sidePanel" aria-label="壁纸控制">
+  <div class="dots" id="dots"></div>
+  <div class="divider"></div>
+  <button class="icon" id="btnSaveBg" title="保存当前壁纸">⤓</button>
+  <button class="icon" id="btnPause" title="暂停 / 继续动态壁纸">❚❚</button>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="saving" id="saving">正在下载官方动态壁纸…</div>
+
+<script>
+  let state = null;
+  const $ = id => document.getElementById(id);
+  const bgImage = $('bgImage'), bgVideo = $('bgVideo');
+
+  function send(obj) {
+    if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage(obj);
+  }
+
+  function toast(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.classList.add('on');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('on'), 2600);
+  }
+
+  function curBg() {
+    if (!state) return null;
+    return state.backgrounds && state.backgrounds.length ? state.backgrounds[state.index] : null;
+  }
+
+  function applyAccent(hex) {
+    if (!hex) return;
+    const h = String(hex).replace('#', '');
+    if (h.length < 6) return;
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    const root = document.body.style;
+    root.setProperty('--accent', '#' + h.substring(0, 6));
+    root.setProperty('--accent-soft', `rgba(${r},${g},${b},.34)`);
+    root.setProperty('--accent-glow', `rgba(${r},${g},${b},.42)`);
+    root.setProperty('--accent-line', `rgba(${r},${g},${b},.55)`);
+  }
+
+  function applyBackground() {
+    if (!state) return;
+    const item = curBg();
+    const url = item ? item.image : null;
+
+    if (url) {
+      if (bgImage.getAttribute('src') !== url) bgImage.src = url;
+      bgImage.classList.remove('hide');
+    } else {
+      bgImage.removeAttribute('src');
+      bgImage.classList.add('hide');
+    }
+
+    if (item && item.video) {
+      if (bgVideo.dataset.src !== item.video) {
+        bgVideo.dataset.src = item.video;
+        bgVideo.src = item.video;
+      }
+      bgVideo.classList.add('on');
+      if (!state.paused) {
+        const p = bgVideo.play();
+        if (p && p.catch) p.catch(() => {});
+      } else {
+        bgVideo.pause();
+      }
+    } else {
+      bgVideo.pause();
+      bgVideo.classList.remove('on');
+      bgVideo.removeAttribute('src');
+      bgVideo.dataset.src = '';
+    }
+
+    const hasVideo = !!(item && item.video);
+    $('btnPause').textContent = state.paused ? '▶' : '❚❚';
+    $('btnPause').disabled = !hasVideo;
+    $('btnPause').title = hasVideo ? '暂停 / 继续动态壁纸' : '当前为静态壁纸';
+  }
+
+  function renderDots() {
+    const box = $('dots');
+    box.innerHTML = '';
+    const list = state.backgrounds || [];
+    for (let i = 0; i < list.length; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === state.index ? ' on' : '');
+      d.title = `官方壁纸 ${i + 1}${list[i].video ? ' · 动态' : ''}`;
+      d.onclick = () => send({ type: 'bg', index: i });
+      box.appendChild(d);
+    }
+  }
+
+  function renderGames() {
+    const menu = $('gameMenu');
+    menu.innerHTML = '';
+    const tip = document.createElement('div');
+    tip.className = 'menu-tip';
+    tip.textContent = '选择要启动的游戏';
+    menu.appendChild(tip);
+
+    state.games.forEach(g => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      const iconHtml = g.icon ? `<img class="gicon" src="${g.icon}" alt="">` : '';
+      item.innerHTML = `${iconHtml}<div class="meta"><div class="name">${g.name}</div>
+        <div class="sub ${g.located ? 'ok' : 'no'}">${g.located ? '● 已定位' : '○ 未定位'}${g.running ? ' · 运行中' : ''}</div></div>
+        <span class="check">${g.key === state.selected ? '✓' : ''}</span>`;
+      item.onclick = () => {
+        menu.classList.remove('on');
+        if (g.key !== state.selected) send({ type: 'selectGame', key: g.key });
+      };
+      menu.appendChild(item);
+    });
+  }
+
+  function renderMainButton() {
+    const g = state.games.find(x => x.key === state.selected) || {};
+    const btn = $('btnMain');
+    if (g.running) {
+      btn.textContent = '游戏启动中';
+      btn.disabled = true;
+    } else if (g.located) {
+      btn.textContent = '开始游戏';
+      btn.disabled = false;
+    } else {
+      btn.textContent = '获取游戏';
+      btn.disabled = false;
+    }
+    $('gameLabel').textContent = `当前游戏：${g.name || ''}`;
+    $('hintText').textContent = state.hint || '';
+    $('btnLocate').style.display = '';
+  }
+
+  function render() {
+    renderGames();
+    renderMainButton();
+    renderDots();
+    applyBackground();
+    $('saving').classList.toggle('on', !!state.preparing);
+  }
+
+  window.mikoInit = function (json) {
+    state = typeof json === 'string' ? JSON.parse(json) : json;
+    if (!state.backgrounds) state.backgrounds = [];
+    if (typeof state.index !== 'number') state.index = 0;
+    applyAccent(state.accent);
+    render();
+  };
+
+  window.mikoUpdate = function (json) {
+    const patch = typeof json === 'string' ? JSON.parse(json) : json;
+    const prevVideo = curBg() ? curBg().video : null;
+    state = Object.assign({}, state, patch);
+    if (patch.accent) applyAccent(state.accent);
+    render();
+    const nowVideo = curBg() ? curBg().video : null;
+    if (prevVideo !== nowVideo && nowVideo && !state.paused) {
+      bgVideo.play().catch(() => {});
+    }
+  };
+
+  window.mikoToast = t => toast(t);
+
+  document.addEventListener('mousemove', e => {
+    $('sidePanel').classList.toggle('on', e.clientX <= 130);
+  });
+  document.addEventListener('mouseleave', () => $('sidePanel').classList.remove('on'));
+
+  $('btnAllGames').onclick = e => { e.stopPropagation(); $('gameMenu').classList.toggle('on'); };
+  $('gameMenu').onclick = e => e.stopPropagation();
+  document.addEventListener('click', () => $('gameMenu').classList.remove('on'));
+  $('btnMhyy').onclick = () => send({ type: 'mhyy' });
+  $('btnMain').onclick = () => {
+    const game = state.games.find(x => x.key === state.selected);
+    return send({ type: game && game.located ? 'start' : 'install' });
+  };
+  $('btnLocate').onclick = () => send({ type: 'locate' });
+  document.querySelectorAll('.reserve .card').forEach(c =>
+    c.onclick = () => send({ type: 'reserve', url: c.dataset.url }));
+
+  $('btnSaveBg').onclick = () => send({ type: 'saveBg' });
+  $('btnPause').onclick = () => send({ type: 'pauseToggle' });
+
+  bgVideo.addEventListener('error', () => {
+    bgVideo.classList.remove('on');
+    toast('该动态壁纸无法播放，已显示静态壁纸');
+  });
+  bgVideo.addEventListener('playing', () => bgImage.classList.add('hide'));
+  bgVideo.addEventListener('pause', () => bgImage.classList.remove('hide'));
+  bgVideo.addEventListener('ended', () => { bgVideo.currentTime = 0; bgVideo.play().catch(() => {}); });
+
+  send({ type: 'ready' });
+</script>
+</body>
+</html>
