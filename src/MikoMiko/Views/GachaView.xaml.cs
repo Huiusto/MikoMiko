@@ -47,6 +47,8 @@ public partial class GachaView : UserControl
         public int SecondCount;
         public int ThirdCount;
         public int Pity;
+        public int SecondPity;
+        public DateTime Earliest;
         public DateTime Latest;
         public List<(string Name, int Pity, DateTime Time)> TopRows = new();
         public List<(string Name, int Pity, DateTime Time)> SecondRows = new();
@@ -207,12 +209,20 @@ public partial class GachaView : UserControl
         var gameRecords = _records.Where(r => r.GameKey == _game &&
                                                (string.IsNullOrEmpty(_uid) || r.Uid == _uid)).ToList();
         var label = _game == "genshin_beyond" ? "千星奇域" : Games.First(g => g.Key == _game).Name;
+        TxtHeaderTitle.Text = _game switch
+        {
+            "starrail" => "跃迁记录",
+            "zzz" => "调频记录",
+            "bh3" => "补给记录",
+            "genshin_beyond" => "颂愿记录",
+            _ => "祈愿记录",
+        };
         TxtSubtitle.Text = $"本地库 {_records.Count:N0} 条 · {label} {gameRecords.Count:N0} 条" +
-                           (string.IsNullOrEmpty(_uid) ? " · 全部 UID" : $" · UID {_uid}");
+                           (string.IsNullOrEmpty(_uid) ? " · 全部 UID" : $" · UID {_uid}") +
+                           (gameRecords.Count > 0
+                               ? $" · 最近更新 {gameRecords.Max(r => ParseTime(r.Time)):yyyy-MM-dd HH:mm}"
+                               : " · 等待记录同步");
         TxtDataDir.Text = "数据目录：" + MikoNestBridge.DataDir;
-        TxtKpiCaption.Text = label + (string.IsNullOrEmpty(_uid) ? " · 全部 UID" : $" · UID {_uid}");
-        TxtKpiTopLabel.Text = $"{TopRank}★ 数量";
-        TxtKpiAvgLabel.Text = $"{TopRank}★ 平均";
 
         var stats = new List<(PoolDef Def, PoolStat Stat)>();
         var matched = new HashSet<GachaRecord>();
@@ -230,14 +240,6 @@ public partial class GachaView : UserControl
 
         var totalPulls = stats.Sum(p => p.Stat.Total);
         var topPulls = stats.Sum(p => p.Stat.TopCount);
-        TxtKpiTotal.Text = totalPulls.ToString("N0");
-        TxtKpiTop.Text = topPulls.ToString("N0");
-        TxtKpiAvg.Text = topPulls > 0 ? (totalPulls / (double)topPulls).ToString("0.0") : "—";
-        TxtKpiRate.Text = totalPulls > 0 ? $"{topPulls * 100.0 / totalPulls:0.0}%" : "—";
-        TxtBottomStatus.Text = $"已载入 {gameRecords.Count:N0} 条记录 · {stats.Count} 个卡池 · " +
-                               (gameRecords.Count > 0
-                                   ? $"最近记录 {gameRecords.Max(r => ParseTime(r.Time)):yyyy-MM-dd HH:mm}"
-                                   : "等待记录同步");
 
         PoolGrid.Children.Clear();
         PoolGrid.ColumnDefinitions.Clear();
@@ -256,9 +258,9 @@ public partial class GachaView : UserControl
     private double PoolColumnWidth(int count)
     {
         var available = PoolScroll.ActualWidth > 0 ? PoolScroll.ActualWidth : ActualWidth;
-        if (count <= 3 && available > 0)
+        if (count <= 4 && available > 0)
             return Math.Max(286, available / count);
-        return 286;
+        return 320;
     }
 
     private int TopRank => _game is "genshin" or "starrail" ? 5 : 4;
@@ -290,19 +292,23 @@ public partial class GachaView : UserControl
         {
             stat.Total++;
             stat.Pity++;
+            stat.SecondPity++;
             var time = ParseTime(record.Time);
             if (time > stat.Latest) stat.Latest = time;
+            if (stat.Earliest == DateTime.MinValue && time > DateTime.MinValue) stat.Earliest = time;
             if (!int.TryParse(record.RankType, out var rank)) continue;
             if (rank == topRank)
             {
                 stat.TopCount++;
                 stat.TopRows.Insert(0, (record.Name, stat.Pity, time));
                 stat.Pity = 0;
+                stat.SecondPity = 0;
             }
             else if (rank == topRank - 1)
             {
                 stat.SecondCount++;
-                stat.SecondRows.Insert(0, (record.Name, 0, time));
+                stat.SecondRows.Insert(0, (record.Name, stat.SecondPity, time));
+                stat.SecondPity = 0;
             }
             else if (rank == topRank - 2)
             {
@@ -314,9 +320,6 @@ public partial class GachaView : UserControl
 
     private Border BuildPoolCard(PoolStat stat, int index)
     {
-        var accent = _game == "genshin_beyond"
-            ? Color.FromRgb(0x2E, 0x99, 0x87)
-            : Color.FromRgb(0x2B, 0x8B, 0xC8);
         var topColor = Color.FromRgb(0xC2, 0x83, 0x1D);
         var secondColor = Color.FromRgb(0x8B, 0x63, 0xC7);
         var thirdColor = Color.FromRgb(0x79, 0x88, 0x93);
@@ -328,14 +331,12 @@ public partial class GachaView : UserControl
         {
             Margin = new Thickness(6, 0, 6, 0),
             CornerRadius = new CornerRadius(12),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0xD9, 0xEA, 0xF5)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xDF, 0xE8, 0xF1)),
             BorderThickness = new Thickness(1),
-            Background = new LinearGradientBrush(
-                Color.FromRgb(0xF2, 0xFB, 0xFF),
-                Color.FromRgb(0xFF, 0xFF, 0xFF),
-                new Point(0, 0), new Point(0, 1)),
+            Background = Brushes.White,
         };
-        var body = new Grid { Margin = new Thickness(14, 13, 14, 12) };
+        var body = new Grid { Margin = new Thickness(16, 12, 16, 12) };
+        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -343,153 +344,79 @@ public partial class GachaView : UserControl
         body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         card.Child = body;
 
+        // 顶部细线
+        var topLine = new Border
+        {
+            Height = 3,
+            CornerRadius = new CornerRadius(2),
+            Background = new SolidColorBrush(Color.FromRgb(0xB8, 0xDC, 0xF2)),
+        };
+        Grid.SetRow(topLine, 0);
+        body.Children.Add(topLine);
+
         // 标题 + 总抽数
-        var header = new Grid();
+        var header = new Grid { Margin = new Thickness(0, 12, 0, 0) };
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var titlePanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        titlePanel.Children.Add(new Border
-        {
-            Width = 4,
-            Height = 17,
-            CornerRadius = new CornerRadius(2),
-            Background = new SolidColorBrush(accent),
-            Margin = new Thickness(0, 0, 7, 0),
-        });
-        titlePanel.Children.Add(new TextBlock
+        var title = new TextBlock
         {
             Text = stat.Name,
-            FontSize = 14.5,
+            FontSize = 17,
             FontWeight = FontWeights.Bold,
-            Foreground = (Brush)FindResource("Brush.TextPrimary"),
+            Foreground = new SolidColorBrush(Color.FromRgb(0x2A, 0x2F, 0x36)),
             VerticalAlignment = VerticalAlignment.Center,
-        });
-        Grid.SetColumn(titlePanel, 0);
-        header.Children.Add(titlePanel);
-        var count = new Border
+        };
+        Grid.SetColumn(title, 0);
+        header.Children.Add(title);
+        var count = new TextBlock
         {
-            Background = new SolidColorBrush(Color.FromArgb(0x14, accent.R, accent.G, accent.B)),
-            CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(8, 3, 8, 3),
+            Text = stat.Total.ToString(),
+            FontSize = 16,
+            FontWeight = FontWeights.Normal,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x5B, 0x63, 0x6D)),
             VerticalAlignment = VerticalAlignment.Center,
-            Child = new TextBlock
-            {
-                Text = $"{stat.Total} 抽",
-                FontSize = 10,
-                Foreground = new SolidColorBrush(accent),
-            },
         };
         Grid.SetColumn(count, 1);
         header.Children.Add(count);
-        Grid.SetRow(header, 0);
+        Grid.SetRow(header, 1);
         body.Children.Add(header);
 
+        var period = stat.Earliest > DateTime.MinValue
+            ? $"{stat.Earliest:yyyy/MM/dd HH:mm} - {stat.Latest:yyyy/MM/dd HH:mm}"
+            : "— —";
+        var periodText = new TextBlock
+        {
+            Text = period,
+            FontSize = 10.5,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x9B, 0xA3, 0xAD)),
+            Margin = new Thickness(0, 6, 0, 0),
+        };
+        Grid.SetRow(periodText, 2);
+        body.Children.Add(periodText);
+
         // 四行统计
-        var statsPanel = new StackPanel { Margin = new Thickness(0, 11, 0, 0) };
+        var statsPanel = new StackPanel { Margin = new Thickness(0, 12, 0, 10) };
         AddStatRow(statsPanel, $"{topLabel} 平均",
-            stat.TopCount > 0 ? $"{stat.Average:0.0}" : "—", "", new SolidColorBrush(topColor), true);
+            stat.TopCount > 0 ? $"{stat.Average:0.00}" : "—", "", new SolidColorBrush(topColor), true);
         AddStatRow(statsPanel, $"{topLabel} 统计", stat.TopCount.ToString(),
             $"[{stat.TopRate:0.00}%]", new SolidColorBrush(topColor), false);
         AddStatRow(statsPanel, $"{secondLabel} 统计", stat.SecondCount.ToString(),
             $"[{stat.SecondRate:0.00}%]", new SolidColorBrush(secondColor), false);
         AddStatRow(statsPanel, $"{thirdLabel} 统计", stat.ThirdCount.ToString(),
             $"[{stat.ThirdRate:0.00}%]", new SolidColorBrush(thirdColor), false);
-        Grid.SetRow(statsPanel, 1);
+        Grid.SetRow(statsPanel, 3);
         body.Children.Add(statsPanel);
-
-        // 白色汇总卡
-        var summary = new Border
-        {
-            Margin = new Thickness(0, 9, 0, 9),
-            Padding = new Thickness(11, 9, 11, 9),
-            CornerRadius = new CornerRadius(10),
-            Background = Brushes.White,
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0xEC, 0xF2, 0xF6)),
-            BorderThickness = new Thickness(1),
-            Effect = new System.Windows.Media.Effects.DropShadowEffect
-            {
-                Color = Color.FromRgb(0x2E, 0x72, 0x9C),
-                BlurRadius = 12,
-                ShadowDepth = 2,
-                Opacity = 0.10,
-            },
-        };
-        var summaryGrid = new Grid();
-        summaryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        summaryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var left = new StackPanel();
-        left.Children.Add(new TextBlock
-        {
-            Text = TopRank == 5 ? "五星" : "四星",
-            FontSize = 9.5,
-            Foreground = (Brush)FindResource("Brush.TextTertiary"),
-        });
-        left.Children.Add(new TextBlock
-        {
-            Text = stat.TopCount.ToString(),
-            FontSize = 25,
-            FontWeight = FontWeights.Bold,
-            Foreground = (Brush)FindResource("Brush.TextPrimary"),
-            Margin = new Thickness(0, -2, 0, 0),
-        });
-        Grid.SetColumn(left, 0);
-        summaryGrid.Children.Add(left);
-
-        var right = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0) };
-        var avgText = stat.TopCount > 0 ? $"{stat.Average:0.0} 抽" : "—";
-        var rateText = stat.Total > 0 ? $"{stat.TopRate:0.0}%" : "—";
-        right.Children.Add(new TextBlock
-        {
-            Text = "平均  " + avgText,
-            FontSize = 10,
-            Foreground = (Brush)FindResource("Brush.TextSecondary"),
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
-        });
-        right.Children.Add(new TextBlock
-        {
-            Text = "出货率  " + rateText,
-            FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x35, 0x9B, 0x5A)),
-            HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
-            Margin = new Thickness(0, 3, 0, 0),
-        });
-        Grid.SetColumn(right, 1);
-        summaryGrid.Children.Add(right);
-
-        var summaryWrap = new StackPanel();
-        summaryWrap.Children.Add(summaryGrid);
-        var progress = new ProgressBar
-        {
-            Height = 5,
-            Minimum = 0,
-            Maximum = PityTarget,
-            Value = Math.Min(stat.Pity, PityTarget),
-            Foreground = new SolidColorBrush(Color.FromRgb(0x3B, 0xB1, 0x70)),
-            Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xF1, 0xF6)),
-            BorderThickness = new Thickness(0),
-            Margin = new Thickness(0, 8, 0, 5),
-        };
-        summaryWrap.Children.Add(progress);
-        summaryWrap.Children.Add(new TextBlock
-        {
-            Text = $"当前保底  {stat.Pity} / {PityTarget}",
-            FontSize = 9.5,
-            Foreground = (Brush)FindResource("Brush.TextSecondary"),
-        });
-        summary.Child = summaryWrap;
-        Grid.SetRow(summary, 2);
-        body.Children.Add(summary);
 
         // 5★ / 4★ 切换
         var topSelected = !_rankFilter.TryGetValue(_game + ":" + stat.Name, out var filter) || filter;
-        var segmented = new Grid { Margin = new Thickness(0, 0, 0, 7) };
+        var segmented = new Grid { Margin = new Thickness(0, 0, 0, 8), Height = 34 };
         segmented.ColumnDefinitions.Add(new ColumnDefinition());
         segmented.ColumnDefinitions.Add(new ColumnDefinition());
         segmented.Children.Add(new Border
         {
-            CornerRadius = new CornerRadius(8),
-            Background = new SolidColorBrush(Color.FromRgb(0xF1, 0xF7, 0xFB)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0xDD, 0xEB, 0xF4)),
+            CornerRadius = new CornerRadius(9),
+            Background = new SolidColorBrush(Color.FromRgb(0xF3, 0xF7, 0xFB)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xDD, 0xE7, 0xF0)),
             BorderThickness = new Thickness(1),
         });
         var topBtn = new Button
@@ -497,7 +424,7 @@ public partial class GachaView : UserControl
             Content = $"{topLabel}",
             Background = topSelected ? Brushes.White : Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Foreground = topSelected ? new SolidColorBrush(accent) : (Brush)FindResource("Brush.TextTertiary"),
+            Foreground = topSelected ? new SolidColorBrush(Color.FromRgb(0x2B, 0x8B, 0xC8)) : (Brush)FindResource("Brush.TextTertiary"),
             FontWeight = topSelected ? FontWeights.SemiBold : FontWeights.Normal,
             FontSize = 11.5,
             Cursor = Cursors.Hand,
@@ -530,7 +457,7 @@ public partial class GachaView : UserControl
         };
         Grid.SetColumn(secondBtn, 1);
         segmented.Children.Add(secondBtn);
-        Grid.SetRow(segmented, 3);
+        Grid.SetRow(segmented, 4);
         body.Children.Add(segmented);
 
         // 记录列表
@@ -539,61 +466,178 @@ public partial class GachaView : UserControl
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
         };
-        var list = new StackPanel();
+        var list = new StackPanel { Margin = new Thickness(0, 0, 2, 0) };
         var rows = topSelected ? stat.TopRows : stat.SecondRows;
+        var standard = stat.Name.Contains("常驻");
+        var pityColor = topSelected
+            ? (standard ? Color.FromRgb(0xDD, 0x95, 0x3D) : Color.FromRgb(0x33, 0x9C, 0x69))
+            : secondColor;
+        if (rows.Count > 0)
+        {
+            var pityHeader = new Border
+            {
+                Background = new SolidColorBrush(pityColor),
+                CornerRadius = new CornerRadius(7),
+                Padding = new Thickness(12, 8, 12, 8),
+                Margin = new Thickness(0, 1, 0, 8),
+            };
+            var pityGrid = new Grid();
+            pityGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            pityGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            pityGrid.Children.Add(new TextBlock
+            {
+                Text = "已垫",
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
+            });
+            var pityValue = new TextBlock
+            {
+                Text = stat.Pity.ToString(),
+                FontSize = 13,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
+            };
+            Grid.SetColumn(pityValue, 1);
+            pityGrid.Children.Add(pityValue);
+            pityHeader.Child = pityGrid;
+            list.Children.Add(pityHeader);
+        }
+
         if (rows.Count == 0)
         {
             list.Children.Add(new TextBlock
             {
                 Text = "暂无记录",
-                FontSize = 11.5,
-                Foreground = (Brush)FindResource("Brush.TextTertiary"),
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x9B, 0xA3, 0xAD)),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                Margin = new Thickness(0, 22, 0, 0),
+                Margin = new Thickness(0, 56, 0, 0),
             });
         }
         else
         {
-            foreach (var row in rows.Take(60))
-            {
-                var rowGrid = new Grid { Margin = new Thickness(0, 0, 0, 4) };
-                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                var name = new TextBlock
-                {
-                    Text = $"★ {row.Name}",
-                    FontSize = 11,
-                    Foreground = (Brush)FindResource("Brush.TextPrimary"),
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = VerticalAlignment.Center,
-                };
-                Grid.SetColumn(name, 0);
-                rowGrid.Children.Add(name);
-                var meta = new TextBlock
-                {
-                    Text = row.Pity > 0 ? $"{row.Pity} 抽 · {row.Time:MM-dd}" : $"{row.Time:MM-dd}",
-                    FontSize = 9.5,
-                    Foreground = topSelected ? new SolidColorBrush(topColor) : new SolidColorBrush(secondColor),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(6, 0, 0, 0),
-                };
-                Grid.SetColumn(meta, 1);
-                rowGrid.Children.Add(meta);
-                list.Children.Add(new Border
-                {
-                    Background = new SolidColorBrush(Color.FromArgb(0x0A, 0x2B, 0x8B, 0xC8)),
-                    CornerRadius = new CornerRadius(6),
-                    Padding = new Thickness(6, 4, 6, 4),
-                    Margin = new Thickness(0, 0, 0, 3),
-                    Child = rowGrid,
-                });
-            }
+            var limited = topSelected && !standard
+                          && !stat.Name.Contains("集录")
+                          && !stat.Name.Contains("家园");
+            foreach (var row in rows.Take(80))
+                list.Children.Add(BuildRecordRow(row, topSelected, limited));
         }
         scroll.Content = list;
-        Grid.SetRow(scroll, 4);
+        Grid.SetRow(scroll, 5);
         body.Children.Add(scroll);
 
         return card;
+    }
+
+    private Border BuildRecordRow((string Name, int Pity, DateTime Time) row, bool topSelected, bool limited)
+    {
+        var accent = topSelected
+            ? Color.FromRgb(0xC2, 0x4B, 0x3E)
+            : Color.FromRgb(0x8B, 0x63, 0xC7);
+        var wrap = new StackPanel { Margin = new Thickness(0, 0, 0, 7) };
+        var card = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0xFB, 0xF6, 0xE7)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xEF, 0xE4, 0xCF)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(7),
+            Padding = new Thickness(7, 6, 9, 6),
+        };
+        var line = new Grid();
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var avatar = new Border
+        {
+            Width = 24,
+            Height = 24,
+            CornerRadius = new CornerRadius(6),
+            Background = new SolidColorBrush(Color.FromRgb(0xF3, 0xDF, 0xB9)),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(row.Name) ? "?" : row.Name[..1],
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x7A, 0x59, 0x26)),
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            },
+        };
+        Grid.SetColumn(avatar, 0);
+        line.Children.Add(avatar);
+        var name = new TextBlock
+        {
+            Text = row.Name,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x3C, 0x35, 0x28)),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(5, 0, 4, 0),
+        };
+        Grid.SetColumn(name, 1);
+        line.Children.Add(name);
+        if (limited)
+        {
+            var up = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0xFF, 0xF4, 0xDB)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0xF0, 0xC5, 0x7B)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(4, 0, 4, 1),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 5, 0),
+                Child = new TextBlock
+                {
+                    Text = "UP!",
+                    FontSize = 9.5,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = new SolidColorBrush(Color.FromRgb(0xCE, 0x9A, 0x2E)),
+                },
+            };
+            Grid.SetColumn(up, 2);
+            line.Children.Add(up);
+        }
+        var value = new TextBlock
+        {
+            Text = row.Pity.ToString(),
+            FontSize = 12.5,
+            FontWeight = FontWeights.Bold,
+            Foreground = new SolidColorBrush(accent),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(4, 0, 0, 0),
+        };
+        Grid.SetColumn(value, 3);
+        line.Children.Add(value);
+        card.Child = line;
+        wrap.Children.Add(card);
+        wrap.Children.Add(BuildPityBar(row.Pity, topSelected ? PityTarget : 10, accent));
+        return new Border { Child = wrap, Background = Brushes.Transparent };
+    }
+
+    private static Grid BuildPityBar(int value, int max, Color fill)
+    {
+        var ratio = max > 0 ? Math.Clamp(value / (double)max, 0, 1) : 0;
+        var grid = new Grid { Height = 3, Margin = new Thickness(1, 2, 1, 0) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(ratio, 0.001), GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(Math.Max(1 - ratio, 0.001), GridUnitType.Star) });
+        grid.Children.Add(new Border
+        {
+            Background = new SolidColorBrush(fill),
+            CornerRadius = new CornerRadius(2),
+            Margin = new Thickness(0, 0, 2, 0),
+        });
+        var rest = new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0xE9, 0xE1, 0xD0)),
+            CornerRadius = new CornerRadius(2),
+        };
+        Grid.SetColumn(rest, 1);
+        grid.Children.Add(rest);
+        return grid;
     }
 
     private void AddStatRow(StackPanel panel, string title, string value, string percent, Brush color, bool big)
@@ -614,9 +658,9 @@ public partial class GachaView : UserControl
         var valueText = new TextBlock
         {
             Text = value,
-            FontSize = big ? 16 : 15,
+            FontSize = big ? 15.5 : 15,
             FontWeight = FontWeights.Bold,
-            Foreground = (Brush)FindResource("Brush.TextPrimary"),
+            Foreground = color,
             VerticalAlignment = VerticalAlignment.Center,
         };
         valuePanel.Children.Add(valueText);
@@ -626,7 +670,8 @@ public partial class GachaView : UserControl
             {
                 Text = percent,
                 FontSize = 9,
-                Foreground = (Brush)FindResource("Brush.TextTertiary"),
+                Foreground = color,
+                Opacity = 0.78,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(4, 2, 0, 0),
             });

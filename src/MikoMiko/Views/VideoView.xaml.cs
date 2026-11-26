@@ -683,9 +683,25 @@ public partial class VideoView : UserControl
 
     private void FullScreen_Click(object sender, RoutedEventArgs e)
     {
-        var window = Window.GetWindow(this);
-        if (window is null) return;
-        window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        if (Window.GetWindow(this) is Views.MainWindow main) main.ToggleVideoFullscreen();
+    }
+
+    private void SendDanmaku_Click(object sender, RoutedEventArgs e)
+    {
+        var text = DanmakuInput.Text.Trim();
+        if (string.IsNullOrWhiteSpace(text) || _vm.Selected is null) return;
+
+        var entry = new DanmakuService.Entry
+        {
+            PostId = _vm.Selected.PostId,
+            Text = text,
+            Time = Media.Position.TotalSeconds,
+            Author = string.IsNullOrWhiteSpace(_settings.Nickname) ? "我" : _settings.Nickname,
+            CreatedAt = DateTimeOffset.Now.ToUnixTimeSeconds(),
+        };
+        _danmaku.Add(entry);
+        ShowDanmakuText(entry.Text, entry.Author);
+        DanmakuInput.Clear();
     }
 
     private void ShowDanmakuText(string text, string author)

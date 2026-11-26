@@ -2,6 +2,7 @@ using MikoMiko.Models;
 using MikoMiko.Services;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 
 namespace MikoMiko.Views;
 
@@ -17,6 +18,20 @@ public partial class UpdateWindow : Window
         _settings = settings;
         VersionText.Text = $"当前版本 {AppInfo.Version}  →  最新版本 {info.Tag}";
         NotesText.Text = string.IsNullOrWhiteSpace(info.Notes) ? "该版本未提供更新说明。" : info.Notes;
+    }
+
+    private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == MouseButtonState.Pressed)
+        {
+            try { DragMove(); } catch { }
+        }
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e)
+    {
+        // 关闭窗口不等于忽略该版本，下次启动仍会提示。
+        Close();
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e)

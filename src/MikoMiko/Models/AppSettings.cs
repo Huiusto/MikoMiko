@@ -14,9 +14,10 @@ public sealed partial class AppSettings : ObservableObject
 
     // 启动 / 关闭
     [ObservableProperty] private bool _autoStart;
-    [ObservableProperty] private bool _startOnHome = true;
+    [ObservableProperty] private bool _startOnHome;
     [ObservableProperty] private bool _startOnVideo;
-    [ObservableProperty] private bool _startOnLaunch;
+    [ObservableProperty] private bool _startOnLaunch = true;
+    [ObservableProperty] private bool _launchDefaultApplied;
     [ObservableProperty] private bool _autoNextVideo = true;
     [ObservableProperty] private bool _autoPlayOnSwipe = true;
     [ObservableProperty] private bool _autoCheckUpdate = true;

@@ -74,7 +74,6 @@ public sealed partial class ShellViewModel : ObservableObject
         Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
         Navigation.Add(new NavItem("Launch", "Nav.Launch", "launch"));
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
-        Navigation.Add(new NavItem("Anime", "Home.Anime", "anime"));
         Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
         Navigation.Add(new NavItem("Gacha", "Nav.Gacha", "gacha"));
         Navigation.Add(new NavItem("Daily", "Nav.Daily", "daily"));
@@ -85,6 +84,7 @@ public sealed partial class ShellViewModel : ObservableObject
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
         HomeTabs.Add(new TabOption("Posts", "Home.Posts"));
         HomeTabs.Add(new TabOption("Web", "Home.Web"));
+        HomeTabs.Add(new TabOption("Anime", "Home.Anime"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -201,6 +201,19 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
+        if (tab.Key == "Anime")
+        {
+            _home.DeactivatePosts();
+            CloseWebHub();
+            if (_currentKey != "Home")
+            {
+                Navigate("Home");
+                return;
+            }
+            ShowAnimePage();
+            return;
+        }
+
         CloseWebHub();
         CloseAnimePage();
         if (tab.Key == "Posts")
@@ -251,6 +264,8 @@ public sealed partial class ShellViewModel : ObservableObject
         AnimePage = null;
         IsAnimePageOpen = false;
         ShowGlobalSearch = true;
+        // 追剧页作为首页页签时，关闭覆盖层后把首页内容恢复出来。
+        if (IsHome && _views.TryGetValue("Home", out var homeView)) CurrentView = homeView;
     }
 
     /// <summary>Flutter 模块点击选集后，先尝试提取直连流；取不到就转站内网页播放。</summary>
@@ -382,38 +397,19 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         PauseAllPlayback();
 
-        // 追剧 / 影视是左侧导航里的独立板块，不再挂在「推荐」页的页签栏上。
+        // 追剧 / 影视已回到首页页签，位于「网页」右侧；旧入口"Anime"统一映射到首页该页签。
         if (key == "Anime")
         {
-            if (_currentKey == "Anime")
+            foreach (var option in HomeTabs) option.IsSelected = option.Key == "Anime";
+            if (_currentKey == "Home")
             {
                 CloseProfile();
+                CloseWebHub();
                 ShowAnimePage();
+                _settings.LastPage = "Home";
                 return;
             }
-
-            if (IsReaderOpen) CloseReader();
-            if (IsBrowserOpen) CloseBrowser();
-            if (IsUploadOpen) CloseUpload();
-            CloseProfile();
-            CloseWebHub();
-            if (_currentKey == "Video") VideoPage?.PausePlayback();
-
-            if (!string.IsNullOrEmpty(_currentKey) && pushHistory && _currentKey != "Anime")
-            {
-                _history.Push(_currentKey);
-                CanGoBack = true;
-            }
-
-            _currentKey = "Anime";
-            IsHome = false;
-            foreach (var item in Navigation.Concat(FooterNavigation))
-            {
-                item.IsSelected = item.Key == "Anime";
-            }
-            SelectedNav = Navigation.Concat(FooterNavigation).FirstOrDefault(i => i.IsSelected);
-            ShowAnimePage();
-            _settings.LastPage = "Anime";
+            Navigate("Home", pushHistory);
             return;
         }
 
@@ -427,6 +423,11 @@ public sealed partial class ShellViewModel : ObservableObject
                 if (tab == "Web")
                 {
                     ShowWebHub();
+                }
+                else if (tab == "Anime")
+                {
+                    CloseWebHub();
+                    ShowAnimePage();
                 }
                 else
                 {
@@ -481,6 +482,11 @@ public sealed partial class ShellViewModel : ObservableObject
             if (tab == "Web")
             {
                 ShowWebHub();
+            }
+            else if (tab == "Anime")
+            {
+                CloseWebHub();
+                ShowAnimePage();
             }
             else
             {

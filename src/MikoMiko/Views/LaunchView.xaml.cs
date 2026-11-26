@@ -48,8 +48,8 @@ public partial class LaunchView : UserControl
     private bool _paused;
     private bool _preparing;
     private bool _webReady;
-    private bool _showReserve = true;
-    private bool _showMhyy = true;
+    private bool _showReserve;
+    private bool _showMhyy;
     private readonly HashSet<string> _runningGames = new();
     private List<string> _gameOrder = new();
     private Dictionary<string, GameUpdateService.UpdateState> _updateStates = new();
@@ -65,6 +65,10 @@ public partial class LaunchView : UserControl
         public string Stage { get; set; } = "正在准备安装…";
         public long Done { get; set; }
         public long Total { get; set; }
+        public long DownloadDone { get; set; }
+        public long DownloadTotal { get; set; }
+        public long InstallDone { get; set; }
+        public long InstallTotal { get; set; }
         public double Speed { get; set; }
         public bool Cancelling { get; set; }
         public bool OwnsTarget { get; set; }
@@ -94,8 +98,19 @@ public partial class LaunchView : UserControl
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         MikoNestBridge.Reload();
-        _showReserve = LauncherBackgroundService.LoadUiFlag("showReserve", true);
-        _showMhyy = LauncherBackgroundService.LoadUiFlag("showMhyy", true);
+        if (!LauncherBackgroundService.LoadUiFlag("hideLobbyExtras", false))
+        {
+            _showReserve = false;
+            _showMhyy = false;
+            LauncherBackgroundService.SaveUiFlag("showReserve", false);
+            LauncherBackgroundService.SaveUiFlag("showMhyy", false);
+            LauncherBackgroundService.SaveUiFlag("hideLobbyExtras", true);
+        }
+        else
+        {
+            _showReserve = LauncherBackgroundService.LoadUiFlag("showReserve", false);
+            _showMhyy = LauncherBackgroundService.LoadUiFlag("showMhyy", false);
+        }
         _gameOrder = LauncherBackgroundService.LoadGameOrder();
         if (_webReady)
         {
@@ -273,34 +288,37 @@ public partial class LaunchView : UserControl
                 : null,
         }).ToList();
 
-        var items = new List<object>();
+        var officialItems = new List<object>();
+        foreach (var item in _bgItems)
+        {
+            if (item.ImagePath == null) continue;
+            officialItems.Add(new
+            {
+                id = item.Id,
+                image = ToUrl(item.ImagePath),
+                video = ToUrl(item.VideoPath),
+            });
+        }
+        if (officialItems.Count == 0)
+        {
+            var fallback = LauncherBackgroundService.FallbackImage(_selectedKey);
+            if (fallback != null)
+                officialItems.Add(new { id = "fallback", image = ToUrl(fallback), video = (string?)null });
+        }
+
         var custom = LauncherBackgroundService.LoadCustomBackground(_selectedKey);
+        var items = new List<object>();
         if (custom != null)
         {
             items.Add(new { id = "custom", image = ToUrl(custom), video = (string?)null });
-            _bgIndex = 0;
         }
         else
         {
-            foreach (var item in _bgItems)
-            {
-                if (item.ImagePath == null) continue;
-                items.Add(new
-                {
-                    id = item.Id,
-                    image = ToUrl(item.ImagePath),
-                    video = ToUrl(item.VideoPath),
-                });
-            }
-            if (items.Count == 0)
-            {
-                var fallback = LauncherBackgroundService.FallbackImage(_selectedKey);
-                if (fallback != null)
-                    items.Add(new { id = "fallback", image = ToUrl(fallback), video = (string?)null });
-            }
+            items.AddRange(officialItems);
         }
 
-        if (_bgIndex >= items.Count) _bgIndex = Math.Max(0, items.Count - 1);
+        if (_bgIndex >= officialItems.Count) _bgIndex = Math.Max(0, officialItems.Count - 1);
+        var shownIndex = custom != null ? 0 : _bgIndex;
 
         var selectedGame = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
         var selectedDir = MikoNestBridge.GetGameDir(_selectedKey);
@@ -332,8 +350,10 @@ public partial class LaunchView : UserControl
             games,
             selected = _selectedKey,
             backgrounds = items,
+            officialBackgrounds = officialItems,
             preloadImages,
-            index = _bgIndex,
+            index = shownIndex,
+            officialIndex = _bgIndex,
             paused = _paused,
             preparing = _preparing,
             accent = "#4EA4DD",
@@ -368,7 +388,16 @@ public partial class LaunchView : UserControl
             stage = job.Stage,
             done = FormatSize(job.Done),
             total = FormatSize(job.Total),
+            downloadDone = FormatSize(job.DownloadDone),
+            downloadTotal = FormatSize(job.DownloadTotal),
+            downloadDoneBytes = job.DownloadDone,
+            downloadTotalBytes = job.DownloadTotal,
+            installDone = FormatSize(job.InstallDone),
+            installTotal = FormatSize(job.InstallTotal),
+            installDoneBytes = job.InstallDone,
+            installTotalBytes = job.InstallTotal,
             speed = job.Speed > 0 ? $"{job.Speed / 1024.0 / 1024.0:0.0} MB/s" : string.Empty,
+            speedBytes = job.Speed,
         };
     }
 
@@ -411,6 +440,10 @@ public partial class LaunchView : UserControl
             job.Stage = stage;
             job.Done = done;
             job.Total = total;
+            job.DownloadDone = p.Done;
+            job.DownloadTotal = p.Total;
+            job.InstallDone = p.InstallDone;
+            job.InstallTotal = p.InstallTotal;
             job.Speed = p.BytesPerSecond;
             PushInstallState(key);
         });
@@ -662,6 +695,11 @@ public partial class LaunchView : UserControl
                 }
 
                 case "bg":
+                    await SelectBackgroundAsync((int)ReadNumber(e.WebMessageAsJson, "index"));
+                    break;
+
+                case "officialBg":
+                    LauncherBackgroundService.ClearCustomBackground(_selectedKey);
                     await SelectBackgroundAsync((int)ReadNumber(e.WebMessageAsJson, "index"));
                     break;
 

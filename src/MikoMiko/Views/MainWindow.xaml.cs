@@ -106,6 +106,42 @@ public partial class MainWindow : Window
     private void ToggleMaximize()
         => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
+    private WindowState _stateBeforeVideoFullscreen = WindowState.Normal;
+
+    /// <summary>视频页最大化：隐藏左侧导航、页头与窗口边距，让画面铺满整个窗口。</summary>
+    public void ToggleVideoFullscreen()
+    {
+        if (IsVideoFullscreen) ExitVideoFullscreen();
+        else EnterVideoFullscreen();
+    }
+
+    public bool IsVideoFullscreen { get; private set; }
+
+    public void EnterVideoFullscreen()
+    {
+        if (IsVideoFullscreen) return;
+        _stateBeforeVideoFullscreen = WindowState;
+        IsVideoFullscreen = true;
+        NavColumn.Width = new GridLength(0);
+        HeaderRow.Height = new GridLength(0);
+        RootBorder.BorderThickness = new Thickness(0);
+        RootBorder.CornerRadius = new CornerRadius(0);
+        WindowState = WindowState.Maximized;
+    }
+
+    public void ExitVideoFullscreen()
+    {
+        if (!IsVideoFullscreen) return;
+        IsVideoFullscreen = false;
+        NavColumn.Width = new GridLength(72);
+        HeaderRow.Height = new GridLength(64);
+        RootBorder.BorderThickness = new Thickness(1);
+        RootBorder.CornerRadius = new CornerRadius(
+            WindowState == WindowState.Maximized ? 0 : 10);
+        WindowState = _stateBeforeVideoFullscreen;
+        UpdateMaximizeVisual();
+    }
+
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void Maximize_Click(object sender, RoutedEventArgs e) => ToggleMaximize();

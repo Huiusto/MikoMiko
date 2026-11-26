@@ -340,6 +340,16 @@ public sealed partial class MineViewModel : ObservableObject
     public async Task LoadAsync()
     {
         LoadBackgroundSource();
+        // 「每日任务」与「我的」共用同一套账号：以 HoyoAccountService 的当前账号为准。
+        var active = HoyoAccountService.Active;
+        if (active is not null && !string.IsNullOrWhiteSpace(active.Cookie)
+            && active.Cookie != _settings.Cookie)
+        {
+            _settings.Cookie = active.Cookie;
+            if (!string.IsNullOrWhiteSpace(active.Nickname)) _settings.Nickname = active.Nickname;
+            if (!string.IsNullOrWhiteSpace(active.AvatarUrl)) _settings.Avatar = active.AvatarUrl!;
+            _content.RebuildApi();
+        }
         IsLoggedIn = !string.IsNullOrWhiteSpace(_settings.Cookie);
         if (!IsLoggedIn)
         {
@@ -464,6 +474,7 @@ public sealed partial class MineViewModel : ObservableObject
             IsQrOpen = false;
             IsLoggedIn = true;
             await SyncUserAsync();
+            RememberActiveAccount();
         }
         catch
         {
@@ -522,6 +533,7 @@ public sealed partial class MineViewModel : ObservableObject
             BindStatus = "账号登录成功";
             CookieInput = string.Empty;
             await SyncUserAsync();
+            RememberActiveAccount();
         }
         finally
         {
@@ -844,6 +856,13 @@ public sealed partial class MineViewModel : ObservableObject
             Posts = stat.Posts,
         };
         IsLoggedIn = true;
+    }
+
+    private void RememberActiveAccount()
+    {
+        var uid = CookieValue("ltuid") is { Length: > 0 } value ? value : CookieValue("account_id");
+        if (string.IsNullOrWhiteSpace(uid) || string.IsNullOrWhiteSpace(_settings.Cookie)) return;
+        HoyoAccountService.AddOrUpdate(_settings.Cookie, _settings.Nickname, uid, _settings.Avatar);
     }
 
     private string CookieValue(string name)

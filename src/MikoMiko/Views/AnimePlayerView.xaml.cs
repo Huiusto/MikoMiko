@@ -375,21 +375,7 @@ public partial class AnimePlayerView : UserControl
             var caption = $"{playback.Title} · {playback.Episode}";
             await Web.CoreWebView2.ExecuteScriptAsync(
                 $"window.mikoPlay({JsonSerializer.Serialize(playback.StreamUrl)}, {JsonSerializer.Serialize(caption)})");
-            await PushDanmakuAsync();
         }
-    }
-
-    private async Task PushDanmakuAsync()
-    {
-        if (!_webReady) return;
-        var list = _playback.Danmaku.Count > 0
-            ? _playback.Danmaku
-            : _danmaku.Get(_playback.Title, _playback.Episode).Select(item => ((long)item.TimeMs, item.Text)).ToList();
-        var payload = list
-            .Select(item => new { time = item.Item1, text = item.Item2 })
-            .ToList();
-        await Web.CoreWebView2.ExecuteScriptAsync(
-            $"window.mikoSetDanmaku({JsonSerializer.Serialize(payload)})");
     }
 
     private void Web_MessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -399,18 +385,7 @@ public partial class AnimePlayerView : UserControl
             using var doc = JsonDocument.Parse(e.WebMessageAsJson);
             var root = doc.RootElement;
             var type = root.TryGetProperty("type", out var typeNode) ? typeNode.GetString() : null;
-            if (type == "playerError")
-            {
-                RequestWebFallback();
-                return;
-            }
-            if (type != "danmaku") return;
-            var text = root.TryGetProperty("text", out var textNode) ? textNode.GetString() ?? string.Empty : string.Empty;
-            var time = root.TryGetProperty("time", out var timeNode) && timeNode.TryGetDouble(out var value) ? value : 0;
-            var entry = _danmaku.Add(_playback.Title, _playback.Episode, time, text);
-            if (entry.Text.Length == 0) return;
-            var payload = JsonSerializer.Serialize(new { time = entry.TimeMs, text = entry.Text });
-            _ = Web.CoreWebView2.ExecuteScriptAsync($"window.mikoAddDanmaku({payload})");
+            if (type == "playerError") RequestWebFallback();
         }
         catch
         {
@@ -510,7 +485,6 @@ public partial class AnimePlayerView : UserControl
                 _webReady = true;
                 _ = Web.CoreWebView2.ExecuteScriptAsync(
                     $"window.mikoSetAnime4K({(_anime4K ? "true" : "false")})");
-                _ = PushDanmakuAsync();
             };
             core.WebMessageReceived += Web_MessageReceived;
 
@@ -589,12 +563,6 @@ public partial class AnimePlayerView : UserControl
         var caption = JsonSerializer.Serialize($"{_playback.Title} · {_playback.Episode}");
         var title = WebUtility.HtmlEncode(_playback.Title);
         var episode = WebUtility.HtmlEncode(_playback.Episode);
-        var danmakuSource = _playback.Danmaku.Count > 0
-            ? _playback.Danmaku
-            : _danmaku.Get(_playback.Title, _playback.Episode).Select(item => ((long)item.TimeMs, item.Text)).ToList();
-        var danmaku = JsonSerializer.Serialize(danmakuSource
-            .Select(item => new { time = item.Item1, text = item.Item2 })
-            .ToList());
 
         return $$"""
 <!DOCTYPE html>
@@ -626,22 +594,6 @@ public partial class AnimePlayerView : UserControl
             border:1px solid rgba(126,196,242,.25); pointer-events:none; }
   #caption { position:absolute; left:18px; top:16px; color:rgba(232,245,255,.66);
              font:12px "Microsoft YaHei UI", sans-serif; text-shadow:0 1px 4px #000; pointer-events:none; }
-  #dmLayer { position:absolute; left:0; right:0; top:0; bottom:62px; overflow:hidden;
-             pointer-events:none; z-index:8; }
-  .dm { position:absolute; left:100%; white-space:nowrap; color:#fff;
-        font:14px/1.4 "Microsoft YaHei UI", "Segoe UI", sans-serif;
-        text-shadow:0 1px 2px #000, 0 0 6px rgba(0,0,0,.75); will-change:transform; }
-  @keyframes dmRun { from { transform:translateX(0); } to { transform:translateX(calc(-100vw - 110%)); } }
-  #dmTools { position:absolute; left:50%; bottom:62px; transform:translateX(-50%); z-index:9;
-             display:flex; gap:8px; padding:6px; border-radius:10px;
-             background:rgba(8,16,25,.78); border:1px solid rgba(126,196,242,.22);
-             opacity:0; transition:opacity .18s; pointer-events:none; }
-  #stage:hover #dmTools, #dmTools:focus-within { opacity:1; pointer-events:auto; }
-  #dmInput { width:260px; height:28px; padding:0 10px; border-radius:7px; border:1px solid #294154;
-             background:#101d29; color:#e8f5ff; outline:none;
-             font:12px "Microsoft YaHei UI", sans-serif; }
-  #dmSend { height:28px; padding:0 13px; border:0; border-radius:7px; cursor:pointer;
-            background:#4EA4DD; color:#fff; font:12px "Microsoft YaHei UI", sans-serif; }
 </style>
 </head>
 <body>
@@ -656,12 +608,7 @@ public partial class AnimePlayerView : UserControl
     <button id="muteBtn" type="button">静音</button>
     <button id="fullBtn" type="button">全屏</button>
   </div>
-  <div id="dmLayer"></div>
   <div id="caption">{{title}} · {{episode}}</div>
-  <div id="dmTools">
-    <input id="dmInput" maxlength="60" placeholder="发个友善的弹幕…">
-    <button id="dmSend" type="button">发送</button>
-  </div>
   <div id="status">正在连接视频流…</div>
 </div>
 <script>{{hlsJs}}</script>
@@ -669,15 +616,11 @@ public partial class AnimePlayerView : UserControl
 (function () {
   const initial = {{source}};
   const initialCaption = {{caption}};
-  const initialDanmaku = {{danmaku}};
   const initialAnime4K = {{(_anime4K ? "true" : "false")}};
   const stage = document.getElementById('stage');
   const video = document.getElementById('video');
   const status = document.getElementById('status');
   const caption = document.getElementById('caption');
-  const dmLayer = document.getElementById('dmLayer');
-  const dmInput = document.getElementById('dmInput');
-  const dmSend = document.getElementById('dmSend');
   const glCanvas = document.getElementById('glCanvas');
   const playerBar = document.getElementById('playerBar');
   const ppBtn = document.getElementById('ppBtn');
@@ -687,8 +630,6 @@ public partial class AnimePlayerView : UserControl
   const fullBtn = document.getElementById('fullBtn');
   let hls = null;
   let retried = 0;
-  let dmPool = [];
-  let dmCursor = 0;
   let a4k = false;
   let gl = null, glProgram = null, glTexture = null, glTexel = null;
   let glReady = false, glWidth = 0, glHeight = 0, rafId = 0, lastDraw = 0;
@@ -898,63 +839,6 @@ public partial class AnimePlayerView : UserControl
     video.removeAttribute('src');
     try { video.load(); } catch (_) {}
   }
-  function resetDmLayer() {
-    dmLayer.innerHTML = '';
-    dmCursor = 0;
-  }
-  function spawnDm(text) {
-    if (!text) return;
-    const node = document.createElement('div');
-    node.className = 'dm';
-    node.textContent = text;
-    node.style.top = (8 + Math.random() * 62) + '%';
-    const duration = 8.5 + Math.random() * 3.5;
-    node.style.animation = 'dmRun ' + duration.toFixed(1) + 's linear forwards';
-    node.addEventListener('animationend', function () { node.remove(); });
-    dmLayer.appendChild(node);
-  }
-  window.mikoSetDanmaku = function (list) {
-    dmPool = Array.isArray(list) ? list.filter(function (e) { return e && e.text; })
-      .sort(function (a, b) { return (a.time || 0) - (b.time || 0); }) : [];
-    resetDmLayer();
-  };
-  window.mikoAddDanmaku = function (entry) {
-    if (!entry || !entry.text) return;
-    dmPool.push(entry);
-    dmPool.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
-  };
-  function sendDanmaku() {
-    const text = (dmInput.value || '').trim();
-    if (!text) return;
-    const time = Math.round((video.currentTime || 0) * 1000);
-    try {
-      if (window.chrome && window.chrome.webview) {
-        window.chrome.webview.postMessage({ type: 'danmaku', text: text, time: time });
-      }
-    } catch (_) {}
-    dmPool.push({ time: time, text: text });
-    dmPool.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
-    spawnDm(text);
-    dmInput.value = '';
-  }
-  dmSend.addEventListener('click', sendDanmaku);
-  dmInput.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); sendDanmaku(); }
-  });
-  video.addEventListener('timeupdate', function () {
-    if (video.paused) return;
-    const now = (video.currentTime || 0) * 1000;
-    while (dmCursor < dmPool.length && (dmPool[dmCursor].time || 0) <= now + 260) {
-      const entry = dmPool[dmCursor++];
-      if ((entry.time || 0) >= now - 1500) spawnDm(entry.text);
-    }
-  });
-  video.addEventListener('seeking', function () {
-    const now = (video.currentTime || 0) * 1000;
-    dmLayer.innerHTML = '';
-    dmCursor = 0;
-    while (dmCursor < dmPool.length && (dmPool[dmCursor].time || 0) < now - 1500) dmCursor++;
-  });
 
   video.addEventListener('playing', hide);
   video.addEventListener('canplay', hide);
@@ -978,7 +862,6 @@ public partial class AnimePlayerView : UserControl
     if (hls) { try { hls.destroy(); } catch (_) {} hls = null; }
     retried = 0;
     resetVideo();
-    resetDmLayer();
     show('正在连接视频流…');
 
     if (src.indexOf('.m3u8') >= 0) {
@@ -1026,7 +909,6 @@ public partial class AnimePlayerView : UserControl
   };
 
   try {
-    window.mikoSetDanmaku(initialDanmaku);
     window.mikoSetAnime4K(initialAnime4K);
     window.mikoPlay(initial, initialCaption);
     syncTime();

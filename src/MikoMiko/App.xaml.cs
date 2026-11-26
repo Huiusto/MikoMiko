@@ -89,9 +89,37 @@ public partial class App : Application
 
         var window = new Views.MainWindow(Shell, SettingsService);
         MainWindow = window;
-        window.Show();
 
-        _ = Shell.InitializeAsync();
+        // 正常启动时先展示萌系启动画面；截图模式直接进主窗口，避免挡住验收页面。
+        var showSplash = !e.Args.Contains("--shot") && !e.Args.Contains("--update-preview");
+        Views.SplashWindow? splash = null;
+        if (showSplash)
+        {
+            splash = new Views.SplashWindow();
+            splash.Show();
+        }
+
+        void ShowMainWindow()
+        {
+            window.Show();
+            _ = Shell.InitializeAsync();
+            splash?.Close();
+        }
+
+        if (showSplash)
+        {
+            var splashTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(2200) };
+            splashTimer.Tick += (_, _) =>
+            {
+                splashTimer.Stop();
+                ShowMainWindow();
+            };
+            splashTimer.Start();
+        }
+        else
+        {
+            ShowMainWindow();
+        }
 
         // 每次启动自动检查一次更新；点了「取消」的版本不再打扰
         if (settings.CheckUpdateOnStartup && !e.Args.Contains("--shot"))
@@ -112,6 +140,21 @@ public partial class App : Application
             updateTimer.Start();
         }
 #if DEBUG
+        // 设计验收：用假版本信息单独打开更新窗口，不触发网络下载。
+        if (e.Args.Contains("--update-preview"))
+        {
+            var previewTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+            previewTimer.Tick += (_, _) =>
+            {
+                previewTimer.Stop();
+                var demo = new UpdateService.UpdateInfo(
+                    new Version("0.1.43"), "v0.1.43", "MikoMiko 0.1.43",
+                    "· 启动画面改为少女探头 + 动态 MikoMiko Logo 加载动画\n· 安装、更新、卸载与启动画面统一萌系蓝白视觉\n· 首页改为推荐 / 板块 / 网页 / 追剧·影视四页签\n· 视频页恢复弹幕输入并支持全屏播放\n· 抽卡页记录卡片改版，账号在每日任务与我的页自动同步",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.42.exe", "");
+                new Views.UpdateWindow(demo, settings).Show();
+            };
+            previewTimer.Start();
+        }
         TryCapture(e.Args);
 #endif
     }

@@ -6,18 +6,19 @@ SetCompressor /SOLID lzma
 !include "FileFunc.nsh"
 
 !define APP_NAME "MikoMiko"
-!define APP_VERSION "0.1.40"
+!define APP_VERSION "0.1.42"
 !define APP_EXE "MikoMiko.exe"
 !define APP_PUBLISHER "MikoMiko Contributors"
 !define APP_URL "https://github.com/Huiusto/MikoMiko"
+!define ROOT "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\dist\MikoMiko-Setup-${APP_VERSION}.exe"
+OutFile "${ROOT}\dist\MikoMiko-Setup-${APP_VERSION}.exe"
 InstallDir "$LOCALAPPDATA\Programs\MikoMiko"
 InstallDirRegKey HKCU "Software\MikoMiko" "InstallDir"
 RequestExecutionLevel user
 
-VIProductVersion "0.1.40.0"
+VIProductVersion "0.1.42.0"
 VIAddVersionKey /LANG=2052 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=2052 "CompanyName" "${APP_PUBLISHER}"
 VIAddVersionKey /LANG=2052 "FileDescription" "${APP_NAME} 安装程序"
@@ -25,19 +26,39 @@ VIAddVersionKey /LANG=2052 "FileVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=2052 "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "MIT License"
 
-!define MUI_ICON "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\src\MikoMiko\Assets\icon.ico"
-!define MUI_UNICON "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\src\MikoMiko\Assets\icon.ico"
+!define MUI_ICON "${ROOT}\src\MikoMiko\Assets\icon.ico"
+!define MUI_UNICON "${ROOT}\src\MikoMiko\Assets\icon.ico"
 !define MUI_ABORTWARNING
+
+; 萌系蓝白配色：左侧大图、顶部横幅与卸载页均使用同一套银发少女插画。
+!define MUI_WELCOMEFINISHPAGE_BITMAP "${ROOT}\installer\assets\install-welcome.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "${ROOT}\installer\assets\uninstall-welcome.bmp"
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_BITMAP "${ROOT}\installer\assets\install-header.bmp"
+!define MUI_HEADERIMAGE_UNBITMAP "${ROOT}\installer\assets\uninstall-header.bmp"
+!define MUI_HEADERIMAGE_RIGHT
+
+!define MUI_WELCOMEPAGE_TITLE "欢迎使用 MikoMiko"
+!define MUI_WELCOMEPAGE_TEXT "MikoMiko 会陪你一起逛米游社、追番看剧、记录抽卡，也会安静地待在桌面一角。$\r$\n$\r$\n本次将安装 MikoMiko ${APP_VERSION}，点击「下一步」开始。"
+!define MUI_FINISHPAGE_TITLE "安装完成！"
+!define MUI_FINISHPAGE_TEXT "MikoMiko ${APP_VERSION} 已经安装好啦，少女正在等你打开。$\r$\n$\r$\n以后可以在开始菜单或桌面找到它。"
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXE}"
 !define MUI_FINISHPAGE_RUN_TEXT "立即运行 MikoMiko"
+
+!define MUI_UNWELCOMEPAGE_TITLE "卸载 MikoMiko"
+!define MUI_UNWELCOMEPAGE_TEXT "要送少女离开了吗？卸载后会删除程序文件与开始菜单快捷方式，账号与本地记录会保留。$\r$\n$\r$\n点击「卸载」继续。"
+!define MUI_UNFINISHPAGE_TITLE "卸载完成"
+!define MUI_UNFINISHPAGE_TEXT "MikoMiko 已从这台电脑移除。$\r$\n$\r$\n谢谢你曾经让它陪你一段时间。"
 
 !insertmacro MUI_PAGE_WELCOME
 ; 更新时直接沿用注册表中已有的 InstallDir，不再让用户选择安装位置。
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
+!insertmacro MUI_UNPAGE_WELCOME
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
 
 !insertmacro MUI_LANGUAGE "SimpChinese"
 !insertmacro MUI_LANGUAGE "English"

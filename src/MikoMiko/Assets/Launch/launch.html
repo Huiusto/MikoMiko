@@ -152,6 +152,38 @@
                    text-align: right; line-height: 1.5;
                    text-shadow: 0 1px 3px rgba(0,0,0,.55); }
   .main-row { display: flex; align-items: center; gap: 10px; position: relative; }
+  .main-wrap { position: relative; display: flex; }
+  .install-card {
+    position: absolute; right: -8px; bottom: calc(100% + 18px); width: 336px;
+    padding: 16px 18px 14px; border-radius: 10px; pointer-events: none;
+    background: rgba(27,28,32,.96); border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 18px 46px rgba(0,0,0,.52), inset 0 1px 0 rgba(255,255,255,.08);
+    opacity: 0; visibility: hidden; transform: translateY(8px);
+    transition: opacity .16s ease, transform .16s ease, visibility .16s;
+    text-align: left; color: #fff; z-index: 35;
+  }
+  .install-card::after {
+    content: ""; position: absolute; right: 30px; bottom: -7px; width: 12px; height: 12px;
+    background: rgba(27,28,32,.96); border-right: 1px solid rgba(255,255,255,.12);
+    border-bottom: 1px solid rgba(255,255,255,.12); transform: rotate(45deg);
+  }
+  .install-card.show { visibility: visible; }
+  .main-wrap:hover .install-card.show { opacity: 1; transform: translateY(0); }
+  .ic-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .ic-state { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.86); }
+  .ic-state .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,.28);
+                    border-top-color: #ffd166; animation: spin 1s linear infinite; }
+  .install-card.paused .ic-state .spin { animation: none; border-color: rgba(255,209,102,.55); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ic-percent { font-size: 14px; font-weight: 700; color: #ffd166; letter-spacing: .2px; }
+  .ic-eta { margin-top: 5px; font-size: 11.5px; color: rgba(255,255,255,.46); text-align: right; }
+  .ic-sep { height: 1px; background: rgba(255,255,255,.09); margin: 12px 0 10px; }
+  .ic-row { display: grid; grid-template-columns: 46px 1fr; gap: 10px; font-size: 12.5px;
+            line-height: 1.75; color: rgba(255,255,255,.62); }
+  .ic-row b { font-weight: 500; color: rgba(255,255,255,.88); }
+  .ic-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,.10); overflow: hidden; margin-top: 8px; }
+  .ic-bar i { display: block; height: 100%; width: 0; border-radius: 4px;
+              background: linear-gradient(90deg, #ffcb57, #ffe6a8); transition: width .3s linear; }
   .pre-btn {
     width: 50px; height: 50px; padding: 0; flex: none; border-radius: 13px; display: none;
     align-items: center; justify-content: center; position: relative;
@@ -222,6 +254,22 @@
   .check { display: flex; align-items: center; gap: 10px; font-size: 14px;
            color: #32363c; margin: 9px 0; cursor: pointer; user-select: none; }
   .check input { width: 18px; height: 18px; accent-color: #2f9be5; cursor: pointer; }
+  .check-row { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; margin-bottom: 3px; }
+  .check-row .check { margin: 6px 0; }
+  .bg-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0 4px; }
+  .bg-item {
+    position: relative; aspect-ratio: 16 / 9; border-radius: 9px; overflow: hidden;
+    border: 2px solid transparent; cursor: pointer; background: #eef2f6;
+    box-shadow: 0 2px 7px rgba(20,28,40,.08); transition: transform .15s ease, border-color .15s ease;
+  }
+  .bg-item:hover { transform: translateY(-2px); border-color: #a9c9e2; }
+  .bg-item.on { border-color: #2f9be5; box-shadow: 0 0 0 3px rgba(47,155,229,.14); }
+  .bg-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bg-item .cap { position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 5px;
+                  background: rgba(12,16,24,.62); color: #fff; font-size: 10.5px; backdrop-filter: blur(4px); }
+  .bg-item.on::after { content: "✓"; position: absolute; right: 7px; top: 6px; width: 19px; height: 19px;
+                       border-radius: 50%; background: #2f9be5; color: #fff; font-size: 12px;
+                       display: flex; align-items: center; justify-content: center; }
   .gs-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
   .gs-btn {
     display: inline-flex; align-items: center; gap: 8px;
@@ -290,7 +338,20 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M6.8 10.2 12 15.4l5.2-5.2"/><path d="M4 18.5h16"/></svg>
           <span class="dot"></span>
         </button>
-        <button class="btn accent main-btn" id="btnMain"><span id="mainText">开始游戏</span></button>
+        <div class="main-wrap">
+          <button class="btn accent main-btn" id="btnMain"><span id="mainText">开始游戏</span></button>
+          <div class="install-card" id="installCard" aria-hidden="true">
+            <div class="ic-head">
+              <div class="ic-state"><span class="spin"></span><span id="icTitle">正在下载游戏资源</span></div>
+              <div class="ic-percent" id="icPercent">0.00%</div>
+            </div>
+            <div class="ic-eta" id="icEta">剩余时间：计算中</div>
+            <div class="ic-sep"></div>
+            <div class="ic-row"><span>下载</span><b id="icDownload">0 B / 0 B</b></div>
+            <div class="ic-row"><span>安装</span><b id="icInstall">0 B / 0 B</b></div>
+            <div class="ic-bar"><i id="icBar"></i></div>
+          </div>
+        </div>
         <button class="btn settings-btn" id="btnGameSettings" title="游戏设置" aria-label="游戏设置">
           <span class="bars"><i></i><i></i><i></i></span>
         </button>
@@ -314,11 +375,14 @@
       <div class="kv"><div class="key">所在磁盘可用空间</div><div class="val" id="gsFree">—</div></div>
       <div class="divider"></div>
       <div class="gs-section">启动页显示</div>
-      <label class="check"><input type="checkbox" id="chkReserve"> 显示「预约游戏」卡片（左下角）</label>
-      <label class="check"><input type="checkbox" id="chkMhyy"> 显示「米哈云游」按钮（左上角）</label>
+      <div class="check-row">
+        <label class="check"><input type="checkbox" id="chkReserve"> 显示「预约游戏」卡片</label>
+        <label class="check"><input type="checkbox" id="chkMhyy"> 显示「米哈云游」按钮</label>
+      </div>
       <div class="divider"></div>
       <div class="gs-section">启动页背景</div>
       <div class="kv"><div class="key">当前背景</div><div class="val" id="gsBg">官方壁纸</div></div>
+      <div class="bg-grid" id="gsBgGrid"></div>
       <div class="gs-actions" style="margin-top:14px">
         <button class="gs-btn" id="gsCustomBg">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="M4.5 17l5-5 4 4 3-2.6 3 3.1"/></svg>
@@ -516,29 +580,31 @@
   function renderMainButton() {
     const g = state.games.find(x => x.key === state.selected) || {};
     const btn = $('btnMain');
+    const label = $('mainText');
     const inst = state.install;
     if (inst && inst.active) {
       if (inst.cancelling) {
-        btn.textContent = '正在取消安装…';
+        label.textContent = '正在取消安装…';
         btn.disabled = true;
       } else {
-        btn.textContent = `${inst.paused ? '继续安装' : '暂停安装'} ${inst.percent}%`;
+        label.textContent = `${inst.paused ? '继续安装' : '暂停安装'} ${(Number(inst.percent) || 0).toFixed(2)}%`;
         btn.disabled = false;
       }
       btn.title = `${inst.stage || ''} ${inst.done || ''} / ${inst.total || ''}`;
     } else if (g.running) {
-      btn.textContent = '游戏启动中';
+      label.textContent = '游戏启动中';
       btn.disabled = true;
       btn.title = '';
     } else if (g.located) {
-      btn.textContent = '开始游戏';
+      label.textContent = '开始游戏';
       btn.disabled = false;
       btn.title = '';
     } else {
-      btn.textContent = '获取游戏';
+      label.textContent = '获取游戏';
       btn.disabled = false;
       btn.title = '';
     }
+    renderInstallCard(inst);
     $('gameLabel').textContent = `当前游戏：${g.name || ''}`;
     $('hintText').textContent = state.hint || '';
     $('btnLocate').style.display = '';
@@ -551,10 +617,69 @@
       : '当前没有官方预下载';
   }
 
+  function formatSize(bytes) {
+    const n = Number(bytes) || 0;
+    if (n >= 1024 * 1024 * 1024) return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+    if (n >= 1024 * 1024) return (n / 1024 / 1024).toFixed(2) + ' MB';
+    if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+    return Math.round(n) + ' B';
+  }
+
+  function formatEta(seconds) {
+    if (!Number.isFinite(seconds) || seconds <= 0) return '剩余时间：计算中';
+    const s = Math.round(seconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    const p = v => String(v).padStart(2, '0');
+    return `剩余时间：${p(h)}:${p(m)}:${p(sec)}`;
+  }
+
+  function renderInstallCard(inst) {
+    const card = $('installCard');
+    const active = !!(inst && inst.active && !inst.cancelling);
+    card.classList.toggle('show', active);
+    card.classList.toggle('paused', !!(inst && inst.paused));
+    if (!active) return;
+    const pct = Math.max(0, Math.min(100, Number(inst.percent) || 0));
+    $('icTitle').textContent = inst.stage || (inst.paused ? '安装已暂停' : '正在下载游戏资源');
+    $('icPercent').textContent = pct.toFixed(2) + '%';
+    const left = Math.max(0, (inst.downloadTotalBytes || 0) - (inst.downloadDoneBytes || 0));
+    const speed = Number(inst.speedBytes) || 0;
+    $('icEta').textContent = inst.paused ? '已暂停，等待继续' : formatEta(speed > 0 ? left / speed : 0);
+    $('icDownload').textContent = `${inst.downloadDone || inst.done || '0 B'} / ${inst.downloadTotal || inst.total || '0 B'}`;
+    $('icInstall').textContent = inst.installTotalBytes
+      ? `${inst.installDone || '0 B'} / ${inst.installTotal}`
+      : '等待下载完成';
+    $('icBar').style.width = pct + '%';
+  }
+
   function applyUiFlags() {
     if (!state) return;
     $('reserveGroup').style.display = state.showReserve === false ? 'none' : '';
     $('btnMhyy').style.display = state.showMhyy === false ? 'none' : '';
+  }
+
+  function renderBgGrid() {
+    const grid = $('gsBgGrid');
+    grid.innerHTML = '';
+    const list = state.officialBackgrounds || [];
+    list.forEach((item, i) => {
+      if (!item || !item.image) return;
+      const cell = document.createElement('div');
+      cell.className = 'bg-item' + (!state.customBackground && i === (state.officialIndex || 0) ? ' on' : '');
+      const img = document.createElement('img');
+      img.src = item.image;
+      img.alt = '';
+      img.loading = 'lazy';
+      const cap = document.createElement('span');
+      cap.className = 'cap';
+      cap.textContent = `官方壁纸 ${i + 1}${item.video ? ' · 动态' : ''}`;
+      cell.appendChild(img);
+      cell.appendChild(cap);
+      cell.onclick = () => send({ type: 'officialBg', index: i });
+      grid.appendChild(cell);
+    });
   }
 
   function updateSettingsView() {
@@ -567,8 +692,12 @@
     $('gsFree').textContent = info.free || '—';
     $('chkReserve').checked = state.showReserve !== false;
     $('chkMhyy').checked = state.showMhyy !== false;
-    $('gsBg').textContent = state.customBackground ? '自定义背景（已启用）' : '官方壁纸';
+    const officialIndex = state.officialIndex || 0;
+    $('gsBg').textContent = state.customBackground
+      ? '自定义背景（已启用）'
+      : `官方壁纸 · 第 ${officialIndex + 1} 张`;
     $('gsRestoreBg').disabled = !state.customBackground;
+    renderBgGrid();
   }
 
   function openSettings() {

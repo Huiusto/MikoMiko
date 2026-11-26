@@ -9,22 +9,22 @@
             <Setter Property="Height" Value="34" />
             <Setter Property="Margin" Value="0,0,8,8" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="#9FB4C6" />
+            <Setter Property="Foreground" Value="#A9BFD0" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bd" Background="#16222F" CornerRadius="8" Padding="4,0">
+                        <Border x:Name="Bd" Background="#1A2B3A" CornerRadius="8" Padding="4,0">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1D3040" />
+                                <Setter TargetName="Bd" Property="Background" Value="#263E52" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2F86B9" />
+                                <Setter TargetName="Bd" Property="Background" Value="#4EA4DD" />
                                 <Setter Property="Foreground" Value="#FFFFFF" />
                                 <Setter Property="FontWeight" Value="SemiBold" />
                             </Trigger>
@@ -44,12 +44,12 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bd" Background="#16222F" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Bd" Background="#1A2B3A" CornerRadius="8" Padding="{TemplateBinding Padding}">
                             <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1D3040" />
+                                <Setter TargetName="Bd" Property="Background" Value="#263E52" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#DFF2FE" />
@@ -63,13 +63,19 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="#081019">
+    <Grid>
+        <Grid.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#0D1622" Offset="0" />
+                <GradientStop Color="#080D14" Offset="1" />
+            </LinearGradientBrush>
+        </Grid.Background>
         <Grid.RowDefinitions>
-            <RowDefinition Height="48" />
+            <RowDefinition Height="52" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#0D1621" BorderBrush="#1C2C3D" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#111B27" BorderBrush="#23364A" BorderThickness="0,0,0,1">
             <Grid Margin="14,0,10,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -112,7 +118,7 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="382" />
+                <ColumnDefinition Width="400" />
             </Grid.ColumnDefinitions>
 
             <!-- 左侧视频 -->
@@ -129,11 +135,11 @@
             </Grid>
 
             <!-- 右侧详情 / 线路 / 选集 -->
-            <Border Grid.Column="1" Background="#0D1621" BorderBrush="#1C2C3D" BorderThickness="1,0,0,0">
+            <Border Grid.Column="1" Background="#111B27" BorderBrush="#23364A" BorderThickness="1,0,0,0">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="20,18,18,26">
+                    <StackPanel Margin="20,18,18,28">
 
-                        <Border Height="142" CornerRadius="12" ClipToBounds="True" Background="#132131">
+                        <Border Height="150" CornerRadius="14" ClipToBounds="True" Background="#1A2938">
                             <Grid>
                                 <TextBlock Text="MikoMiko" FontSize="15" Foreground="#4C6B84"
                                            HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -147,8 +153,8 @@
                         <TextBlock x:Name="DetailMeta" FontSize="10.5" Foreground="#7F99AD"
                                    TextWrapping="Wrap" Margin="0,7,0,0" />
 
-                        <Border Background="#111D2A" BorderBrush="#1B2C3D" BorderThickness="1" CornerRadius="10"
-                                Padding="12,10" Margin="0,12,0,0">
+                        <Border Background="#172532" BorderBrush="#263B4E" BorderThickness="1" CornerRadius="10"
+                                Padding="13,11" Margin="0,12,0,0">
                             <TextBlock x:Name="DescriptionText" FontSize="11.5" LineHeight="19"
                                        Foreground="#AFC3D3" TextWrapping="Wrap" MaxHeight="104"
                                        TextTrimming="CharacterEllipsis" />
@@ -159,7 +165,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <Button x:Name="FollowButton" Height="36" Background="#2F86B9" Foreground="White"
+                            <Button x:Name="FollowButton" Height="36" Background="#4EA4DD" Foreground="White"
                                     BorderThickness="0" Cursor="Hand" Click="Follow_Click">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -180,7 +186,7 @@
                                     <TextBlock x:Name="FollowText" Text="追剧" FontSize="12" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Button>
-                            <Border Grid.Column="1" Background="#16222F" CornerRadius="18" Padding="14,0"
+                            <Border Grid.Column="1" Background="#1A2B3A" CornerRadius="18" Padding="14,0"
                                     VerticalAlignment="Center" Height="36">
                                 <TextBlock x:Name="EpisodeInfoText" Text="选集" FontSize="10.5"
                                            Foreground="#7F99AD" VerticalAlignment="Center" />

@@ -10,6 +10,7 @@ public sealed class SettingsService
 {
     private readonly string _filePath;
     private Timer? _saveTimer;
+    private bool _needsSave;
 
     public AppSettings Current { get; }
 
@@ -19,6 +20,7 @@ public sealed class SettingsService
         Directory.CreateDirectory(DataDirectory);
         _filePath = Path.Combine(DataDirectory, "settings.json");
         Current = Load();
+        if (_needsSave) Save();
         Current.PropertyChanged += (_, _) => QueueSave();
     }
 
@@ -74,7 +76,19 @@ public sealed class SettingsService
             {
                 var json = File.ReadAllText(_filePath);
                 var model = JsonSerializer.Deserialize<AppSettings>(json);
-                if (model is not null) return model;
+                if (model is not null)
+                {
+                    // 0.1.41 将默认启动目的地改为启动页；仅迁移一次，之后尊重用户选择。
+                    if (!model.LaunchDefaultApplied)
+                    {
+                        model.StartOnLaunch = true;
+                        model.StartOnHome = false;
+                        model.StartOnVideo = false;
+                        model.LaunchDefaultApplied = true;
+                        _needsSave = true;
+                    }
+                    return model;
+                }
             }
         }
         catch
@@ -82,7 +96,9 @@ public sealed class SettingsService
             // 配置损坏时回落到默认设置
         }
 
-        return new AppSettings();
+        var fresh = new AppSettings { LaunchDefaultApplied = true };
+        _needsSave = true;
+        return fresh;
     }
 
     private void QueueSave()

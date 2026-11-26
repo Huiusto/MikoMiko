@@ -1,0 +1,29 @@
+<Window x:Class="MikoMiko.Views.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:MikoMiko.Controls"
+        Title="MikoMiko"
+        Width="900" Height="640"
+        WindowStyle="None" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False" Topmost="True"
+        Background="White"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Grid Background="White" Margin="30,24,30,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Image Grid.Row="0" Source="/Assets/Setup/splash-girl.png" Width="620"
+               Stretch="Uniform" VerticalAlignment="Bottom" HorizontalAlignment="Center" />
+
+        <controls:AnimatedGif Grid.Row="1" GifPath="/Assets/Setup/loading.gif"
+                              Width="480" Margin="0,-8,0,0"
+                              Stretch="Uniform" HorizontalAlignment="Center" />
+
+        <TextBlock Grid.Row="2" Text="正在把少女的小世界搬过来…" FontSize="12"
+                   Foreground="#8EAECB" HorizontalAlignment="Center" Margin="0,6,0,0" />
+    </Grid>
+</Window>
