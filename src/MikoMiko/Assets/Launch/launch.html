@@ -159,7 +159,68 @@
   .main-btn:active { transform: translateY(0) scale(.99); }
   .main-btn[disabled] { opacity: .76; cursor: default; transform: none; }
 
+  /* 开始游戏右侧：三条杠游戏设置 */
+  .settings-btn {
+    width: 50px; height: 50px; padding: 0; flex: none; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(18,20,26,.58); border: 1px solid rgba(255,255,255,.22);
+    box-shadow: 0 8px 22px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.10);
+    backdrop-filter: blur(12px) saturate(1.05);
+  }
+  .settings-btn:hover { background: rgba(46,50,62,.74); border-color: rgba(255,255,255,.42); }
+  .settings-btn .bars { display: flex; flex-direction: column; gap: 5px; }
+  .settings-btn .bars i { display: block; width: 21px; height: 2px; border-radius: 2px;
+                          background: rgba(255,255,255,.94); box-shadow: 0 0 6px rgba(0,0,0,.25); }
+
   .locate { font-size: 11.5px; padding: 5px 14px; }
+
+  /* 游戏设置弹窗 */
+  .modal {
+    position: fixed; inset: 0; z-index: 60; display: none;
+    align-items: center; justify-content: center; padding: 28px;
+    background: rgba(6,8,12,.42); backdrop-filter: blur(3px);
+  }
+  .modal.on { display: flex; }
+  .dialog {
+    width: min(820px, calc(100vw - 56px)); max-height: calc(100vh - 56px);
+    overflow: auto; background: #fff; color: #1d1f24; border-radius: 18px;
+    box-shadow: 0 30px 90px rgba(0,0,0,.46);
+    font-family: "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  }
+  .dialog-head { padding: 28px 34px 18px; }
+  .dialog-head h2 { font-size: 21px; font-weight: 700; letter-spacing: .2px; }
+  .dialog-head p { font-size: 13px; color: #9aa0a8; margin-top: 8px; }
+  .dialog-card {
+    margin: 0 34px; border: 1px solid #d8dde3; border-radius: 12px;
+    padding: 25px 24px 20px;
+  }
+  .kv { display: grid; grid-template-columns: 154px 1fr; gap: 18px;
+        align-items: start; margin-bottom: 13px; font-size: 14.5px; }
+  .kv .key { color: #9aa0a8; }
+  .kv .val { color: #1d1f24; line-height: 1.5; word-break: break-all; }
+  .dialog .divider { height: 0; border-top: 1px dashed #e6e9ee; margin: 18px 0 16px; }
+  .gs-section { font-size: 15px; font-weight: 700; margin-bottom: 13px; }
+  .check { display: flex; align-items: center; gap: 10px; font-size: 14px;
+           color: #32363c; margin: 9px 0; cursor: pointer; user-select: none; }
+  .check input { width: 18px; height: 18px; accent-color: #2f9be5; cursor: pointer; }
+  .gs-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
+  .gs-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 17px; border-radius: 8px; border: 1px solid #d3d9e0;
+    background: #fff; color: #24282e; font-size: 14px; cursor: pointer;
+    transition: background .16s ease, border-color .16s ease, transform .12s ease;
+  }
+  .gs-btn:hover { background: #f6f8fb; border-color: #b8c1cb; transform: translateY(-1px); }
+  .gs-btn.danger { color: #e5484d; }
+  .gs-btn.danger:hover { background: #fff5f5; border-color: #f0b4b6; }
+  .gs-btn svg { width: 17px; height: 17px; flex: none; }
+  .dialog-foot { display: flex; justify-content: flex-end; padding: 20px 34px 26px; }
+  .dialog-close {
+    min-width: 78px; padding: 9px 20px; border-radius: 8px;
+    border: 1px solid #d3d9e0; background: #fff; color: #24282e;
+    font-size: 14px; cursor: pointer;
+  }
+  .dialog-close:hover { background: #f6f8fb; }
 
   .toast {
     position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(14px);
@@ -197,7 +258,7 @@
   <div class="spacer"></div>
 
   <div class="bottom">
-    <div class="reserve">
+    <div class="reserve" id="reserveGroup">
       <span class="title">预约游戏</span>
       <div class="card" data-url="https://planet.mihoyo.com/home"><b>星布谷地</b><span>未上线 · 预约</span></div>
       <div class="card" data-url="https://nodusfall.mihoyo.com/home"><b>源初之结</b><span>未上线 · 预约</span></div>
@@ -206,10 +267,47 @@
     <div class="actions">
       <div class="main-row">
         <button class="btn accent main-btn" id="btnMain"><span id="mainText">开始游戏</span></button>
+        <button class="btn settings-btn" id="btnGameSettings" title="游戏设置" aria-label="游戏设置">
+          <span class="bars"><i></i><i></i><i></i></span>
+        </button>
       </div>
       <button class="btn ghost locate" id="btnLocate">定位游戏</button>
       <div class="hint" id="hintText"></div>
     </div>
+  </div>
+</div>
+
+<div class="modal" id="settingsModal">
+  <div class="dialog" role="dialog" aria-modal="true">
+    <div class="dialog-head">
+      <h2 id="gsTitle">游戏设置 · 原神</h2>
+      <p>游戏基本信息、安装目录与安装 / 卸载管理。</p>
+    </div>
+    <div class="dialog-card">
+      <div class="kv"><div class="key">游戏</div><div class="val" id="gsGame">原神</div></div>
+      <div class="kv"><div class="key">主程序</div><div class="val" id="gsExe">YuanShen.exe / GenshinImpact.exe / YS.exe</div></div>
+      <div class="kv"><div class="key">安装目录</div><div class="val" id="gsDir">未定位</div></div>
+      <div class="kv"><div class="key">所在磁盘可用空间</div><div class="val" id="gsFree">—</div></div>
+      <div class="divider"></div>
+      <div class="gs-section">启动页显示</div>
+      <label class="check"><input type="checkbox" id="chkReserve"> 显示「预约游戏」卡片（左下角）</label>
+      <label class="check"><input type="checkbox" id="chkMhyy"> 显示「米哈云游」按钮（左上角）</label>
+      <div class="gs-actions">
+        <button class="gs-btn" id="gsOpenDir">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.2c0-1 .8-1.8 1.8-1.8h4l2 2.2h7.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8H5.3c-1 0-1.8-.8-1.8-1.8Z"/><path d="M3.8 10.4h16.4"/></svg>
+          打开安装目录
+        </button>
+        <button class="gs-btn" id="gsRelocate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
+          重新定位游戏
+        </button>
+        <button class="gs-btn danger" id="gsUninstall">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.2h15M9 7.2V5.4c0-.7.5-1.2 1.2-1.2h3.6c.7 0 1.2.5 1.2 1.2v1.8M6.6 7.2l.8 12c0 .9.8 1.6 1.7 1.6h5.8c.9 0 1.7-.7 1.7-1.6l.8-12"/><path d="M10 11v6M14 11v6"/></svg>
+          卸载游戏
+        </button>
+      </div>
+    </div>
+    <div class="dialog-foot"><button class="dialog-close" id="gsClose">关闭</button></div>
   </div>
 </div>
 
@@ -351,11 +449,47 @@
     $('btnLocate').style.display = '';
   }
 
+  function applyUiFlags() {
+    if (!state) return;
+    $('reserveGroup').style.display = state.showReserve === false ? 'none' : '';
+    $('btnMhyy').style.display = state.showMhyy === false ? 'none' : '';
+  }
+
+  function updateSettingsView() {
+    if (!state) return;
+    const info = state.gameInfo || {};
+    $('gsTitle').textContent = `游戏设置 · ${info.name || ''}`;
+    $('gsGame').textContent = info.name || '—';
+    $('gsExe').textContent = info.exe || '—';
+    $('gsDir').textContent = info.dir || '未定位';
+    $('gsFree').textContent = info.free || '—';
+    $('chkReserve').checked = state.showReserve !== false;
+    $('chkMhyy').checked = state.showMhyy !== false;
+  }
+
+  function openSettings() {
+    updateSettingsView();
+    $('settingsModal').classList.add('on');
+  }
+
+  function closeSettings() {
+    $('settingsModal').classList.remove('on');
+  }
+
+  function setUiFlag(name, checked) {
+    if (!state) return;
+    state[name] = checked;
+    applyUiFlags();
+    send({ type: 'uiFlag', name, value: checked });
+  }
+
   function render() {
     renderGames();
     renderMainButton();
     renderDots();
     applyBackground();
+    applyUiFlags();
+    updateSettingsView();
     $('saving').classList.toggle('on', !!state.preparing);
   }
 
@@ -397,6 +531,18 @@
   $('btnLocate').onclick = () => send({ type: 'locate' });
   document.querySelectorAll('.reserve .card').forEach(c =>
     c.onclick = () => send({ type: 'reserve', url: c.dataset.url }));
+
+  $('btnGameSettings').onclick = e => { e.stopPropagation(); openSettings(); };
+  $('gsClose').onclick = closeSettings;
+  $('settingsModal').addEventListener('click', e => {
+    if (e.target === $('settingsModal')) closeSettings();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
+  $('gsOpenDir').onclick = () => send({ type: 'openDir' });
+  $('gsRelocate').onclick = () => send({ type: 'locate' });
+  $('gsUninstall').onclick = () => send({ type: 'uninstall' });
+  $('chkReserve').onchange = e => setUiFlag('showReserve', e.target.checked);
+  $('chkMhyy').onchange = e => setUiFlag('showMhyy', e.target.checked);
 
   $('btnSaveBg').onclick = () => send({ type: 'saveBg' });
   $('btnPause').onclick = () => send({ type: 'pauseToggle' });

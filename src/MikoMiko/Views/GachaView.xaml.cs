@@ -693,7 +693,7 @@ public partial class GachaView : UserControl
         var open = new MenuItem { Header = "打开 MikoNest 数据目录" };
         open.Click += (_, _) => OpenDataDir();
         var about = new MenuItem { Header = "数据来源：MikoNest gacha_records.json" };
-        about.Click += (_, _) => ShowToast("MikoMiko 0.1.36 · 抽卡数据来自 MikoNest 本地记录");
+        about.Click += (_, _) => ShowToast("MikoMiko 0.1.37 · 抽卡数据来自 MikoNest 本地记录");
         menu.Items.Add(reload);
         menu.Items.Add(open);
         menu.Items.Add(new Separator());

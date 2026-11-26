@@ -83,6 +83,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
         HomeTabs.Add(new TabOption("Posts", "Home.Posts"));
+        HomeTabs.Add(new TabOption("Web", "Home.Web"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -115,6 +116,10 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>软件内网页视图（正文里的外部链接），不打开系统浏览器。</summary>
     [ObservableProperty] private Views.BrowserView? _browserView;
     [ObservableProperty] private bool _isBrowserOpen;
+
+    /// <summary>首页「网页」页签：内置浏览器默认打开米游社，并提供推荐网页入口。</summary>
+    [ObservableProperty] private Views.WebHubView? _webHubPage;
+    [ObservableProperty] private bool _isWebHubOpen;
 
     /// <summary>追番/影视的软件内视频播放器，只加载解析出的流地址。</summary>
     [ObservableProperty] private Views.AnimePlayerView? _animePlayerView;
@@ -185,6 +190,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         if (tab.Key == "Anime")
         {
+            CloseWebHub();
             _home.DeactivatePosts();
             if (_currentKey != "Home")
             {
@@ -195,6 +201,19 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
+        if (tab.Key == "Web")
+        {
+            _home.DeactivatePosts();
+            if (_currentKey != "Home")
+            {
+                Navigate("Home");
+                return;
+            }
+            ShowWebHub();
+            return;
+        }
+
+        CloseWebHub();
         CloseAnimePage();
         if (tab.Key == "Posts")
         {
@@ -208,6 +227,21 @@ public sealed partial class ShellViewModel : ObservableObject
             if (_currentKey == "Home") await _home.LoadAsync(false);
             else Navigate("Home");
         }
+    }
+
+    private void ShowWebHub()
+    {
+        CloseAnimePage();
+        WebHubPage ??= new Views.WebHubView();
+        IsWebHubOpen = true;
+        ShowGlobalSearch = false;
+    }
+
+    private void CloseWebHub()
+    {
+        if (WebHubPage is not null) WebHubPage.PauseMedia();
+        IsWebHubOpen = false;
+        ShowGlobalSearch = true;
     }
 
     private void ShowAnimePage()
@@ -352,12 +386,18 @@ public sealed partial class ShellViewModel : ObservableObject
             if (key == "Home")
             {
                 if (IsReaderOpen) CloseReader();
-                if (HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key == "Anime")
+                var tab = HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key;
+                if (tab == "Anime")
                 {
                     ShowAnimePage();
                 }
+                else if (tab == "Web")
+                {
+                    ShowWebHub();
+                }
                 else
                 {
+                    CloseWebHub();
                     CloseAnimePage();
                     if (_home.IsPostsTab) _ = _home.ActivatePostsAsync();
                     else _ = _home.LoadAsync(_home.IsLatest);
@@ -370,6 +410,7 @@ public sealed partial class ShellViewModel : ObservableObject
         // 首页打开帖子后切到视频 / 动态等页面时，自动关闭阅读器与浏览器
         if (IsReaderOpen) CloseReader();
         if (IsBrowserOpen) CloseBrowser();
+        if (IsWebHubOpen) CloseWebHub();
         if (IsUploadOpen) CloseUpload();
         CloseProfile();
         if (key != "Home") CloseAnimePage();
@@ -401,10 +442,17 @@ public sealed partial class ShellViewModel : ObservableObject
         CurrentView = view;
         if (view is Views.VideoView videoView) VideoPage = videoView;
 
-        if (key == "Home" && HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key == "Anime")
-            ShowAnimePage();
-        else if (key == "Home")
-            CloseAnimePage();
+        if (key == "Home")
+        {
+            var tab = HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key;
+            if (tab == "Anime") ShowAnimePage();
+            else if (tab == "Web") ShowWebHub();
+            else
+            {
+                CloseWebHub();
+                CloseAnimePage();
+            }
+        }
 
         _settings.LastPage = key;
         _ = EnsureLoadedAsync(key);
@@ -428,6 +476,7 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             case "Home":
                 if (IsAnimePageOpen) { /* Flutter 模块自行加载内置规则 */ }
+                else if (IsWebHubOpen) { /* 网页页签由 WebView2 自行加载 */ }
                 else if (_home.IsPostsTab) await _home.ActivatePostsAsync();
                 else if (_home.Items.Count == 0) await _home.LoadAsync(_home.IsLatest);
                 break;
@@ -502,6 +551,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         // 从视频页点开帖子时先暂停视频
         VideoPage?.PausePlayback();
+        WebHubPage?.PauseMedia();
         CloseReader();
         CloseBrowser();
         CloseProfile();
@@ -567,6 +617,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         CloseBrowser();
+        WebHubPage?.PauseMedia();
         BrowserView = new Views.BrowserView(url, CloseBrowser);
         IsBrowserOpen = true;
     }

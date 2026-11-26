@@ -48,7 +48,17 @@ public partial class LaunchView : UserControl
     private bool _paused;
     private bool _preparing;
     private bool _webReady;
+    private bool _showReserve = true;
+    private bool _showMhyy = true;
     private readonly HashSet<string> _runningGames = new();
+
+    private static readonly Dictionary<string, string> UninstallBiz = new()
+    {
+        ["genshin"] = "hk4e_cn",
+        ["starrail"] = "hkrpg_cn",
+        ["zzz"] = "nap_cn",
+        ["bh3"] = "bh3_cn",
+    };
 
     public LaunchView()
     {
@@ -61,6 +71,8 @@ public partial class LaunchView : UserControl
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         MikoNestBridge.Reload();
+        _showReserve = LauncherBackgroundService.LoadUiFlag("showReserve", true);
+        _showMhyy = LauncherBackgroundService.LoadUiFlag("showMhyy", true);
         if (_webReady)
         {
             PushState();
@@ -244,6 +256,18 @@ public partial class LaunchView : UserControl
 
         if (_bgIndex >= items.Count) _bgIndex = Math.Max(0, items.Count - 1);
 
+        var selectedGame = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
+        var selectedDir = MikoNestBridge.GetGameDir(_selectedKey);
+        var selectedExe = MikoNestBridge.FindGameExe(_selectedKey);
+        var gameInfo = new
+        {
+            name = selectedGame?.Name ?? _selectedKey,
+            exe = selectedGame is null ? "" : string.Join(" / ", selectedGame.ExeNames),
+            dir = selectedDir ?? "",
+            free = FormatFreeSpace(selectedDir),
+            located = selectedExe != null,
+        };
+
         var state = new
         {
             games,
@@ -254,6 +278,9 @@ public partial class LaunchView : UserControl
             preparing = _preparing,
             accent = "#4EA4DD",
             hint = BuildHint(),
+            showReserve = _showReserve,
+            showMhyy = _showMhyy,
+            gameInfo,
         };
 
         _ = Web.CoreWebView2.ExecuteScriptAsync(
@@ -284,6 +311,22 @@ public partial class LaunchView : UserControl
     }
 
     private bool IsLocated(string key) => MikoNestBridge.FindGameExe(key) != null;
+
+    private static string FormatFreeSpace(string? dir)
+    {
+        try
+        {
+            var root = dir is null ? null : Path.GetPathRoot(dir);
+            if (string.IsNullOrWhiteSpace(root)) return "—";
+            var drive = new DriveInfo(root);
+            if (!drive.IsReady) return "—";
+            return (drive.AvailableFreeSpace / 1024d / 1024d / 1024d).ToString("0.0") + " GB";
+        }
+        catch
+        {
+            return "—";
+        }
+    }
 
     private string? ToUrl(string? absolutePath)
     {
@@ -356,6 +399,26 @@ public partial class LaunchView : UserControl
                     PickGame();
                     break;
 
+                case "openDir":
+                    OpenGameDir();
+                    break;
+
+                case "uninstall":
+                    UninstallGame();
+                    break;
+
+                case "uiFlag":
+                {
+                    var name = ReadString(e.WebMessageAsJson, "name");
+                    var value = ReadBool(e.WebMessageAsJson, "value");
+                    if (name == "showReserve") _showReserve = value;
+                    else if (name == "showMhyy") _showMhyy = value;
+                    else break;
+                    LauncherBackgroundService.SaveUiFlag(name!, value);
+                    PushState();
+                    break;
+                }
+
                 case "mhyy":
                     OpenUrl("https://mhyy.mihoyo.com/");
                     break;
@@ -385,6 +448,11 @@ public partial class LaunchView : UserControl
            value.ValueKind == JsonValueKind.Number
             ? value.GetDouble()
             : 0;
+
+    private static bool ReadBool(string json, string property)
+        => JsonDocument.Parse(json).RootElement.TryGetProperty(property, out var value) &&
+           (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False) &&
+           value.GetBoolean();
 
     // ---------- 壁纸 ----------
 
@@ -475,6 +543,88 @@ public partial class LaunchView : UserControl
         MikoNestBridge.SetLocalGamePath(_selectedKey, selected);
         PushState();
         Toast($"已保存「{game.Name}」的安装位置");
+    }
+
+    private void OpenGameDir()
+    {
+        var dir = MikoNestBridge.GetGameDir(_selectedKey);
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        {
+            Toast("尚未定位到安装目录，请先点「重新定位游戏」");
+            return;
+        }
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"\"{dir}\"",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            Toast("打开目录失败：" + ex.Message);
+        }
+    }
+
+    /// <summary>只调用米哈游启动器的官方卸载入口，不自行删除任何游戏文件。</summary>
+    private void UninstallGame()
+    {
+        var game = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
+        var dir = MikoNestBridge.GetGameDir(_selectedKey);
+        if (game == null || string.IsNullOrWhiteSpace(dir))
+        {
+            Toast("尚未定位到游戏目录，无法卸载");
+            return;
+        }
+
+        var answer = MessageBox.Show(
+            $"将通过米哈游启动器卸载「{game.Name}」。\n这会关闭游戏并删除游戏文件，确定继续吗？",
+            "卸载游戏", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+        if (answer != MessageBoxResult.Yes) return;
+
+        var launcher = FindLauncher(dir);
+        if (launcher is null)
+        {
+            MessageBox.Show("没有找到米哈游启动器，请打开米哈游启动器手动卸载。", "MikoMiko",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = launcher,
+                Arguments = "--uninstall_game=" + UninstallBiz[_selectedKey],
+                WorkingDirectory = Path.GetDirectoryName(launcher) ?? "",
+                UseShellExecute = true,
+            });
+            Toast("已打开米哈游官方卸载流程");
+        }
+        catch (Exception ex)
+        {
+            Toast("打开卸载程序失败：" + ex.Message);
+        }
+    }
+
+    private static string? FindLauncher(string dir)
+    {
+        try
+        {
+            var current = new DirectoryInfo(dir);
+            for (var i = 0; i < 4 && current != null; i++, current = current.Parent)
+            {
+                var candidate = Path.Combine(current.FullName, "launcher.exe");
+                if (File.Exists(candidate)) return candidate;
+            }
+        }
+        catch
+        {
+            // 目录不可访问时走失败提示
+        }
+        return null;
     }
 
     private async Task StartGameAsync()

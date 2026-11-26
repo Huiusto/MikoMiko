@@ -199,6 +199,12 @@
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             Focusable="False" />
 
+            <!-- ==================== 首页「网页」页签（软件内浏览器） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding WebHubPage}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False"
+                            Visibility="{Binding IsWebHubOpen, Converter={StaticResource BoolToVis}}" />
+
             <!-- ==================== 追番/影视（首页第三页签，独立模块页） ==================== -->
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding AnimePage}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"

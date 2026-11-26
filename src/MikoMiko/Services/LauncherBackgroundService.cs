@@ -295,6 +295,7 @@ public static class LauncherBackgroundService
     private sealed class LaunchUiState
     {
         public Dictionary<string, int> Index { get; set; } = new();
+        public Dictionary<string, bool> Flags { get; set; } = new();
     }
 
     public static int LoadIndex(string gameKey)
@@ -327,6 +328,42 @@ public static class LauncherBackgroundService
         catch
         {
             // 只影响下次默认选中
+        }
+    }
+
+    /// <summary>启动页显示开关（预约卡片 / 米哈云游按钮）。默认开启。</summary>
+    public static bool LoadUiFlag(string name, bool fallback)
+    {
+        try
+        {
+            if (!File.Exists(UiStateFile)) return fallback;
+            var state = JsonSerializer.Deserialize<LaunchUiState>(File.ReadAllText(UiStateFile));
+            if (state?.Flags != null && state.Flags.TryGetValue(name, out var value)) return value;
+        }
+        catch
+        {
+            // 读取失败时使用默认值
+        }
+        return fallback;
+    }
+
+    public static void SaveUiFlag(string name, bool value)
+    {
+        try
+        {
+            Directory.CreateDirectory(SettingsService.CacheDirectory);
+            LaunchUiState state;
+            if (File.Exists(UiStateFile))
+                state = JsonSerializer.Deserialize<LaunchUiState>(File.ReadAllText(UiStateFile)) ?? new();
+            else
+                state = new();
+            state.Flags ??= new Dictionary<string, bool>();
+            state.Flags[name] = value;
+            File.WriteAllText(UiStateFile, JsonSerializer.Serialize(state));
+        }
+        catch
+        {
+            // 仅影响下次启动页的显示状态
         }
     }
 
