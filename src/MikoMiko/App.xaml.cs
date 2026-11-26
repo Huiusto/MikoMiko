@@ -149,8 +149,8 @@ public partial class App : Application
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
                     new Version("0.1.43"), "v0.1.43", "MikoMiko 0.1.43",
-                    "· 启动画面改为少女探头 + 动态 MikoMiko Logo 加载动画\n· 安装、更新、卸载与启动画面统一萌系蓝白视觉\n· 首页改为推荐 / 板块 / 网页 / 追剧·影视四页签\n· 视频页恢复弹幕输入并支持全屏播放\n· 抽卡页记录卡片改版，账号在每日任务与我的页自动同步",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.42.exe", "");
+                    "· 启动画面改为整张少女探头 MikoMiko 海报\n· 首页、视频缓冲、网页、追番、播放器、动态与帖子详情统一使用加载 GIF\n· 抽卡记录页仿 MikoNest 重做为 262 宽卡池卡、平铺记录行与保底进度条",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.43.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();

@@ -319,10 +319,13 @@
                            HorizontalAlignment="Center" Margin="0,50,0,0"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
 
-                <TextBlock Text="{Binding [Common.Loading], Source={x:Static loc:Loc.Instance}}"
-                           Foreground="{DynamicResource Brush.TextTertiary}" FontSize="13"
-                           HorizontalAlignment="Center" Margin="0,50,0,0"
-                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
+                <StackPanel HorizontalAlignment="Center" Margin="0,28,0,0"
+                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+                    <controls:AnimatedGif Style="{StaticResource LoadingGif}" Width="220" />
+                    <TextBlock Text="{Binding [Common.Loading], Source={x:Static loc:Loc.Instance}}"
+                               Foreground="{DynamicResource Brush.TextTertiary}" FontSize="11"
+                               HorizontalAlignment="Center" Margin="0,2,0,0" />
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
 

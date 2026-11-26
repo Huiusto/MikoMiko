@@ -1,6 +1,6 @@
 ﻿# MikoMiko
 
-> 当前版本 **0.1.42** · 主色 **#4EA4DD（米蓝）**
+> 当前版本 **0.1.43** · 主色 **#4EA4DD（米蓝）**
 
 一个基于 **WPF (.NET 8)** 的米游社第三方桌面客户端，界面参考 [TeyvatGuide](https://github.com/BTMuli/TeyvatGuide) 的「米游社」板块，账号页参考 [Starward](https://github.com/Scighost/Starward)。
 
@@ -33,6 +33,12 @@
 - 接口失败自动回落到内置演示数据，离线也能浏览界面
 
 ## 更新日志
+
+### v0.1.43（2026-11-26）
+- 启动画面改为整张「少女探头 + MikoMiko」海报，不再叠加动画与进度文案
+- 首页初始加载 / 加载更多、视频缓冲、网页页、追番模块、播放器、动态、帖子详情与浏览器统一接入 MikoMiko 加载 GIF
+- 抽卡记录页仿 MikoNest 重做：262 宽卡池卡、顶部 accent 线与 96px 淡彩 wash、四行统计、5★/4★ 分段、平铺记录行（rank 软色底、26px 渐变徽标、UP 标签）与保底进度条
+- 抽卡设置新增「记录区显示 4★」「显示条目图标」，底部新增状态卡；账号选择改为 UID，保底按 UID 分段累计
 
 ### v0.1.42（2026-11-26）
 - 启动画面改为「少女探头 + MikoMiko 动态 Logo」的加载动画，使用透明 GIF 逐帧播放，启动时能看到品牌字与进度线循环
@@ -291,7 +297,7 @@
 
 ## 构建与运行
 
-已提供安装包：`dist/MikoMiko-Setup-0.1.42.exe`（NSIS 制作，默认安装到 `%LOCALAPPDATA%\Programs\MikoMiko`，单用户安装、无需管理员，自动创建开始菜单与桌面快捷方式，可在「设置 → 应用维护 → 卸载」或控制面板卸载）。
+已提供安装包：`dist/MikoMiko-Setup-0.1.43.exe`（NSIS 制作，默认安装到 `%LOCALAPPDATA%\Programs\MikoMiko`，单用户安装、无需管理员，自动创建开始菜单与桌面快捷方式，可在「设置 → 应用维护 → 卸载」或控制面板卸载）。
 
 Visual Studio：
 

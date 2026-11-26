@@ -321,17 +321,19 @@
                            HorizontalAlignment="Center" Margin="0,60,0,0"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVis}}" />
 
-                <StackPanel HorizontalAlignment="Center" Margin="0,26,0,0"
+                <StackPanel HorizontalAlignment="Center" Margin="0,22,0,6"
                             Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
+                    <controls:AnimatedGif Style="{StaticResource LoadingGif}" Width="232" />
                     <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Brush.TextTertiary}"
-                               FontSize="13" HorizontalAlignment="Center" />
+                               FontSize="11.5" HorizontalAlignment="Center" Margin="0,2,0,0" />
                 </StackPanel>
 
-                <StackPanel HorizontalAlignment="Center" Margin="0,24,0,6"
+                <StackPanel HorizontalAlignment="Center" Margin="0,18,0,4"
                             Visibility="{Binding IsLoadingMore, Converter={StaticResource BoolToVis}}">
+                    <controls:AnimatedGif Style="{StaticResource LoadingGif}" Width="168" />
                     <TextBlock Text="{Binding [Common.Loading], Source={x:Static loc:Loc.Instance}}"
-                               Foreground="{DynamicResource Brush.TextTertiary}" FontSize="12.5"
-                               HorizontalAlignment="Center" />
+                               Foreground="{DynamicResource Brush.TextTertiary}" FontSize="11"
+                               HorizontalAlignment="Center" Margin="0,1,0,0" />
                 </StackPanel>
 
                 <StackPanel HorizontalAlignment="Center" Margin="0,24,0,6">

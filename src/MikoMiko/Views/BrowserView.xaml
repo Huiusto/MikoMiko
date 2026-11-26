@@ -1,6 +1,7 @@
 <UserControl x:Class="MikoMiko.Views.BrowserView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:MikoMiko.Controls"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              xmlns:loc="clr-namespace:MikoMiko.Localization"
              FontFamily="{DynamicResource Font.Ui}">
@@ -48,7 +49,9 @@
         <Grid Grid.Row="1" Background="#FFFFFFFF">
             <wv2:WebView2 x:Name="Web" Loaded="Web_Loaded" />
             <StackPanel x:Name="LoadingPanel" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="正在软件内加载网页…" Foreground="#66707A" FontSize="12.5" />
+                <controls:AnimatedGif Style="{StaticResource LoadingGif}" Width="220" />
+                <TextBlock Text="正在软件内加载网页…" Foreground="#66707A" FontSize="11.5"
+                           HorizontalAlignment="Center" Margin="0,4,0,0" />
             </StackPanel>
         </Grid>
     </Grid>

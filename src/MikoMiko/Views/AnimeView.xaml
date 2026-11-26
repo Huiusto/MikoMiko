@@ -384,11 +384,10 @@
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14"
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10"
                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}">
-                        <ProgressBar Width="110" Height="4" IsIndeterminate="True" Foreground="#4EA4DD"
-                                     Background="#D8ECF9" BorderThickness="0" VerticalAlignment="Center" />
-                        <TextBlock Text="正在从片库站点同步…" FontSize="11" Foreground="#6C8FA5" Margin="10,0,0,0" />
+                        <controls:AnimatedGif Style="{StaticResource LoadingGif}" Width="132" VerticalAlignment="Center" />
+                        <TextBlock Text="正在从片库站点同步…" FontSize="11" Foreground="#6C8FA5" Margin="6,0,0,0" VerticalAlignment="Center" />
                     </StackPanel>
 
                     <Grid Visibility="{Binding IsWatchlistPage, Converter={StaticResource InverseBoolToVis}}">

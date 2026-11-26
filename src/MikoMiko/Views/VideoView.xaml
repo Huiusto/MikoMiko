@@ -48,12 +48,16 @@
                         </Button.Template>
                     </Button>
 
-                    <!-- 缓冲 / 无源提示 -->
-                    <Border Background="#66000000" CornerRadius="12" Padding="14,6" MaxWidth="360"
+                    <!-- 缓冲 / 无源提示：加载中显示 MikoMiko GIF -->
+                    <Border Background="#F2FFFFFF" CornerRadius="16" Padding="20,14,20,10" MaxWidth="360"
                             HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,120,0,0"
                             Visibility="{Binding StatusText, Converter={StaticResource NotEmptyToVis}}">
-                        <TextBlock Text="{Binding StatusText}" Foreground="#E6FFFFFF" FontSize="12"
-                                   TextWrapping="Wrap" HorizontalAlignment="Center" />
+                        <StackPanel>
+                            <controls:AnimatedGif Style="{StaticResource LoadingGif}" Width="200" Margin="0,0,0,4"
+                                                   Visibility="{Binding IsBuffering, Converter={StaticResource BoolToVis}}" />
+                            <TextBlock Text="{Binding StatusText}" Foreground="#25445C" FontSize="11.5"
+                                       TextWrapping="Wrap" HorizontalAlignment="Center" />
+                        </StackPanel>
                     </Border>
 
                     <Border Background="#66000000" CornerRadius="10" Padding="12,5"

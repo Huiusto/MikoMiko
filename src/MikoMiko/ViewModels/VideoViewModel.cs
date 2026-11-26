@@ -48,6 +48,12 @@ public sealed partial class VideoViewModel : ObservableObject
     [ObservableProperty] private bool _isDemo;
     [ObservableProperty] private bool _hasSource;
     [ObservableProperty] private string _statusText = string.Empty;
+
+    partial void OnStatusTextChanged(string value)
+    {
+        IsBuffering = value.StartsWith("正在缓冲", StringComparison.Ordinal)
+                      || value.StartsWith("正在加载", StringComparison.Ordinal);
+    }
     [ObservableProperty] private bool _isPlaying;
     [ObservableProperty] private bool _isMuted;
     [ObservableProperty] private double _volume = 60;

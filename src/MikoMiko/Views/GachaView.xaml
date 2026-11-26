@@ -56,11 +56,12 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="24,16,24,16">
+    <Grid Margin="24,16,24,14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 页头 -->
@@ -72,9 +73,9 @@
 
             <StackPanel VerticalAlignment="Top">
                 <StackPanel Orientation="Horizontal">
-                    <Border Width="4" Height="29" CornerRadius="2" Background="#258DD1"
-                            VerticalAlignment="Center" Margin="0,0,9,0" />
-                    <TextBlock x:Name="TxtHeaderTitle" Text="祈愿记录" FontSize="26" FontWeight="Bold"
+                    <Border Width="4" Height="24" CornerRadius="2" Background="#258DD1"
+                            VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock x:Name="TxtHeaderTitle" Text="祈愿记录" FontSize="22" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
                     <Button x:Name="BtnBeyond" Height="28" Margin="12,0,0,0" Padding="12,0"
                             Background="#EAF7FF" BorderBrush="#CBE8FA" BorderThickness="1"
@@ -131,6 +132,15 @@
                     <TextBlock Text="记录来自 MikoNest 本地抽卡库；在游戏内打开一次抽卡记录页面会刷新 authkey。"
                                FontSize="10" Foreground="{DynamicResource Brush.TextTertiary}"
                                TextWrapping="Wrap" Margin="0,3,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,9,0,0">
+                        <CheckBox x:Name="ChkShow4" Content="记录区显示 4★" FontSize="11" IsChecked="True"
+                                  Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center"
+                                  Checked="DisplayOption_Changed" Unchecked="DisplayOption_Changed" />
+                        <CheckBox x:Name="ChkShowIcon" Content="显示条目图标" FontSize="11" IsChecked="True"
+                                  Foreground="{DynamicResource Brush.TextSecondary}" Margin="18,0,0,0"
+                                  VerticalAlignment="Center"
+                                  Checked="DisplayOption_Changed" Unchecked="DisplayOption_Changed" />
+                    </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="导出 CSV" Height="32" Padding="12,0" Style="{StaticResource GachaButton}"
@@ -146,6 +156,16 @@
                       HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <Grid x:Name="PoolGrid" HorizontalAlignment="Left" VerticalAlignment="Stretch" />
         </ScrollViewer>
+
+        <!-- 底部状态卡 -->
+        <Border Grid.Row="3" Margin="0,10,0,0" Background="#FFFFFF" BorderBrush="#DCE8F2"
+                BorderThickness="1" CornerRadius="12" Padding="16,10">
+            <StackPanel Orientation="Horizontal">
+                <Ellipse Width="7" Height="7" Fill="#4EA4DD" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock x:Name="TxtStatus" Text="本地库 0 条 · 数据来自 MikoNest" FontSize="10.5"
+                           Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
 
         <Border x:Name="TxtToast" Grid.Row="2" Background="#E6112230" CornerRadius="8" Padding="16,8"
                 HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
