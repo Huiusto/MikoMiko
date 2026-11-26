@@ -72,8 +72,11 @@ public sealed partial class ShellViewModel : ObservableObject
         _placeholderTimer.Start();
 
         Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
+        Navigation.Add(new NavItem("Launch", "Nav.Launch", "launch"));
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
         Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
+        Navigation.Add(new NavItem("Gacha", "Nav.Gacha", "gacha"));
+        Navigation.Add(new NavItem("Daily", "Nav.Daily", "daily"));
         Navigation.Add(new NavItem("Mine", "Nav.Mine", "mine"));
         FooterNavigation.Add(new NavItem("Upload", "Nav.Upload", "upload"));
         FooterNavigation.Add(new NavItem("Settings", "Nav.Settings", "settings"));
@@ -409,8 +412,11 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private object CreateView(string key) => key switch
     {
+        "Launch" => new Views.LaunchView(),
         "Video" => new Views.VideoView(_video, _settings),
         "Moment" => new Views.MomentView(_moment),
+        "Gacha" => new Views.GachaView(),
+        "Daily" => new Views.DailyTaskView(),
         "Mine" => new Views.MineView(_mine),
         "Settings" => new Views.SettingsView(_settingsVm),
         _ => new Views.HomeView(_home),
