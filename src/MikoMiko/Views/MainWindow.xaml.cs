@@ -27,7 +27,11 @@ public partial class MainWindow : Window
         DataContext = shell;
 
         RestoreWindowBounds();
-        StateChanged += (_, _) => UpdateMaximizeVisual();
+        StateChanged += (_, _) =>
+        {
+            UpdateMaximizeVisual();
+            if (WindowState == WindowState.Minimized) _shell.PauseAllPlayback();
+        };
     }
 
     // ---------------------------------------------------------------- 窗口尺寸
@@ -180,6 +184,7 @@ public partial class MainWindow : Window
 
     private void HideToTray()
     {
+        _shell.PauseAllPlayback();
         _tray ??= CreateTray();
         _tray.Visible = true;
         Hide();

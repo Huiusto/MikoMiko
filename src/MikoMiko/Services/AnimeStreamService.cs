@@ -22,6 +22,11 @@ public sealed class AnimePlayback
     public AnimeEpisode? SelectedEpisode { get; set; }
     public AnimeItem? CatalogItem { get; set; }
 
+    /// <summary>哔哩哔哩站内播放：选集在软件内解析，官方弹幕与评论一并载入。</summary>
+    public bool IsBilibili { get; set; }
+    public List<(long TimeMs, string Text)> Danmaku { get; set; } = new();
+    public List<BilibiliComment> Comments { get; set; } = new();
+
     public bool IsHls => StreamUrl.Contains(".m3u8", StringComparison.OrdinalIgnoreCase);
 }
 

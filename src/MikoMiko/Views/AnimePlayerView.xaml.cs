@@ -18,6 +18,7 @@ namespace MikoMiko.Views;
 public partial class AnimePlayerView : UserControl
 {
     private readonly AnimeStreamService _streams = new();
+    private readonly BilibiliAnimeService _bilibili = new();
     private readonly AnimeCatalogService _catalog = new();
     private readonly AnimeFollowService _follows;
     private readonly AnimeDanmakuService _danmaku;
@@ -54,6 +55,8 @@ public partial class AnimePlayerView : UserControl
 
         UpdateHeader();
         UpdateDetails();
+        UpdateComments();
+        WebFallbackButton.Visibility = playback.IsBilibili ? Visibility.Collapsed : Visibility.Visible;
         InitializeProviderList();
         InitializeSources();
         UpdateFollowState();
@@ -76,6 +79,13 @@ public partial class AnimePlayerView : UserControl
         if (_disposed) return;
         _disposed = true;
         try { Web.Dispose(); } catch { /* 窗口已关闭时忽略 */ }
+    }
+
+    /// <summary>最小化 / 切页 / 打开其他页面时暂停视频。</summary>
+    public void PausePlayback()
+    {
+        if (!_webReady || _disposed) return;
+        try { _ = Web.CoreWebView2.ExecuteScriptAsync("window.mikoPause && window.mikoPause()"); } catch { }
     }
 
     private void InitializeProviderList()
@@ -260,7 +270,9 @@ public partial class AnimePlayerView : UserControl
 
         try
         {
-            var playback = await _streams.ResolveEpisodeAsync(_playback.Details, source, episode, item);
+            var playback = _playback.IsBilibili
+                ? await _bilibili.ResolveEpisodeAsync(_playback, episode, CancellationToken.None)
+                : await _streams.ResolveEpisodeAsync(_playback.Details, source, episode, item);
             if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
             {
                 SwitchStatus.Text = $"{source.Name} · {episode.Name} 无法提取，正在自动切换其他站点…";
@@ -352,6 +364,8 @@ public partial class AnimePlayerView : UserControl
         _referer = string.IsNullOrWhiteSpace(playback.Referer) ? _referer : playback.Referer;
         UpdateHeader();
         UpdateDetails();
+        UpdateComments();
+        WebFallbackButton.Visibility = playback.IsBilibili ? Visibility.Collapsed : Visibility.Visible;
         InitializeSources();
         UpdateFollowState();
         await LoadPosterAsync(playback);
@@ -368,11 +382,14 @@ public partial class AnimePlayerView : UserControl
     private async Task PushDanmakuAsync()
     {
         if (!_webReady) return;
-        var list = _danmaku.Get(_playback.Title, _playback.Episode)
-            .Select(item => new { time = item.TimeMs, text = item.Text })
+        var list = _playback.Danmaku.Count > 0
+            ? _playback.Danmaku
+            : _danmaku.Get(_playback.Title, _playback.Episode).Select(item => ((long)item.TimeMs, item.Text)).ToList();
+        var payload = list
+            .Select(item => new { time = item.Item1, text = item.Item2 })
             .ToList();
         await Web.CoreWebView2.ExecuteScriptAsync(
-            $"window.mikoSetDanmaku({JsonSerializer.Serialize(list)})");
+            $"window.mikoSetDanmaku({JsonSerializer.Serialize(payload)})");
     }
 
     private void Web_MessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -416,6 +433,14 @@ public partial class AnimePlayerView : UserControl
         }
     }
 
+    private void UpdateComments()
+    {
+        var comments = _playback.Comments;
+        CommentList.ItemsSource = comments;
+        CommentCountText.Text = comments.Count > 0 ? $"{comments.Count} 条" : string.Empty;
+        CommentEmpty.Visibility = comments.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void UpdateHeader()
     {
         TitleText.Text = _playback.Title;
@@ -424,8 +449,7 @@ public partial class AnimePlayerView : UserControl
     }
 
     private void UpdateDetails()
-    {
-        DetailTitle.Text = string.IsNullOrWhiteSpace(_playback.Title) ? "追番 / 影视" : _playback.Title;
+    {        DetailTitle.Text = string.IsNullOrWhiteSpace(_playback.Title) ? "追番 / 影视" : _playback.Title;
         var meta = string.IsNullOrWhiteSpace(_playback.Meta) ? _playback.Source : _playback.Meta;
         DetailMeta.Text = meta;
         var description = _playback.Description?.Trim() ?? string.Empty;
@@ -532,7 +556,7 @@ public partial class AnimePlayerView : UserControl
     /// <summary>直连流反复失败时，关闭本站播放器，改用站点的网页播放页。</summary>
     private void RequestWebFallback()
     {
-        if (_fallbackRequested) return;
+        if (_fallbackRequested || _playback.IsBilibili) return;
         var url = _playback.SelectedEpisode?.PageUrl;
         if (string.IsNullOrWhiteSpace(url)) url = _playback.CatalogItem?.PlayUrl;
         if (string.IsNullOrWhiteSpace(url)) url = _playback.CatalogItem?.Url;
@@ -565,8 +589,11 @@ public partial class AnimePlayerView : UserControl
         var caption = JsonSerializer.Serialize($"{_playback.Title} · {_playback.Episode}");
         var title = WebUtility.HtmlEncode(_playback.Title);
         var episode = WebUtility.HtmlEncode(_playback.Episode);
-        var danmaku = JsonSerializer.Serialize(_danmaku.Get(_playback.Title, _playback.Episode)
-            .Select(item => new { time = item.TimeMs, text = item.Text })
+        var danmakuSource = _playback.Danmaku.Count > 0
+            ? _playback.Danmaku
+            : _danmaku.Get(_playback.Title, _playback.Episode).Select(item => ((long)item.TimeMs, item.Text)).ToList();
+        var danmaku = JsonSerializer.Serialize(danmakuSource
+            .Select(item => new { time = item.Item1, text = item.Item2 })
             .ToList());
 
         return $$"""
@@ -941,6 +968,10 @@ public partial class AnimePlayerView : UserControl
     } catch (_) {}
   });
 
+  window.mikoPause = function () {
+    try { video.pause(); } catch (_) {}
+  };
+
   window.mikoPlay = function (src, text) {
     if (!src) { show('没有拿到可播放的视频地址。'); return; }
     if (text) caption.textContent = text;
@@ -1013,3 +1044,4 @@ public partial class AnimePlayerView : UserControl
 """;
     }
 }
+

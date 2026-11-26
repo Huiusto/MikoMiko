@@ -13,7 +13,7 @@ public sealed class Loc : INotifyPropertyChanged
     public static Loc Instance { get; } = new();
 
     private static readonly Dictionary<string, string> ZhHans = Build(
-        ("Nav.Home", "首页"), ("Nav.Video", "视频"), ("Nav.Moment", "关注"), ("Nav.Messages", "消息"), ("Nav.Mine", "我的"), ("Nav.Upload", "上传"), ("Nav.Settings", "设置"),
+        ("Nav.Home", "首页"), ("Nav.Video", "视频"), ("Nav.Moment", "关注"), ("Nav.Mine", "我的"), ("Nav.Upload", "上传"), ("Nav.Settings", "设置"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "搜索你感兴趣的内容"),
         ("Common.Loading", "正在加载…"), ("Common.Refresh", "刷新"), ("Common.More", "加载更多"), ("Common.Empty", "这里空空的，去逛逛别的吧"),
         ("Common.Fail", "内容加载失败，请稍后重试"), ("Common.Retry", "重试"), ("Common.Cancel", "取消"), ("Common.Confirm", "确定"),
@@ -71,7 +71,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("S.WindowHint", "窗口相关选项在下次启动时生效"),
         ("S.PlaybackHint", "播放设置将用于视频页播放器"),
         ("S.MaintainHint", "清理缓存或检查更新不会影响已保存的设置"),
-        ("S.Changelog.Body", "MikoMiko 更新日志（简要版）\n0.1.33 · 新增消息中心（同步米游社回复、@、点赞与系统通知）；追剧/影视仅保留 7 部番剧与 10 场音乐会；更新日志精简\n0.1.32 · 追番首页七列改版；修复选集后无法播放\n0.1.31 · 首页板块游戏名增加角色头像\n0.1.30 · 首页「帖子」改为「板块」；推荐与视频推送加入作者冷却；追剧规则替换为八站\n0.1.29 · 修复扫码登录换票失败\n0.1.23 · 追番改为 Flutter 规则模块，支持规则编辑与 Anime4K\n0.1.22 · 追番搜索接入站点检索；播放失败自动换站；新增本地弹幕\n0.1.21 · 追番首页与播放器站点切换、我的追剧\n0.1.20 · 追番首页、筛选与 B 站式播放页\n0.1.19 · 改为站内直连 HLS 播放；修复评论回复\n0.1.18 · 追番首页重排；修复登录 -100；设置页对齐\n0.1.17 · 未下载模块时只保留下载入口\n0.1.16 · 九站聚合影视首页与站内播放\n0.1.15 · 视频进度拖动、评论复制与上传页恢复\n0.1.14 · 评论排序、用户主页跳转与关注流\n0.1.13 · 新增追番入口；视频作者冷却改为 3 天\n0.1.12 · 视频作者冷却、关注页双栏与上传入口\n0.1.11 · 导航与视频进度条、用户主页、关注流\n0.1.10 · 搜索精简、评论修复、角色管理与用户主页\n0.1.9 · 设置、下载、评论与视频菜单完善\n0.1.8 · 导航、阅读器、评论与我的页完善\n0.1.7 · 新导航图标、帖子筛选、阅读器与视频交互\n0.1.6 · 导航文案与顺序调整\n0.1.5 · 阅读器、视频、动态、我的与应用内更新\n0.1.4 · 富文本阅读器、Range 播放、内嵌扫码登录\n0.1.3 · 全站搜索、评论同步、随机视频流\n0.1.2 · 新标志、设置布局与登录引导\n0.1.1 · 米蓝主色、随机帖子流与视频滑动\n0.1.0 · 首个版本，完成基础页面与米游社接口"),
+        ("S.Changelog.Body", "MikoMiko 更新日志（简要版）\n0.1.27 · 移除左侧「消息」入口与首页「追番/影视」板块\n0.1.33 · 新增消息中心（同步米游社回复、@、点赞与系统通知）；追剧/影视仅保留 7 部番剧与 10 场音乐会；更新日志精简\n0.1.32 · 追番首页七列改版；修复选集后无法播放\n0.1.31 · 首页板块游戏名增加角色头像\n0.1.30 · 首页「帖子」改为「板块」；推荐与视频推送加入作者冷却；追剧规则替换为八站\n0.1.29 · 修复扫码登录换票失败\n0.1.23 · 追番改为 Flutter 规则模块，支持规则编辑与 Anime4K\n0.1.22 · 追番搜索接入站点检索；播放失败自动换站；新增本地弹幕\n0.1.21 · 追番首页与播放器站点切换、我的追剧\n0.1.20 · 追番首页、筛选与 B 站式播放页\n0.1.19 · 改为站内直连 HLS 播放；修复评论回复\n0.1.18 · 追番首页重排；修复登录 -100；设置页对齐\n0.1.17 · 未下载模块时只保留下载入口\n0.1.16 · 九站聚合影视首页与站内播放\n0.1.15 · 视频进度拖动、评论复制与上传页恢复\n0.1.14 · 评论排序、用户主页跳转与关注流\n0.1.13 · 新增追番入口；视频作者冷却改为 3 天\n0.1.12 · 视频作者冷却、关注页双栏与上传入口\n0.1.11 · 导航与视频进度条、用户主页、关注流\n0.1.10 · 搜索精简、评论修复、角色管理与用户主页\n0.1.9 · 设置、下载、评论与视频菜单完善\n0.1.8 · 导航、阅读器、评论与我的页完善\n0.1.7 · 新导航图标、帖子筛选、阅读器与视频交互\n0.1.6 · 导航文案与顺序调整\n0.1.5 · 阅读器、视频、动态、我的与应用内更新\n0.1.4 · 富文本阅读器、Range 播放、内嵌扫码登录\n0.1.3 · 全站搜索、评论同步、随机视频流\n0.1.2 · 新标志、设置布局与登录引导\n0.1.1 · 米蓝主色、随机帖子流与视频滑动\n0.1.0 · 首个版本，完成基础页面与米游社接口"),
 
 
         ("About.Title", "MikoMiko"),
@@ -82,7 +82,7 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> ZhHant = Build(
-        ("Nav.Home", "首頁"), ("Nav.Video", "影片"), ("Nav.Moment", "關注"), ("Nav.Messages", "訊息"), ("Nav.Mine", "我的"), ("Nav.Upload", "上傳"), ("Nav.Settings", "設定"),
+        ("Nav.Home", "首頁"), ("Nav.Video", "影片"), ("Nav.Moment", "關注"), ("Nav.Mine", "我的"), ("Nav.Upload", "上傳"), ("Nav.Settings", "設定"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "搜尋你感興趣的內容"),
         ("Common.Loading", "正在載入…"), ("Common.Refresh", "重新整理"), ("Common.More", "載入更多"), ("Common.Empty", "這裡空空的，去逛逛別的吧"),
         ("Common.Fail", "內容載入失敗，請稍後重試"), ("Common.Retry", "重試"), ("Common.Cancel", "取消"), ("Common.Confirm", "確定"),
@@ -140,7 +140,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("S.WindowHint", "視窗相關選項在下次啟動時生效"),
         ("S.PlaybackHint", "播放設定將用於影片頁播放器"),
         ("S.MaintainHint", "清理快取或檢查更新不會影響已儲存的設定"),
-        ("S.Changelog.Body", "MikoMiko 更新日志（简要版）\n0.1.33 · 新增消息中心（同步米游社回复、@、点赞与系统通知）；追剧/影视仅保留 7 部番剧与 10 场音乐会；更新日志精简\n0.1.32 · 追番首页七列改版；修复选集后无法播放\n0.1.31 · 首页板块游戏名增加角色头像\n0.1.30 · 首页「帖子」改为「板块」；推荐与视频推送加入作者冷却；追剧规则替换为八站\n0.1.29 · 修复扫码登录换票失败\n0.1.23 · 追番改为 Flutter 规则模块，支持规则编辑与 Anime4K\n0.1.22 · 追番搜索接入站点检索；播放失败自动换站；新增本地弹幕\n0.1.21 · 追番首页与播放器站点切换、我的追剧\n0.1.20 · 追番首页、筛选与 B 站式播放页\n0.1.19 · 改为站内直连 HLS 播放；修复评论回复\n0.1.18 · 追番首页重排；修复登录 -100；设置页对齐\n0.1.17 · 未下载模块时只保留下载入口\n0.1.16 · 九站聚合影视首页与站内播放\n0.1.15 · 视频进度拖动、评论复制与上传页恢复\n0.1.14 · 评论排序、用户主页跳转与关注流\n0.1.13 · 新增追番入口；视频作者冷却改为 3 天\n0.1.12 · 视频作者冷却、关注页双栏与上传入口\n0.1.11 · 导航与视频进度条、用户主页、关注流\n0.1.10 · 搜索精简、评论修复、角色管理与用户主页\n0.1.9 · 设置、下载、评论与视频菜单完善\n0.1.8 · 导航、阅读器、评论与我的页完善\n0.1.7 · 新导航图标、帖子筛选、阅读器与视频交互\n0.1.6 · 导航文案与顺序调整\n0.1.5 · 阅读器、视频、动态、我的与应用内更新\n0.1.4 · 富文本阅读器、Range 播放、内嵌扫码登录\n0.1.3 · 全站搜索、评论同步、随机视频流\n0.1.2 · 新标志、设置布局与登录引导\n0.1.1 · 米蓝主色、随机帖子流与视频滑动\n0.1.0 · 首个版本，完成基础页面与米游社接口"),
+        ("S.Changelog.Body", "MikoMiko 更新日志（简要版）\n0.1.27 · 移除左侧「消息」入口与首页「追番/影视」板块\n0.1.33 · 新增消息中心（同步米游社回复、@、点赞与系统通知）；追剧/影视仅保留 7 部番剧与 10 场音乐会；更新日志精简\n0.1.32 · 追番首页七列改版；修复选集后无法播放\n0.1.31 · 首页板块游戏名增加角色头像\n0.1.30 · 首页「帖子」改为「板块」；推荐与视频推送加入作者冷却；追剧规则替换为八站\n0.1.29 · 修复扫码登录换票失败\n0.1.23 · 追番改为 Flutter 规则模块，支持规则编辑与 Anime4K\n0.1.22 · 追番搜索接入站点检索；播放失败自动换站；新增本地弹幕\n0.1.21 · 追番首页与播放器站点切换、我的追剧\n0.1.20 · 追番首页、筛选与 B 站式播放页\n0.1.19 · 改为站内直连 HLS 播放；修复评论回复\n0.1.18 · 追番首页重排；修复登录 -100；设置页对齐\n0.1.17 · 未下载模块时只保留下载入口\n0.1.16 · 九站聚合影视首页与站内播放\n0.1.15 · 视频进度拖动、评论复制与上传页恢复\n0.1.14 · 评论排序、用户主页跳转与关注流\n0.1.13 · 新增追番入口；视频作者冷却改为 3 天\n0.1.12 · 视频作者冷却、关注页双栏与上传入口\n0.1.11 · 导航与视频进度条、用户主页、关注流\n0.1.10 · 搜索精简、评论修复、角色管理与用户主页\n0.1.9 · 设置、下载、评论与视频菜单完善\n0.1.8 · 导航、阅读器、评论与我的页完善\n0.1.7 · 新导航图标、帖子筛选、阅读器与视频交互\n0.1.6 · 导航文案与顺序调整\n0.1.5 · 阅读器、视频、动态、我的与应用内更新\n0.1.4 · 富文本阅读器、Range 播放、内嵌扫码登录\n0.1.3 · 全站搜索、评论同步、随机视频流\n0.1.2 · 新标志、设置布局与登录引导\n0.1.1 · 米蓝主色、随机帖子流与视频滑动\n0.1.0 · 首个版本，完成基础页面与米游社接口"),
 
         ("About.Title", "MikoMiko"),
         ("About.Slogan", "一個更輕盈的米遊社桌面客戶端"),
@@ -150,7 +150,7 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> En = Build(
-        ("Nav.Home", "Home"), ("Nav.Video", "Videos"), ("Nav.Moment", "Following"), ("Nav.Messages", "Messages"), ("Nav.Mine", "Me"), ("Nav.Upload", "Upload"), ("Nav.Settings", "Settings"),
+        ("Nav.Home", "Home"), ("Nav.Video", "Videos"), ("Nav.Moment", "Following"), ("Nav.Mine", "Me"), ("Nav.Upload", "Upload"), ("Nav.Settings", "Settings"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "Search anything you like"),
         ("Common.Loading", "Loading…"), ("Common.Refresh", "Refresh"), ("Common.More", "Load more"), ("Common.Empty", "Nothing here yet"),
         ("Common.Fail", "Failed to load, please retry"), ("Common.Retry", "Retry"), ("Common.Cancel", "Cancel"), ("Common.Confirm", "OK"),
@@ -208,7 +208,7 @@ public sealed class Loc : INotifyPropertyChanged
         ("S.WindowHint", "Window options apply on next launch"),
         ("S.PlaybackHint", "Playback settings apply to the video player"),
         ("S.MaintainHint", "Clearing cache or checking updates keeps your settings"),
-        ("S.Changelog.Body", "MikoMiko changelog (concise)\n0.1.33 · Added Messages synced with Miyoushe replies, mentions, likes and notices; Bilibili-only anime list with 7 series and 10 concerts\n0.1.32 · Seven-column anime home; fixed episode playback\n0.1.31 · Game avatars on home section menu\n0.1.30 · Posts renamed Sections; author cooldowns; new eight-site anime rules\n0.1.29 · Fixed QR login token exchange\n0.1.23 · Flutter anime rule module with editor and Anime4K\n0.1.22 · Site search, auto source switch, local danmaku\n0.1.21 · Anime home, provider switching and watchlist\n0.1.20 · Anime home, filters and Bilibili-style player\n0.1.19 · Direct HLS playback; comment reply fixes\n0.1.18 · Anime home refresh; login -100 fix; settings alignment\n0.1.17 · Download-only gate for anime module\n0.1.16 · Nine-site media home and in-app playback\n0.1.15 · Video seek, comment copy and upload page restore\n0.1.14 · Comment sorting, user profiles and following feed\n0.1.13 · Anime entry; video author cooldown to 3 days\n0.1.12 · Author cooldown, two-column following and upload\n0.1.11 · Nav icons, video progress, profiles and feed\n0.1.10 · Search cleanup, comments, roles and profiles\n0.1.9 · Settings, downloads, comments and video menu\n0.1.8 · Navigation, reader, comments and profile\n0.1.7 · Nav icons, post filters, reader and video\n0.1.6 · Navigation labels and order\n0.1.5 · Reader, video, feed, profile and in-app update\n0.1.4 · Rich reader, Range playback, embedded QR login\n0.1.3 · Global search, synced comments, random videos\n0.1.2 · New logo, settings layout and login guide\n0.1.1 · Blue theme, random posts and video swipe\n0.1.0 · First release with core pages and Miyoushe APIs"),
+        ("S.Changelog.Body", "MikoMiko changelog (concise)\n0.1.27 · Removed the Messages entry and the Anime section from Home\n0.1.33 · Added Messages synced with Miyoushe replies, mentions, likes and notices; Bilibili-only anime list with 7 series and 10 concerts\n0.1.32 · Seven-column anime home; fixed episode playback\n0.1.31 · Game avatars on home section menu\n0.1.30 · Posts renamed Sections; author cooldowns; new eight-site anime rules\n0.1.29 · Fixed QR login token exchange\n0.1.23 · Flutter anime rule module with editor and Anime4K\n0.1.22 · Site search, auto source switch, local danmaku\n0.1.21 · Anime home, provider switching and watchlist\n0.1.20 · Anime home, filters and Bilibili-style player\n0.1.19 · Direct HLS playback; comment reply fixes\n0.1.18 · Anime home refresh; login -100 fix; settings alignment\n0.1.17 · Download-only gate for anime module\n0.1.16 · Nine-site media home and in-app playback\n0.1.15 · Video seek, comment copy and upload page restore\n0.1.14 · Comment sorting, user profiles and following feed\n0.1.13 · Anime entry; video author cooldown to 3 days\n0.1.12 · Author cooldown, two-column following and upload\n0.1.11 · Nav icons, video progress, profiles and feed\n0.1.10 · Search cleanup, comments, roles and profiles\n0.1.9 · Settings, downloads, comments and video menu\n0.1.8 · Navigation, reader, comments and profile\n0.1.7 · Nav icons, post filters, reader and video\n0.1.6 · Navigation labels and order\n0.1.5 · Reader, video, feed, profile and in-app update\n0.1.4 · Rich reader, Range playback, embedded QR login\n0.1.3 · Global search, synced comments, random videos\n0.1.2 · New logo, settings layout and login guide\n0.1.1 · Blue theme, random posts and video swipe\n0.1.0 · First release with core pages and Miyoushe APIs"),
 
         ("About.Title", "MikoMiko"),
         ("About.Slogan", "A lighter Miyoushe desktop client"),
@@ -218,7 +218,7 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> Ja = Build(
-        ("Nav.Home", "ホーム"), ("Nav.Video", "動画"), ("Nav.Moment", "フォロー"), ("Nav.Messages", "メッセージ"), ("Nav.Mine", "マイ"), ("Nav.Upload", "アップロード"), ("Nav.Settings", "設定"),
+        ("Nav.Home", "ホーム"), ("Nav.Video", "動画"), ("Nav.Moment", "フォロー"), ("Nav.Mine", "マイ"), ("Nav.Upload", "アップロード"), ("Nav.Settings", "設定"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "気になる内容を検索"),
         ("Common.Loading", "読み込み中…"), ("Common.Refresh", "更新"), ("Common.More", "もっと見る"), ("Common.Empty", "まだ何もありません"),
         ("Common.Fail", "読み込みに失敗しました"), ("Common.Retry", "再試行"), ("Common.Cancel", "キャンセル"), ("Common.Confirm", "OK"),
@@ -263,7 +263,7 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> Ru = Build(
-        ("Nav.Home", "Главная"), ("Nav.Video", "Видео"), ("Nav.Moment", "Подписки"), ("Nav.Messages", "Сообщения"), ("Nav.Mine", "Профиль"), ("Nav.Upload", "Загрузить"), ("Nav.Settings", "Настройки"),
+        ("Nav.Home", "Главная"), ("Nav.Video", "Видео"), ("Nav.Moment", "Подписки"), ("Nav.Mine", "Профиль"), ("Nav.Upload", "Загрузить"), ("Nav.Settings", "Настройки"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "Поиск интересного контента"),
         ("Common.Loading", "Загрузка…"), ("Common.Refresh", "Обновить"), ("Common.More", "Ещё"), ("Common.Empty", "Здесь пока пусто"),
         ("Common.Fail", "Не удалось загрузить"), ("Common.Retry", "Повторить"), ("Common.Cancel", "Отмена"), ("Common.Confirm", "ОК"),
@@ -296,7 +296,7 @@ public sealed class Loc : INotifyPropertyChanged
     );
 
     private static readonly Dictionary<string, string> Ko = Build(
-        ("Nav.Home", "홈"), ("Nav.Video", "영상"), ("Nav.Moment", "팔로잉"), ("Nav.Messages", "메시지"), ("Nav.Mine", "내 정보"), ("Nav.Upload", "업로드"), ("Nav.Settings", "설정"),
+        ("Nav.Home", "홈"), ("Nav.Video", "영상"), ("Nav.Moment", "팔로잉"), ("Nav.Mine", "내 정보"), ("Nav.Upload", "업로드"), ("Nav.Settings", "설정"),
         ("Header.Brand", "MikoMiko"), ("Header.Search", "관심 있는 콘텐츠 검색"),
         ("Common.Loading", "불러오는 중…"), ("Common.Refresh", "새로고침"), ("Common.Empty", "아직 내용이 없습니다"), ("Common.Back", "뒤로"),
         ("Post.Detail", "게시글"), ("Post.Comments", "댓글"), ("Post.NoComments", "아직 댓글이 없습니다"),
@@ -356,6 +356,8 @@ public sealed class Loc : INotifyPropertyChanged
 
     public string T(string key) => this[key];
 }
+
+
 
 
 

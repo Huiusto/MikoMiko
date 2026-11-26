@@ -246,6 +246,50 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
+                        <Grid Margin="0,10,0,9">
+                            <TextBlock Text="热门评论" FontSize="11" FontWeight="SemiBold" Foreground="#7F99AD" />
+                            <TextBlock x:Name="CommentCountText" FontSize="10" Foreground="#5E7A90"
+                                       HorizontalAlignment="Right" />
+                        </Grid>
+                        <ItemsControl x:Name="CommentList" MaxHeight="260">
+                            <ItemsControl.Template>
+                                <ControlTemplate TargetType="ItemsControl">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </ControlTemplate>
+                            </ItemsControl.Template>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="30"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid Width="24" Height="24" VerticalAlignment="Top">
+                                            <Ellipse Fill="#1B3042"/>
+                                            <TextBlock Text="{Binding Initial}" FontSize="10" Foreground="#8FD3F4"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Grid>
+                                        <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                            <Grid>
+                                                <TextBlock Text="{Binding Nickname}" FontSize="10.5" Foreground="#8FD3F4"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding TimeText}" FontSize="9" Foreground="#5E7A90"
+                                                           HorizontalAlignment="Right"/>
+                                            </Grid>
+                                            <TextBlock Text="{Binding Message}" FontSize="11" LineHeight="17" Margin="0,3,0,0"
+                                                       TextWrapping="Wrap" MaxHeight="52" TextTrimming="CharacterEllipsis"
+                                                       Foreground="#C3D5E3"/>
+                                            <TextBlock Text="{Binding LikeText}" FontSize="9" Foreground="#5E7A90" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock x:Name="CommentEmpty" Text="暂无评论" FontSize="10.5" Foreground="#5E7A90"
+                                   Margin="0,2,0,0" Visibility="Collapsed"/>
+
                         <TextBlock x:Name="SwitchStatus" FontSize="10.5" Foreground="#E0A46A"
                                    TextWrapping="Wrap" Margin="0,6,0,0" />
                     </StackPanel>

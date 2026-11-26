@@ -1,7 +1,7 @@
 name: miko_anime
 description: "MikoMiko Flutter 规则追番模块"
 publish_to: 'none'
-version: 0.1.33+33
+version: 0.1.27+27
 
 environment:
   sdk: ^3.9.2
@@ -25,3 +25,5 @@ flutter:
     - family: MikoSans
       fonts:
         - asset: assets/fonts/NotoSansSC.ttf
+
+

@@ -20,6 +20,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly VideoViewModel _video;
     private readonly AnimeViewModel _anime;
     private readonly AnimeStreamService _animeStreams = new();
+    private readonly BilibiliAnimeService _bilibiliAnime = new();
     private readonly AnimeFollowService _animeFollows;
     private readonly AnimeDanmakuService _animeDanmaku;
 
@@ -73,14 +74,12 @@ public sealed partial class ShellViewModel : ObservableObject
         Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
         Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
-        Navigation.Add(new NavItem("Messages", "Nav.Messages", "message"));
         Navigation.Add(new NavItem("Mine", "Nav.Mine", "mine"));
         FooterNavigation.Add(new NavItem("Upload", "Nav.Upload", "upload"));
         FooterNavigation.Add(new NavItem("Settings", "Nav.Settings", "settings"));
 
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
         HomeTabs.Add(new TabOption("Posts", "Home.Posts"));
-        HomeTabs.Add(new TabOption("Anime", "Home.Anime"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -98,7 +97,6 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private bool _showGlobalSearch = true;
 
-    /// <summary>追番/影视是首页内的独立覆盖页，0.1.23 起由 Flutter 模块承载。</summary>
     [ObservableProperty] private Views.FlutterAnimeView? _animePage;
     [ObservableProperty] private bool _isAnimePageOpen;
 
@@ -147,12 +145,21 @@ public sealed partial class ShellViewModel : ObservableObject
     private void NavigateTo(NavItem? item)
     {
         if (item is null) return;
+        PauseAllPlayback();
         if (item.Key == "Upload")
         {
             OpenUpload();
             return;
         }
         Navigate(item.Key);
+    }
+
+    /// <summary>最小化 / 切页 / 打开弹层时，把所有正在播放的视频统一暂停。</summary>
+    public void PauseAllPlayback()
+    {
+        VideoPage?.PausePlayback();
+        AnimePlayerView?.PausePlayback();
+        AnimeSitePlayerView?.PausePlayback();
     }
 
     [RelayCommand]
@@ -281,31 +288,29 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
-    /// <summary>在软件内打开哔哩哔哩番剧/视频页，播放、弹幕与评论由官方页面同步。</summary>
-    private void OpenBilibiliInApp(string url, string title)
+    /// <summary>哔哩哔哩番剧/视频：解析官方直连流后在软件内播放，选集、弹幕与评论一并载入。</summary>
+    private async void OpenBilibiliInApp(string url, string title)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
+        AnimePage?.ShowToast($"正在缓冲《{title}》…");
+        AnimePlayback? playback = null;
         try
         {
-            CloseAnimePlayer();
-            CloseAnimeSitePlayer();
-            AnimePage?.Suspend();
-            IsAnimePageOpen = false;
-            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
-                url,
-                "https://www.bilibili.com/",
-                title,
-                "哔哩哔哩 · 弹幕与评论同步",
-                "哔哩哔哩",
-                CloseAnimeSitePlayer);
-            IsAnimeSitePlayerOpen = true;
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(14));
+            playback = await _bilibiliAnime.ResolveAsync(url, title, timeout.Token);
         }
-        catch (Exception ex)
+        catch
         {
-            AnimePage?.Resume();
-            IsAnimePageOpen = true;
-            AnimePage?.ShowToast("打开哔哩哔哩播放页失败：" + ex.Message);
+            playback = null;
         }
+
+        if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
+        {
+            AnimePage?.ShowToast("这部作品暂时取不到可播放的视频流，请稍后重试。");
+            return;
+        }
+        ShowAnimePlayer(playback);
+        AnimePage?.ShowToast($"已在软件内缓冲《{playback.Title}》");
     }
 
     /// <summary>直连流不可用时，用软件内 WebView2 打开站点播放页。</summary>
@@ -337,6 +342,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public void Navigate(string key, bool pushHistory = true)
     {
+        PauseAllPlayback();
         if (_currentKey == key)
         {
             CloseProfile();
@@ -405,42 +411,10 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         "Video" => new Views.VideoView(_video, _settings),
         "Moment" => new Views.MomentView(_moment),
-        "Messages" => CreateMessagesView(),
         "Mine" => new Views.MineView(_mine),
         "Settings" => new Views.SettingsView(_settingsVm),
         _ => new Views.HomeView(_home),
     };
-
-    private Views.MessagesView CreateMessagesView()
-    {
-        var view = new Views.MessagesView(_settings.Cookie);
-        view.OpenWebRequested = OpenMiyousheMessagePage;
-        return view;
-    }
-
-    /// <summary>消息中心用软件内 WebView2 打开米游社网页版，消息与账号登录态保持同步。</summary>
-    private void OpenMiyousheMessagePage(string url, string title)
-    {
-        if (string.IsNullOrWhiteSpace(url)) return;
-        try
-        {
-            CloseAnimePlayer();
-            CloseAnimeSitePlayer();
-            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
-                url,
-                "https://www.miyoushe.com/",
-                title,
-                "米游社 · 消息同步",
-                "米游社",
-                CloseAnimeSitePlayer);
-            IsAnimeSitePlayerOpen = true;
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show("打开米游社页面失败：" + ex.Message, "MikoMiko",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-        }
-    }
 
     private async Task EnsureLoadedAsync(string key)
     {
@@ -627,9 +601,10 @@ public sealed partial class ShellViewModel : ObservableObject
         if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl)) return;
         CloseAnimePlayer();
         CloseAnimeSitePlayer();
-        AnimePlayerView = new Views.AnimePlayerView(playback, _anime.Providers, _animeFollows,
-            _animeDanmaku, CloseAnimePlayer, anime4K,
-            url => ShowAnimeSiteFromPlayback(playback, url));
+        AnimePlayerView = new Views.AnimePlayerView(playback,
+            playback.IsBilibili ? Array.Empty<AnimeProvider>() : _anime.Providers,
+            _animeFollows, _animeDanmaku, CloseAnimePlayer, anime4K,
+            playback.IsBilibili ? null : url => ShowAnimeSiteFromPlayback(playback, url));
         // WebView2 是原生子窗口，会盖在 WPF 内容之上；播放时必须先隐藏 Flutter 宿主。
         AnimePage?.Suspend();
         IsAnimePageOpen = false;
@@ -680,6 +655,7 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>打开上传内容弹层；再次打开时回到第一步。</summary>
     public void OpenUpload()
     {
+        PauseAllPlayback();
         _upload.Reset();
         UploadView ??= new Views.UploadView(_upload);
         IsUploadOpen = true;
@@ -733,3 +709,4 @@ public sealed partial class ShellViewModel : ObservableObject
         foreach (var tab in HomeTabs) tab.RefreshTitle();
     }
 }
+

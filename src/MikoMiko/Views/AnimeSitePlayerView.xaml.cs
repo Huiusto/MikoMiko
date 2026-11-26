@@ -52,6 +52,18 @@ public partial class AnimeSitePlayerView : UserControl
         try { Web.Dispose(); } catch { }
     }
 
+    /// <summary>最小化 / 切页时暂停网页里的音视频。</summary>
+    public void PausePlayback()
+    {
+        if (!_initialized || _disposed) return;
+        try
+        {
+            _ = Web.CoreWebView2?.ExecuteScriptAsync(
+                "document.querySelectorAll('video,audio').forEach(function(m){try{m.pause();}catch(e){}});");
+        }
+        catch { }
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_initialized) return;
