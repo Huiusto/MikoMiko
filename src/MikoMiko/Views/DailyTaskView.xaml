@@ -41,6 +41,33 @@
             <Setter Property="Padding" Value="18,8" />
         </Style>
 
+        <Style x:Key="HeaderActionButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="11,7" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="B" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="LogText" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas" />
             <Setter Property="FontSize" Value="11.5" />
@@ -81,44 +108,85 @@
                     <TextBlock Text="每日任务" FontSize="26" FontWeight="Bold"
                                Foreground="{DynamicResource Brush.TextPrimary}" />
                 </StackPanel>
-                <TextBlock Text="米游社每日任务 · 角色签到 · 多账号一键执行" FontSize="12"
+                <TextBlock x:Name="TxtSubtitle" Text="米游社每日任务 · 角色签到 · 多账号一键执行" FontSize="12"
                            Foreground="{DynamicResource Brush.TextSecondary}" Margin="14,5,0,0" />
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,2,0,0">
-                <Border Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.Border}"
-                        BorderThickness="1" CornerRadius="11" Padding="12,7" Margin="0,0,10,0">
+                <Button x:Name="BtnAddAccount" Style="{StaticResource HeaderActionButton}" Click="BtnAddAccount_Click">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource Brush.AccentSoft}">
-                            <TextBlock x:Name="TxtAvatar" Text="灰" FontSize="13" FontWeight="Bold"
-                                       Foreground="{DynamicResource Brush.Accent}"
+                        <Border Width="22" Height="22" CornerRadius="7" Background="{DynamicResource Brush.AccentSoft}">
+                            <TextBlock Text="＋" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Brush.Accent}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <StackPanel Margin="8,0,0,0" VerticalAlignment="Center">
-                            <TextBlock x:Name="TxtAccount" Text="读取账号中…" FontSize="12" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource Brush.TextPrimary}" />
-                            <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
-                                <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="{DynamicResource Brush.Success}"
-                                         VerticalAlignment="Center" Margin="0,0,5,0" />
-                                <TextBlock x:Name="TxtAccountState" Text="已登录" FontSize="10"
-                                           Foreground="{DynamicResource Brush.TextTertiary}" />
-                            </StackPanel>
-                        </StackPanel>
+                        <TextBlock Text="添加账号" FontSize="12.5" FontWeight="SemiBold" Margin="7,0,0,0"
+                                   Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
                     </StackPanel>
-                </Border>
-                <Button x:Name="BtnRefresh" Content="刷新" Style="{StaticResource TaskButton}" Click="BtnRefresh_Click" />
+                </Button>
+                <Button x:Name="BtnSwitchAccount" Style="{StaticResource HeaderActionButton}" Margin="8,0,0,0"
+                        Click="BtnSwitchAccount_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="22" Height="22" CornerRadius="7" Background="{DynamicResource Brush.AccentSoft}">
+                            <TextBlock Text="⇄" FontSize="14" FontWeight="Bold" Foreground="{DynamicResource Brush.Accent}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock Text="切换账号" FontSize="12.5" FontWeight="SemiBold" Margin="7,0,0,0"
+                                   Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button x:Name="BtnRefresh" Content="刷新" Style="{StaticResource TaskButton}" Margin="8,0,0,0"
+                        Padding="16,8" Click="BtnRefresh_Click" />
             </StackPanel>
         </Grid>
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.08*" />
+                <ColumnDefinition Width="1.12*" />
                 <ColumnDefinition Width="14" />
-                <ColumnDefinition Width="0.92*" />
+                <ColumnDefinition Width="0.88*" />
             </Grid.ColumnDefinitions>
 
             <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel>
+                    <!-- 账号任务 -->
+                    <Border Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
+                            BorderThickness="1" CornerRadius="16" Padding="18,16,18,14" Margin="0,0,0,12">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="账号任务" FontSize="16" FontWeight="Bold"
+                                               Foreground="{DynamicResource Brush.TextPrimary}" />
+                                    <Border x:Name="AccountBadge" Background="{DynamicResource Brush.AccentSoft}"
+                                            CornerRadius="8" Padding="8,3" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock x:Name="TxtAccountBadge" Text="0 个账号" FontSize="10.5"
+                                                   Foreground="{DynamicResource Brush.Accent}" />
+                                    </Border>
+                                </StackPanel>
+                                <Button x:Name="BtnRunAll" Grid.Column="1" Content="一键执行所有账号"
+                                        Style="{StaticResource PrimaryTaskButton}" HorizontalAlignment="Right"
+                                        Click="BtnRunAll_Click" />
+                            </Grid>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="每个账号会依次完成米游社打卡、浏览/点赞任务与游戏角色签到。"
+                                           FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock x:Name="TxtCurrent" Grid.Column="1" Text="" FontSize="10.5"
+                                           Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center"
+                                           Margin="10,0,0,0" />
+                            </Grid>
+                            <Border Height="1" Background="{DynamicResource Brush.BorderSoft}" Margin="0,0,0,8" />
+                            <StackPanel x:Name="AccountPanel" />
+                        </StackPanel>
+                    </Border>
+
                     <!-- 米游社任务 -->
                     <Border Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
                             BorderThickness="1" CornerRadius="16" Padding="18,16,18,14" Margin="0,0,0,12">
@@ -140,8 +208,8 @@
                                 <TextBlock x:Name="TxtPoints" Grid.Column="1" Text="—" FontSize="22" FontWeight="Bold"
                                            Foreground="{DynamicResource Brush.Accent}" VerticalAlignment="Center" />
                             </Grid>
-                            <TextBlock Text="持有米游币" FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}"
-                                       Margin="0,3,0,0" HorizontalAlignment="Right" />
+                            <TextBlock x:Name="TxtMissionOwner" Text="当前账号" FontSize="10.5"
+                                       Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,3,0,0" />
 
                             <Border Height="1" Background="{DynamicResource Brush.BorderSoft}" Margin="0,12,0,10" />
                             <StackPanel x:Name="MissionPanel" />
@@ -150,15 +218,12 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="TxtMissionHint" Text="" FontSize="10.5"
                                            Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center"
                                            TextTrimming="CharacterEllipsis" />
                                 <Button x:Name="BtnMissionReload" Grid.Column="1" Content="刷新任务"
                                         Style="{StaticResource TaskButton}" Click="BtnMissionReload_Click" Margin="8,0,0,0" />
-                                <Button x:Name="BtnMissionRun" Grid.Column="2" Content="一键执行"
-                                        Style="{StaticResource PrimaryTaskButton}" Click="BtnMissionRun_Click" Margin="8,0,0,0" />
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -177,10 +242,10 @@
                                                    Foreground="{DynamicResource Brush.TextSecondary}" />
                                     </Border>
                                 </StackPanel>
-                                <Button x:Name="BtnSignAll" Content="一键签到" Style="{StaticResource TaskButton}"
+                                <Button x:Name="BtnSignAll" Content="一键签到当前账号" Style="{StaticResource TaskButton}"
                                         HorizontalAlignment="Right" Click="BtnSignAll_Click" />
                             </Grid>
-                            <TextBlock Text="按账号绑定的游戏角色逐一签到，已签到的角色会自动跳过。"
+                            <TextBlock Text="按当前账号绑定的游戏角色逐一签到，已签到的角色会自动跳过。"
                                        FontSize="10.5" Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,4,0,10" />
                             <Border Height="1" Background="{DynamicResource Brush.BorderSoft}" Margin="0,0,0,8" />
                             <StackPanel x:Name="RolePanel" />

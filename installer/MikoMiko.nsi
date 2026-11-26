@@ -1,4 +1,4 @@
-﻿; MikoMiko 0.1.34 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
+﻿; MikoMiko 0.1.35 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
 Unicode true
 SetCompressor /SOLID lzma
 
@@ -6,7 +6,7 @@ SetCompressor /SOLID lzma
 !include "FileFunc.nsh"
 
 !define APP_NAME "MikoMiko"
-!define APP_VERSION "0.1.34"
+!define APP_VERSION "0.1.35"
 !define APP_EXE "MikoMiko.exe"
 !define APP_PUBLISHER "MikoMiko Contributors"
 !define APP_URL "https://github.com/Huiusto/MikoMiko"
@@ -17,7 +17,7 @@ InstallDir "$LOCALAPPDATA\Programs\MikoMiko"
 InstallDirRegKey HKCU "Software\MikoMiko" "InstallDir"
 RequestExecutionLevel user
 
-VIProductVersion "0.1.34.0"
+VIProductVersion "0.1.35.0"
 VIAddVersionKey /LANG=2052 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=2052 "CompanyName" "${APP_PUBLISHER}"
 VIAddVersionKey /LANG=2052 "FileDescription" "${APP_NAME} 安装程序"
@@ -32,7 +32,7 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "MIT License"
 !define MUI_FINISHPAGE_RUN_TEXT "立即运行 MikoMiko"
 
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_DIRECTORY
+; 更新时直接沿用注册表中已有的 InstallDir，不再让用户选择安装位置。
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
@@ -48,6 +48,9 @@ Section "MikoMiko 主程序" SecMain
   SetOutPath "$INSTDIR"
   SetOverwrite on
 
+  ; 覆盖安装前结束正在运行的旧版本，避免主程序被占用导致更新失败。
+  nsExec::Exec 'taskkill /IM "${APP_EXE}" /F'
+  Sleep 1200
   Delete "$INSTDIR\${APP_EXE}"
   File "C:\Users\35847\Doubao\chats\2026-11-22\new-chat\MikoMiko\dist\app\MikoMiko.exe"
   SetOutPath "$INSTDIR\Assets\Anime"

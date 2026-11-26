@@ -3,21 +3,25 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              FontFamily="Microsoft YaHei UI" ClipToBounds="True">
     <UserControl.Resources>
-        <Style x:Key="PoolCard" TargetType="Border">
-            <Setter Property="Width" Value="292" />
-            <Setter Property="Margin" Value="0,0,14,8" />
-            <Setter Property="CornerRadius" Value="16" />
-            <Setter Property="Background" Value="{DynamicResource Brush.Card}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+        <Style x:Key="GachaCombo" TargetType="ComboBox">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#D4E3EE" />
             <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-        <Style x:Key="MiniButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
-            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
+
+        <Style x:Key="GachaButton" TargetType="Button">
+            <Setter Property="Height" Value="42" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="12.5" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+            <Setter Property="Background" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#D4E3EE" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="12,6" />
-            <Setter Property="FontSize" Value="12" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -29,47 +33,33 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
-                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
+                                <Setter TargetName="B" Property="Background" Value="#EAF7FF" />
+                                <Setter TargetName="B" Property="BorderBrush" Value="#8CC9EC" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="GameTab" TargetType="Button">
-            <Setter Property="Margin" Value="0,0,10,0" />
-            <Setter Property="Padding" Value="18,8" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
-            <Setter Property="Background" Value="{DynamicResource Brush.Surface}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="B" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="20" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Brush.AccentSoft}" />
-                                <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+
+        <Style x:Key="GachaPrimaryButton" TargetType="Button" BasedOn="{StaticResource GachaButton}">
+            <Setter Property="Background" Value="#258DD1" />
+            <Setter Property="Foreground" Value="#FFFFFF" />
+            <Setter Property="BorderBrush" Value="#258DD1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="GachaIconButton" TargetType="Button" BasedOn="{StaticResource GachaButton}">
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="FontSize" Value="15" />
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="26,18,26,14">
+    <Grid Margin="24,16,24,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -79,54 +69,57 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
+
+            <StackPanel VerticalAlignment="Top">
                 <StackPanel Orientation="Horizontal">
-                    <Border Width="4" Height="27" CornerRadius="2" Background="{DynamicResource Brush.Accent}"
-                            VerticalAlignment="Center" Margin="0,0,10,0" />
-                    <TextBlock Text="抽卡记录" FontSize="26" FontWeight="Bold"
-                               Foreground="{DynamicResource Brush.TextPrimary}" />
+                    <Border Width="4" Height="29" CornerRadius="2" Background="#258DD1"
+                            VerticalAlignment="Center" Margin="0,0,9,0" />
+                    <TextBlock Text="祈愿记录" FontSize="26" FontWeight="Bold"
+                               Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
+                    <Button x:Name="BtnBeyond" Height="28" Margin="12,0,0,0" Padding="12,0"
+                            Background="#EAF7FF" BorderBrush="#CBE8FA" BorderThickness="1"
+                            Foreground="#2A78A8" FontSize="11" Cursor="Hand" Click="BtnBeyond_Click"
+                            VerticalAlignment="Center">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="B" CornerRadius="14" Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                        Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="B" Property="Opacity" Value="0.88" /></Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                        <TextBlock Text="千星奇域颂愿" FontSize="11" />
+                    </Button>
                 </StackPanel>
-                <TextBlock x:Name="TxtSubtitle" Text="正在读取本地记录…" FontSize="12"
-                           Foreground="{DynamicResource Brush.TextSecondary}" Margin="14,5,0,0" />
+                <TextBlock x:Name="TxtSubtitle" Text="本地库 0 条 · 数据来自 MikoNest" FontSize="11.5"
+                           Foreground="{DynamicResource Brush.TextSecondary}" Margin="13,5,0,0" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,4,0,0">
-                <ComboBox x:Name="ComboUid" Width="170" Height="34" VerticalContentAlignment="Center"
-                          Margin="0,0,10,0" SelectionChanged="ComboUid_SelectionChanged" />
-                <Button x:Name="BtnReload" Content="刷新记录" Style="{StaticResource MiniButton}" Height="34"
-                        Padding="18,0" Click="BtnReload_Click" />
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,2,0,0">
+                <ComboBox x:Name="ComboGame" Width="132" Style="{StaticResource GachaCombo}"
+                          SelectionChanged="ComboGame_SelectionChanged" />
+                <ComboBox x:Name="ComboUid" Width="190" Style="{StaticResource GachaCombo}" Margin="8,0,0,0"
+                          SelectionChanged="ComboUid_SelectionChanged" />
+                <Button x:Name="BtnUpdate" Content="更新记录" Width="104" Style="{StaticResource GachaPrimaryButton}"
+                        Margin="8,0,0,0" Click="BtnUpdate_Click" />
+                <Button x:Name="BtnMore" Content="⌄" Style="{StaticResource GachaIconButton}" Margin="8,0,0,0"
+                        Click="BtnMore_Click" ToolTip="更多操作" />
+                <Button x:Name="BtnSettings" Content="⚙  设置" Style="{StaticResource GachaButton}"
+                        Margin="8,0,0,0" Click="BtnSettings_Click" />
             </StackPanel>
         </Grid>
 
-        <!-- 游戏切换 -->
-        <StackPanel x:Name="GameTabsPanel" Grid.Row="1" Orientation="Horizontal" Margin="0,20,0,16">
-            <Button Style="{StaticResource GameTab}" Content="原神" Tag="genshin" Click="GameTab_Click" />
-            <Button Style="{StaticResource GameTab}" Content="星穹铁道" Tag="starrail" Click="GameTab_Click" />
-            <Button Style="{StaticResource GameTab}" Content="绝区零" Tag="zzz" Click="GameTab_Click" />
-            <Button Style="{StaticResource GameTab}" Content="崩坏3" Tag="bh3" Click="GameTab_Click" />
-            <Button Style="{StaticResource GameTab}" Content="千星奇域" Tag="genshin_beyond" Click="GameTab_Click" />
-        </StackPanel>
+        <!-- 四/五列固定卡池 -->
+        <Grid x:Name="PoolGrid" Grid.Row="2" />
 
-        <!-- 卡池列 -->
-        <Grid Grid.Row="2">
-            <ScrollViewer x:Name="PoolScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                          PanningMode="HorizontalOnly">
-                <StackPanel x:Name="PoolPanel" Orientation="Horizontal" VerticalAlignment="Top" />
-            </ScrollViewer>
-            <Border x:Name="EmptyPanel" CornerRadius="18" Background="{DynamicResource Brush.Surface}"
-                    BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1" Visibility="Collapsed">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520">
-                    <Border Width="64" Height="64" CornerRadius="32" Background="{DynamicResource Brush.AccentSoft}"
-                            HorizontalAlignment="Center">
-                        <TextBlock Text="✦" FontSize="28" Foreground="{DynamicResource Brush.Accent}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
-                    <TextBlock x:Name="TxtEmptyTitle" Text="还没有本地抽卡记录" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource Brush.TextPrimary}" HorizontalAlignment="Center" Margin="0,16,0,0" />
-                    <TextBlock x:Name="TxtEmptyDesc" Text="在 MikoNest 中更新一次抽卡记录后，这里会自动同步显示。"
-                               FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
-                               TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0" LineHeight="20" />
-                </StackPanel>
-            </Border>
-        </Grid>
+        <Border x:Name="TxtToast" Grid.Row="2" Background="#E6112230" CornerRadius="8" Padding="16,8"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
+                Visibility="Collapsed" Panel.ZIndex="10">
+            <TextBlock x:Name="TxtToastText" Text="" FontSize="12" Foreground="#EAF6FF" />
+        </Border>
     </Grid>
 </UserControl>

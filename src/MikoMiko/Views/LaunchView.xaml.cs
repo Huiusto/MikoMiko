@@ -2,251 +2,365 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using MikoMiko.Services;
-using Button = System.Windows.Controls.Button;
+using Cursors = System.Windows.Input.Cursors;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
 namespace MikoMiko.Views;
 
-/// <summary>启动页：沿用 MikoNest 的全屏壁纸 + 游戏切换 + 开始游戏布局。</summary>
+/// <summary>启动页：仿官方启动器主视觉 + 本地游戏路径定位与启动。</summary>
 public partial class LaunchView : UserControl
 {
-    private readonly Dictionary<string, Border> _railItems = new();
-    private readonly DispatcherTimer _toastTimer;
-    private string _selectedKey = "genshin";
-    private bool _launching;
-
-    private static readonly Dictionary<string, string[]> Info = new()
+    private sealed class GameProfile
     {
-        ["genshin"] = new[] { "提瓦特大陆，等待你的到来", "https://ys.mihoyo.com/main/" },
-        ["starrail"] = new[] { "愿此行，终抵群星", "https://sr.mihoyo.com/main/" },
-        ["zzz"] = new[] { "最后的都市，新的日常", "https://zzz.mihoyo.com/main/" },
-        ["bh3"] = new[] { "为世界上所有的美好而战", "https://bh3.mihoyo.com/main/" },
+        public required string Key;
+        public required string Name;
+        public required string Logo;
+        public required string Version;
+        public required string HeroTitle;
+        public required string HeroSubtitle;
+        public required string Website;
+        public required string ActivityImage;
+        public required string[] Activities;
+        public required string[] Notices;
+        public required string[] News;
+    }
+
+    private static readonly GameProfile[] Profiles =
+    {
+        new()
+        {
+            Key = "genshin",
+            Name = "原神",
+            Logo = "原神",
+            Version = "VERSION   7.2",
+            HeroTitle = "晶石如林生长之地",
+            HeroSubtitle = "新地区「新基捷城」、「如翼之峰」现已开放",
+            Website = "https://ys.mihoyo.com/",
+            ActivityImage = "pack://application:,,,/Assets/Launch/activity_genshin.jpg",
+            Activities = new[] { "「新基捷城」区域探索开启", "「如翼之峰」版本主题活动" },
+            Notices = new[] { "7.2 版本更新说明", "已知问题修复公告" },
+            News = new[] { "版本前瞻特别节目回顾", "新角色与区域玩法介绍" },
+        },
+        new()
+        {
+            Key = "starrail",
+            Name = "星穹铁道",
+            Logo = "星穹铁道",
+            Version = "LATEST VERSION",
+            HeroTitle = "愿此行，终抵群星",
+            HeroSubtitle = "全新开拓任务与跃迁活动现已开放",
+            Website = "https://sr.mihoyo.com/",
+            ActivityImage = "pack://application:,,,/Assets/Launch/bg_StarRail.jpg",
+            Activities = new[] { "全新开拓任务现已开放", "版本跃迁活动进行中" },
+            Notices = new[] { "版本更新说明", "已知问题修复公告" },
+            News = new[] { "版本前瞻节目回顾", "新角色玩法介绍" },
+        },
+        new()
+        {
+            Key = "zzz",
+            Name = "绝区零",
+            Logo = "绝区零",
+            Version = "LATEST VERSION",
+            HeroTitle = "最后的都市，新的日常",
+            HeroSubtitle = "全新代理人、街区与委托现已开放",
+            Website = "https://zzz.mihoyo.com/",
+            ActivityImage = "pack://application:,,,/Assets/Launch/bg_zzz.jpg",
+            Activities = new[] { "新代理人版本活动开启", "限时委托与登录活动" },
+            Notices = new[] { "版本更新说明", "已知问题修复公告" },
+            News = new[] { "版本前瞻特别节目", "新代理人战斗展示" },
+        },
+        new()
+        {
+            Key = "bh3",
+            Name = "崩坏3",
+            Logo = "崩坏3",
+            Version = "LATEST VERSION",
+            HeroTitle = "为世界上所有的美好而战",
+            HeroSubtitle = "全新版本内容与女武神活动现已开放",
+            Website = "https://bh3.mihoyo.com/",
+            ActivityImage = "pack://application:,,,/Assets/Launch/bg_bh3.jpg",
+            Activities = new[] { "新版本主题活动开启", "女武神补给与登录活动" },
+            Notices = new[] { "版本更新说明", "已知问题修复公告" },
+            News = new[] { "版本前瞻节目回顾", "新女武神玩法介绍" },
+        },
     };
+
+    private readonly Dictionary<string, Border> _gameBorders = new();
+    private string _gameKey = "genshin";
+    private string _tab = "activity";
+    private DispatcherTimer? _toastTimer;
 
     public LaunchView()
     {
         InitializeComponent();
-        _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.6) };
-        _toastTimer.Tick += (_, _) =>
-        {
-            _toastTimer.Stop();
-            ToastBox.Visibility = Visibility.Collapsed;
-        };
-        Loaded += (_, _) => RefreshData();
+        Loaded += (_, _) => Initialize();
+        Unloaded += (_, _) => _toastTimer?.Stop();
     }
 
-    private void RefreshData()
+    private GameProfile Profile => Profiles.First(p => p.Key == _gameKey);
+
+    private void Initialize()
     {
         MikoNestBridge.Reload();
-        BuildRail();
-        if (!MikoNestBridge.Games.Any(g => g.Key == _selectedKey))
-            _selectedKey = MikoNestBridge.Games[0].Key;
-        SelectGame(_selectedKey, false);
+        BuildGameStrip();
+        ApplyGame("genshin", false);
     }
 
-    private void BuildRail()
+    private void BuildGameStrip()
     {
-        if (_railItems.Count > 0) return;
-        foreach (var game in MikoNestBridge.Games)
+        GameStrip.Children.Clear();
+        _gameBorders.Clear();
+        foreach (var profile in Profiles)
         {
             var image = new Image
             {
-                Source = new BitmapImage(new Uri(game.Icon, UriKind.Absolute)),
-                Width = 42,
-                Height = 42,
+                Source = LoadImage(profile.Key == "genshin"
+                    ? "pack://application:,,,/Assets/Launch/icons/icon_genshin.png"
+                    : MikoNestBridge.Games.First(g => g.Key == profile.Key).Icon),
+                Width = 25,
+                Height = 25,
                 Stretch = Stretch.Uniform,
             };
             var border = new Border
             {
-                Width = 58,
-                Height = 58,
-                Margin = new Thickness(0, 0, 0, 12),
-                CornerRadius = new CornerRadius(14),
-                Background = new SolidColorBrush(Color.FromArgb(0x66, 0x14, 0x1B, 0x24)),
-                BorderThickness = new Thickness(1.5),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)),
-                Cursor = System.Windows.Input.Cursors.Hand,
-                ToolTip = game.Name,
+                Width = 42,
+                Height = 42,
+                CornerRadius = new CornerRadius(11),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0x59, 0xFF, 0xFF, 0xFF)),
+                Background = new SolidColorBrush(Color.FromArgb(0x26, 0x00, 0x00, 0x00)),
+                Margin = new Thickness(7, 0, 0, 0),
+                Cursor = Cursors.Hand,
+                ToolTip = profile.Name,
                 Child = image,
-                RenderTransformOrigin = new Point(0.5, 0.5),
-                RenderTransform = new ScaleTransform(1, 1),
             };
-            border.MouseLeftButtonUp += (_, _) => SelectGame(game.Key, true);
-            border.MouseEnter += (_, _) => border.Opacity = 0.9;
-            border.MouseLeave += (_, _) => border.Opacity = 1;
-            _railItems[game.Key] = border;
-            GameRail.Children.Add(border);
+            border.MouseLeftButtonUp += (_, _) => ApplyGame(profile.Key, true);
+            _gameBorders[profile.Key] = border;
+            GameStrip.Children.Add(border);
         }
     }
 
-    private void SelectGame(string key, bool animate)
+    private void ApplyGame(string key, bool animate)
     {
-        _selectedKey = key;
-        var game = MikoNestBridge.Games.First(g => g.Key == key);
-        foreach (var pair in _railItems)
+        if (Profiles.All(p => p.Key != key)) return;
+        _gameKey = key;
+        var profile = Profile;
+        ImgBackground.Source = LoadImage(MikoNestBridge.Games.First(g => g.Key == key).Background);
+        ImgActivity.Source = LoadImage(profile.ActivityImage);
+        TxtLogo.Text = profile.Logo;
+        TxtHeroVersion.Text = profile.Version.Trim();
+        TxtHeroTitle.Text = profile.HeroTitle;
+        TxtHeroSubtitle.Text = profile.HeroSubtitle;
+        TxtFooter.Text = "MIKOMIKO · 本地游戏启动器";
+
+        foreach (var (gameKey, border) in _gameBorders)
         {
-            var selected = pair.Key == key;
-            pair.Value.BorderBrush = new SolidColorBrush(selected
-                ? Color.FromRgb(0x4E, 0xA4, 0xDD)
-                : Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
-            pair.Value.BorderThickness = new Thickness(selected ? 2.5 : 1.5);
-            pair.Value.Background = new SolidColorBrush(selected
-                ? Color.FromArgb(0x99, 0x16, 0x22, 0x30)
-                : Color.FromArgb(0x66, 0x14, 0x1B, 0x24));
+            var selected = gameKey == key;
+            border.BorderBrush = selected
+                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xD8, 0x4D))
+                : new SolidColorBrush(Color.FromArgb(0x59, 0xFF, 0xFF, 0xFF));
+            border.BorderThickness = new Thickness(selected ? 2 : 1);
+            border.Background = new SolidColorBrush(selected
+                ? Color.FromArgb(0x59, 0x00, 0x00, 0x00)
+                : Color.FromArgb(0x26, 0x00, 0x00, 0x00));
+            if (border.Child is Image image) image.Opacity = selected ? 1 : 0.74;
         }
 
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.UriSource = new Uri(game.Background, UriKind.Absolute);
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-        bitmap.EndInit();
-        bitmap.Freeze();
-        BgImage.Source = bitmap;
+        _tab = "activity";
+        SetTabVisual("activity");
+        UpdateActivityList();
+        UpdateInstallState();
+
         if (animate)
         {
-            BgImage.BeginAnimation(OpacityProperty,
-                new DoubleAnimation(0.25, 1, TimeSpan.FromMilliseconds(420))
-                {
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
-                });
+            Root.BeginAnimation(OpacityProperty, new DoubleAnimation(0.45, 1,
+                TimeSpan.FromMilliseconds(220))
+            {
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut },
+            });
         }
-
-        TxtGameName.Text = game.Name;
-        TxtSubtitle.Text = Info.TryGetValue(key, out var info) ? info[0] : "";
-        UpdateGameState();
     }
 
-    private void UpdateGameState()
+    private void UpdateInstallState()
     {
-        var game = MikoNestBridge.Games.First(g => g.Key == _selectedKey);
-        var dir = MikoNestBridge.GetGameDir(_selectedKey);
-        var exe = MikoNestBridge.FindGameExe(_selectedKey);
-
+        var exe = MikoNestBridge.FindGameExe(_gameKey);
         if (exe is not null)
         {
-            InstalledBadge.Background = new SolidColorBrush(Color.FromRgb(0x2E, 0x8B, 0x57));
-            TxtBadge.Text = "已安装";
-            TxtPath.Text = "安装目录：" + (dir ?? Path.GetDirectoryName(exe));
-            BtnLaunch.Content = "开始游戏";
-            TxtHint.Text = "游戏已就绪，点击开始游戏；也可以切换左侧图标启动其它游戏。";
+            BtnPrimary.Content = "开始游戏";
+            BtnPrimary.CommandParameter = "▶";
+            BtnLocate.Content = "已安装 · 定位游戏";
+            TxtFooter.Text = "MIKOMIKO · 已找到本地游戏";
         }
         else
         {
-            InstalledBadge.Background = new SolidColorBrush(Color.FromRgb(0xC2, 0x41, 0x0C));
-            TxtBadge.Text = "未检测到";
-            TxtPath.Text = game.Key == "genshin"
-                ? "未找到游戏主程序，可点击「定位游戏」选择安装目录。"
-                : "MikoNest 记录的目录中没有找到主程序，可点击「定位游戏」重新选择。";
-            BtnLaunch.Content = "定位游戏";
-            TxtHint.Text = "选择包含 " + string.Join(" / ", game.ExeNames) + " 的文件夹即可开始启动。";
+            BtnPrimary.Content = "获取游戏";
+            BtnPrimary.CommandParameter = "↓";
+            BtnLocate.Content = "已安装？定位游戏";
+            TxtFooter.Text = "MIKOMIKO · 本地游戏启动器";
         }
     }
 
-    private void BtnRefresh_Click(object sender, RoutedEventArgs e)
+    private void SetTabVisual(string tab)
     {
-        MikoNestBridge.Reload();
-        UpdateGameState();
-        ShowToast("已重新读取游戏目录与账号数据");
+        _tab = tab;
+        foreach (var (button, key) in new[]
+                 {
+                     (TabActivity, "activity"), (TabNotice, "notice"), (TabNews, "news"),
+                 })
+        {
+            var selected = key == tab;
+            button.Foreground = new SolidColorBrush(selected
+                ? Color.FromRgb(0x1F, 0x5E, 0x8E)
+                : Color.FromRgb(0x7C, 0x8B, 0x98));
+            button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
+        }
+        TabIndicator.Margin = new Thickness(tab switch
+        {
+            "notice" => 67,
+            "news" => 130,
+            _ => 2,
+        }, 0, 0, 0);
     }
 
-    private void BtnOpenDir_Click(object sender, RoutedEventArgs e)
+    private void UpdateActivityList()
     {
-        var dir = MikoNestBridge.GetGameDir(_selectedKey) ?? Path.GetDirectoryName(MikoNestBridge.FindGameExe(_selectedKey) ?? "");
-        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        var profile = Profile;
+        var items = _tab switch
         {
-            ShowToast("还没有找到该游戏的安装目录");
-            return;
-        }
-        try
-        {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{dir}\"") { UseShellExecute = true });
-        }
-        catch (Exception ex)
-        {
-            ShowToast("打开目录失败：" + ex.Message);
-        }
-    }
-
-    private void BtnLocate_Click(object sender, RoutedEventArgs e) => LocateGame();
-
-    private void LocateGame()
-    {
-        var game = MikoNestBridge.Games.First(g => g.Key == _selectedKey);
-        using var dialog = new System.Windows.Forms.FolderBrowserDialog
-        {
-            Description = $"请选择「{game.Name}」的安装目录（包含 {string.Join(" / ", game.ExeNames)} 的文件夹）",
-            UseDescriptionForTitle = true,
+            "notice" => profile.Notices,
+            "news" => profile.News,
+            _ => profile.Activities,
         };
-        var current = MikoNestBridge.GetGameDir(_selectedKey);
-        if (!string.IsNullOrWhiteSpace(current) && Directory.Exists(current)) dialog.SelectedPath = current;
-        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
-
-        MikoNestBridge.SetLocalGamePath(_selectedKey, dialog.SelectedPath);
-        UpdateGameState();
-        if (MikoNestBridge.FindGameExe(_selectedKey) is null)
-            ShowToast("这个目录里没有找到游戏主程序，请选择包含 EXE 的文件夹");
-        else
-            ShowToast("已记录游戏目录");
+        var first = items.Length > 0 ? items[0] : "暂无内容";
+        var second = items.Length > 1 ? items[1] : "";
+        TxtActivity1.Text = first;
+        TxtActivity2.Text = second;
+        TxtActivityDate1.Text = DateTime.Now.ToString("MM/dd");
+        TxtActivityDate2.Text = DateTime.Now.AddDays(-4).ToString("MM/dd");
     }
 
-    private async void BtnLaunch_Click(object sender, RoutedEventArgs e)
+    private static BitmapImage LoadImage(string uri)
     {
-        if (_launching) return;
-        var exe = MikoNestBridge.FindGameExe(_selectedKey);
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+        image.UriSource = new Uri(uri, UriKind.Absolute);
+        image.EndInit();
+        image.Freeze();
+        return image;
+    }
+
+    private void TabActivity_Click(object sender, RoutedEventArgs e)
+    {
+        SetTabVisual("activity");
+        UpdateActivityList();
+    }
+
+    private void TabNotice_Click(object sender, RoutedEventArgs e)
+    {
+        SetTabVisual("notice");
+        UpdateActivityList();
+    }
+
+    private void TabNews_Click(object sender, RoutedEventArgs e)
+    {
+        SetTabVisual("news");
+        UpdateActivityList();
+    }
+
+    private void BtnHotspot_Click(object sender, RoutedEventArgs e)
+    {
+        OpenUrl(Profile.Website);
+        ShowToast($"已打开 {Profile.Name} 官方网站");
+    }
+
+    private void BtnPrimary_Click(object sender, RoutedEventArgs e)
+    {
+        var exe = MikoNestBridge.FindGameExe(_gameKey);
         if (exe is null)
         {
-            LocateGame();
+            OpenUrl(Profile.Website);
+            ShowToast($"未找到本地 {Profile.Name}，已在浏览器打开官网");
             return;
         }
-
-        _launching = true;
-        BtnLaunch.IsEnabled = false;
-        var game = MikoNestBridge.Games.First(g => g.Key == _selectedKey);
         try
         {
             Process.Start(new ProcessStartInfo(exe)
             {
-                WorkingDirectory = Path.GetDirectoryName(exe) ?? "",
                 UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(exe) ?? "",
             });
-            ShowToast($"正在启动 {game.Name}…");
-            await Task.Delay(3000);
-            if (Window.GetWindow(this) is { } window && window.WindowState != WindowState.Minimized)
-                window.WindowState = WindowState.Minimized;
+            ShowToast($"正在启动 {Profile.Name}…");
         }
         catch (Exception ex)
         {
             ShowToast("启动失败：" + ex.Message);
         }
-        finally
+    }
+
+    private void BtnLocate_Click(object sender, RoutedEventArgs e)
+    {
+        var exe = MikoNestBridge.FindGameExe(_gameKey);
+        if (exe is not null)
         {
-            _launching = false;
-            BtnLaunch.IsEnabled = true;
+            try
+            {
+                Process.Start("explorer.exe", $"/select,\"{exe}\"");
+                ShowToast("已在资源管理器中定位游戏");
+                return;
+            }
+            catch { }
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = $"定位 {Profile.Name}",
+            Filter = "游戏程序|*.exe|所有文件|*.*",
+            CheckFileExists = true,
+        };
+        var dir = MikoNestBridge.GetGameDir(_gameKey);
+        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+            dialog.InitialDirectory = dir;
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true)
+        {
+            var selected = Path.GetDirectoryName(dialog.FileName);
+            if (!string.IsNullOrEmpty(selected))
+            {
+                MikoNestBridge.SetLocalGamePath(_gameKey, selected);
+                UpdateInstallState();
+                ShowToast($"已保存 {Profile.Name} 的安装位置");
+            }
         }
     }
 
-    private void BtnOfficial_Click(object sender, RoutedEventArgs e)
+    private static void OpenUrl(string url)
     {
-        if (!Info.TryGetValue(_selectedKey, out var info)) return;
         try
         {
-            Process.Start(new ProcessStartInfo(info[1]) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
-        catch (Exception ex)
-        {
-            ShowToast("打开官网失败：" + ex.Message);
-        }
+        catch { }
     }
 
     private void ShowToast(string text)
     {
-        TxtToast.Text = text;
-        ToastBox.Visibility = Visibility.Visible;
-        _toastTimer.Stop();
+        TxtToastText.Text = text;
+        TxtToast.Visibility = Visibility.Visible;
+        _toastTimer?.Stop();
+        _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.6) };
+        _toastTimer.Tick += (_, _) =>
+        {
+            TxtToast.Visibility = Visibility.Collapsed;
+            _toastTimer?.Stop();
+        };
         _toastTimer.Start();
     }
 }
