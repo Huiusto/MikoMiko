@@ -5,10 +5,19 @@ using System.Text.RegularExpressions;
 
 namespace MikoMiko.Services;
 
+/// <summary>追剧页卡片所需的轻量媒体信息（不解析视频流）。</summary>
+public sealed class BilibiliMediaInfo
+{
+    public string Title { get; init; } = string.Empty;
+    public string Cover { get; init; } = string.Empty;
+    public string Meta { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public int EpisodeCount { get; init; }
+}
+
 /// <summary>B 站评论（只在软件内展示，不跳官方页面）。</summary>
 public sealed class BilibiliComment
-{
-    public string Nickname { get; init; } = string.Empty;
+{    public string Nickname { get; init; } = string.Empty;
     public string AvatarUrl { get; init; } = string.Empty;
     public string Message { get; init; } = string.Empty;
     public string TimeText { get; init; } = string.Empty;
@@ -26,6 +35,7 @@ public sealed class BilibiliAnimeService
     private static readonly HttpClient Http = CreateHttpClient();
     private static readonly Regex PagePattern = new(@"(?:^|&)p=(?<p>\d+)", RegexOptions.IgnoreCase);
     private static readonly Regex BangumiPattern = new(@"/bangumi/play/(?<id>ss|ep)(?<n>\d+)", RegexOptions.IgnoreCase);
+    private static readonly Regex MediaPattern = new(@"/bangumi/media/md(?<n>\d+)", RegexOptions.IgnoreCase);
     private static readonly Regex VideoPattern = new(@"/video/(?<bv>BV[0-9A-Za-z]+)", RegexOptions.IgnoreCase);
     private static readonly Regex DmPattern = new(
         @"<d\s+p=""(?<p>[^""]+)""[^>]*>(?<text>.*?)</d>",
@@ -62,6 +72,15 @@ public sealed class BilibiliAnimeService
                     : await ResolveEpisodeAsync(number, title, ct);
             }
 
+            var media = MediaPattern.Match(pageUrl);
+            if (media.Success)
+            {
+                var seasonId = await ResolveSeasonIdFromMediaAsync(long.Parse(media.Groups["n"].Value), ct);
+                return seasonId > 0
+                    ? await ResolveSeasonAsync(seasonId, title, null, ct)
+                    : null;
+            }
+
             var video = VideoPattern.Match(pageUrl);
             if (video.Success)
             {
@@ -76,6 +95,96 @@ public sealed class BilibiliAnimeService
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>读取番剧/视频的标题、封面与简介，供追剧页原生卡片使用。</summary>
+    public async Task<BilibiliMediaInfo?> GetMediaInfoAsync(string pageUrl, string fallbackTitle = "",
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(pageUrl)) return null;
+        try
+        {
+            var media = MediaPattern.Match(pageUrl);
+            if (media.Success)
+            {
+                var seasonId = await ResolveSeasonIdFromMediaAsync(long.Parse(media.Groups["n"].Value), ct);
+                return seasonId > 0 ? await GetSeasonInfoAsync(seasonId, fallbackTitle, ct) : null;
+            }
+
+            var bangumi = BangumiPattern.Match(pageUrl);
+            if (bangumi.Success && bangumi.Groups["id"].Value.Equals("ss", StringComparison.OrdinalIgnoreCase))
+                return await GetSeasonInfoAsync(long.Parse(bangumi.Groups["n"].Value), fallbackTitle, ct);
+
+            var video = VideoPattern.Match(pageUrl);
+            if (video.Success) return await GetVideoInfoAsync(video.Groups["bv"].Value, fallbackTitle, ct);
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static async Task<BilibiliMediaInfo?> GetSeasonInfoAsync(long seasonId, string fallbackTitle,
+        CancellationToken ct)
+    {
+        using var season = await GetJsonAsync($"https://api.bilibili.com/pgc/view/web/season?season_id={seasonId}", ct);
+        if (season is null) return null;
+        var root = season.RootElement;
+        if (!root.TryGetProperty("code", out var code) || code.GetInt32() != 0) return null;
+        if (!root.TryGetProperty("result", out var result)) return null;
+        var episodes = result.TryGetProperty("episodes", out var epNode) && epNode.ValueKind == JsonValueKind.Array
+            ? epNode.GetArrayLength()
+            : 0;
+        var typeName = ReadString(result, "type_name", "番剧");
+        return new BilibiliMediaInfo
+        {
+            Title = ReadString(result, "title", fallbackTitle),
+            Cover = ReadString(result, "cover"),
+            Description = ReadString(result, "evaluate"),
+            EpisodeCount = episodes,
+            Meta = $"哔哩哔哩 · {typeName}" + (episodes > 0 ? $" · 全 {episodes} 话" : ""),
+        };
+    }
+
+    private static async Task<BilibiliMediaInfo?> GetVideoInfoAsync(string bvid, string fallbackTitle,
+        CancellationToken ct)
+    {
+        using var view = await GetJsonAsync($"https://api.bilibili.com/x/web-interface/view?bvid={bvid}", ct);
+        if (view is null) return null;
+        var root = view.RootElement;
+        if (!root.TryGetProperty("code", out var code) || code.GetInt32() != 0) return null;
+        if (!root.TryGetProperty("data", out var data)) return null;
+        var owner = data.TryGetProperty("owner", out var ownerNode) ? ReadString(ownerNode, "name") : string.Empty;
+        var duration = FormatDuration(ReadLong(data, "duration"));
+        var pages = data.TryGetProperty("pages", out var pagesNode) && pagesNode.ValueKind == JsonValueKind.Array
+            ? pagesNode.GetArrayLength()
+            : 1;
+        return new BilibiliMediaInfo
+        {
+            Title = ReadString(data, "title", fallbackTitle),
+            Cover = ReadString(data, "pic"),
+            Description = ReadString(data, "desc"),
+            EpisodeCount = pages,
+            Meta = string.Join(" · ", new[] { "哔哩哔哩", owner, duration }.Where(x => !string.IsNullOrWhiteSpace(x))),
+        };
+    }
+
+    private static async Task<long> ResolveSeasonIdFromMediaAsync(long mediaId, CancellationToken ct)
+    {
+        try
+        {
+            using var response = await Http.GetAsync($"https://www.bilibili.com/bangumi/media/md{mediaId}", ct);
+            if (!response.IsSuccessStatusCode) return 0;
+            var html = await response.Content.ReadAsStringAsync(ct);
+            var match = Regex.Match(html, @"""season_id""\s*:\s*(?<id>\d+)", RegexOptions.IgnoreCase);
+            return match.Success && long.TryParse(match.Groups["id"].Value, out var id) ? id : 0;
+        }
+        catch
+        {
+            return 0;
         }
     }
 

@@ -1,6 +1,10 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using System.Windows;
+using Microsoft.Win32;
+using SaveFileDialog = Microsoft.Win32.SaveFileDialog;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -205,6 +209,10 @@ public partial class GachaView : UserControl
         var label = _game == "genshin_beyond" ? "千星奇域" : Games.First(g => g.Key == _game).Name;
         TxtSubtitle.Text = $"本地库 {_records.Count:N0} 条 · {label} {gameRecords.Count:N0} 条" +
                            (string.IsNullOrEmpty(_uid) ? " · 全部 UID" : $" · UID {_uid}");
+        TxtDataDir.Text = "数据目录：" + MikoNestBridge.DataDir;
+        TxtKpiCaption.Text = label + (string.IsNullOrEmpty(_uid) ? " · 全部 UID" : $" · UID {_uid}");
+        TxtKpiTopLabel.Text = $"{TopRank}★ 数量";
+        TxtKpiAvgLabel.Text = $"{TopRank}★ 平均";
 
         var stats = new List<(PoolDef Def, PoolStat Stat)>();
         var matched = new HashSet<GachaRecord>();
@@ -219,6 +227,17 @@ public partial class GachaView : UserControl
         var leftovers = gameRecords.Where(r => !matched.Contains(r)).ToList();
         if (leftovers.Count > 0)
             stats.Add((new PoolDef { Name = "其他祈愿" }, BuildStat("其他祈愿", leftovers, TopRank)));
+
+        var totalPulls = stats.Sum(p => p.Stat.Total);
+        var topPulls = stats.Sum(p => p.Stat.TopCount);
+        TxtKpiTotal.Text = totalPulls.ToString("N0");
+        TxtKpiTop.Text = topPulls.ToString("N0");
+        TxtKpiAvg.Text = topPulls > 0 ? (totalPulls / (double)topPulls).ToString("0.0") : "—";
+        TxtKpiRate.Text = totalPulls > 0 ? $"{topPulls * 100.0 / totalPulls:0.0}%" : "—";
+        TxtBottomStatus.Text = $"已载入 {gameRecords.Count:N0} 条记录 · {stats.Count} 个卡池 · " +
+                               (gameRecords.Count > 0
+                                   ? $"最近记录 {gameRecords.Max(r => ParseTime(r.Time)):yyyy-MM-dd HH:mm}"
+                                   : "等待记录同步");
 
         PoolGrid.Children.Clear();
         PoolGrid.ColumnDefinitions.Clear();
@@ -692,23 +711,60 @@ public partial class GachaView : UserControl
 
     private void BtnSettings_Click(object sender, RoutedEventArgs e)
     {
-        var menu = new ContextMenu
-        {
-            PlacementTarget = BtnSettings,
-            Placement = PlacementMode.Bottom,
-        };
-        var reload = new MenuItem { Header = "重新读取本地记录" };
-        reload.Click += (_, _) => { ReloadData(); ShowToast("已重新读取本地抽卡记录"); };
-        var open = new MenuItem { Header = "打开 MikoNest 数据目录" };
-        open.Click += (_, _) => OpenDataDir();
-        var about = new MenuItem { Header = "数据来源：MikoNest gacha_records.json" };
-        about.Click += (_, _) => ShowToast("MikoMiko 0.1.38 · 抽卡数据来自 MikoNest 本地记录");
-        menu.Items.Add(reload);
-        menu.Items.Add(open);
-        menu.Items.Add(new Separator());
-        menu.Items.Add(about);
-        menu.IsOpen = true;
+        PanelSettings.Visibility = PanelSettings.Visibility == Visibility.Visible
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        if (PanelSettings.Visibility == Visibility.Visible)
+            TxtDataDir.Text = "数据目录：" + MikoNestBridge.DataDir;
     }
+
+    private void ExportCsv_Click(object sender, RoutedEventArgs e)
+    {
+        var gameRecords = _records.Where(r => r.GameKey == _game &&
+                                              (string.IsNullOrEmpty(_uid) || r.Uid == _uid)).ToList();
+        if (gameRecords.Count == 0)
+        {
+            ShowToast("当前没有可导出的抽卡记录");
+            return;
+        }
+        var dialog = new SaveFileDialog
+        {
+            Title = "导出抽卡记录",
+            Filter = "CSV 文件|*.csv",
+            FileName = $"MikoMiko-Gacha-{_game}-{DateTime.Now:yyyyMMdd-HHmm}.csv",
+        };
+        if (dialog.ShowDialog() != true) return;
+        try
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("uid,game,gacha_type,item_id,name,rank_type,item_type,count,time,id,pool_name");
+            foreach (var r in gameRecords.OrderBy(r => ParseTime(r.Time)))
+            {
+                sb.AppendLine(string.Join(",", new[]
+                {
+                    Csv(r.Uid), Csv(r.GameKey), Csv(r.GachaType), Csv(r.ItemId), Csv(r.Name),
+                    Csv(r.RankType), Csv(r.ItemType), Csv(r.Count), Csv(r.Time), Csv(r.Id), Csv(r.PoolName),
+                }));
+            }
+            File.WriteAllText(dialog.FileName, sb.ToString(), new UTF8Encoding(true));
+            ShowToast($"已导出 {gameRecords.Count:N0} 条记录");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("导出失败：" + ex.Message);
+        }
+    }
+
+    private static string Csv(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Contains(',') || value.Contains('"') || value.Contains('\n')
+            ? "\"" + value.Replace("\"", "\"\"") + "\""
+            : value;
+    }
+
+    private void OpenDataDir_Click(object sender, RoutedEventArgs e) => OpenDataDir();
+
 
     private void CopySummary()
     {

@@ -60,7 +60,7 @@ public static class SignService
 
     public record SignStateResult(bool? Signed, string Message, int Retcode, bool LoginExpired);
 
-    public record ActionResult(bool Ok, string Message, int Retcode, List<LogLine> Log);
+    public record ActionResult(bool Ok, string Message, int Retcode, List<LogLine> Log, string? Aigis = null);
 
     public class MissionItem
     {
@@ -314,8 +314,8 @@ public static class SignService
         }
         if (api.Retcode == 1034)
         {
-            log.Add(new LogLine($"{label} 触发验证码（1034），请到米游社 App 手动签到", "WARN"));
-            return new ActionResult(false, "触发验证码", api.Retcode, log);
+            log.Add(new LogLine($"{label} 触发验证码（1034），正在打开软件内安全验证", "WARN"));
+            return new ActionResult(false, "触发验证码", api.Retcode, log, api.Aigis);
         }
         if (IsLoginExpired(api.Retcode))
         {
@@ -423,8 +423,8 @@ public static class SignService
         }
         if (api.Retcode == 1034)
         {
-            log.Add(new LogLine("打卡触发验证码（1034），请到米游社 App 手动打卡", "WARN"));
-            return new ActionResult(false, "触发验证码", api.Retcode, log);
+            log.Add(new LogLine("打卡触发验证码（1034），正在打开软件内安全验证", "WARN"));
+            return new ActionResult(false, "触发验证码", api.Retcode, log, api.Aigis);
         }
         if (IsLoginExpired(api.Retcode))
         {

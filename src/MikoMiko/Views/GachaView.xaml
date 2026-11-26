@@ -59,8 +59,10 @@
     <Grid Margin="24,16,24,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="16" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 页头 -->
@@ -113,12 +115,103 @@
             </StackPanel>
         </Grid>
 
+        <!-- 设置面板（默认折叠） -->
+        <Border x:Name="PanelSettings" Grid.Row="1" Visibility="Collapsed" Margin="0,12,0,0"
+                Background="#FFFFFF" BorderBrush="#DCE8F2" BorderThickness="1" CornerRadius="10"
+                Padding="16,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="抽卡记录设置" FontSize="13" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.TextPrimary}" />
+                    <TextBlock x:Name="TxtDataDir" Text="数据目录：—" FontSize="10.5"
+                               Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap"
+                               Margin="0,5,0,0" />
+                    <TextBlock Text="记录来自 MikoNest 本地抽卡库；在游戏内打开一次抽卡记录页面会刷新 authkey。"
+                               FontSize="10" Foreground="{DynamicResource Brush.TextTertiary}"
+                               TextWrapping="Wrap" Margin="0,3,0,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="导出 CSV" Height="32" Padding="12,0" Style="{StaticResource GachaButton}"
+                            Click="ExportCsv_Click" Margin="0,0,6,0" />
+                    <Button Content="打开数据目录" Height="32" Padding="12,0" Style="{StaticResource GachaButton}"
+                            Click="OpenDataDir_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 统计总览 -->
+        <Border Grid.Row="2" Margin="0,14,0,12" CornerRadius="12" BorderBrush="#D9E8F4"
+                BorderThickness="1" Padding="16,12">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#F3FAFF" Offset="0" />
+                    <GradientStop Color="#FFFFFF" Offset="0.55" />
+                    <GradientStop Color="#F8F5EE" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="1" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="1" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="1" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="总抽数" FontSize="10" Foreground="{DynamicResource Brush.TextTertiary}" />
+                    <TextBlock x:Name="TxtKpiTotal" Text="—" FontSize="23" FontWeight="Bold"
+                               Foreground="{DynamicResource Brush.TextPrimary}" Margin="0,2,0,0" />
+                    <TextBlock x:Name="TxtKpiCaption" Text="当前记录" FontSize="9.5"
+                               Foreground="{DynamicResource Brush.TextTertiary}" />
+                </StackPanel>
+                <Border Grid.Column="1" Background="#E4EEF6" Margin="0,2,0,2" />
+                <StackPanel Grid.Column="2" Margin="16,0,0,0">
+                    <TextBlock x:Name="TxtKpiTopLabel" Text="五星数量" FontSize="10"
+                               Foreground="{DynamicResource Brush.TextTertiary}" />
+                    <TextBlock x:Name="TxtKpiTop" Text="—" FontSize="23" FontWeight="Bold"
+                               Foreground="#C2831D" Margin="0,2,0,0" />
+                    <TextBlock Text="最高稀有度出货" FontSize="9.5"
+                               Foreground="{DynamicResource Brush.TextTertiary}" />
+                </StackPanel>
+                <Border Grid.Column="3" Background="#E4EEF6" Margin="0,2,0,2" />
+                <StackPanel Grid.Column="4" Margin="16,0,0,0">
+                    <TextBlock x:Name="TxtKpiAvgLabel" Text="五星平均" FontSize="10"
+                               Foreground="{DynamicResource Brush.TextTertiary}" />
+                    <TextBlock x:Name="TxtKpiAvg" Text="—" FontSize="23" FontWeight="Bold"
+                               Foreground="{DynamicResource Brush.TextPrimary}" Margin="0,2,0,0" />
+                    <TextBlock Text="抽 / 个" FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}" />
+                </StackPanel>
+                <Border Grid.Column="5" Background="#E4EEF6" Margin="0,2,0,2" />
+                <StackPanel Grid.Column="6" Margin="16,0,0,0">
+                    <TextBlock Text="出货率" FontSize="10" Foreground="{DynamicResource Brush.TextTertiary}" />
+                    <TextBlock x:Name="TxtKpiRate" Text="—" FontSize="23" FontWeight="Bold"
+                               Foreground="#359B5A" Margin="0,2,0,0" />
+                    <TextBlock Text="最高稀有度占比" FontSize="9.5"
+                               Foreground="{DynamicResource Brush.TextTertiary}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- 卡池分列（固定宽度，横向可滚动，和 MikoNest 抽卡记录页一致） -->
-        <ScrollViewer x:Name="PoolScroll" Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <ScrollViewer x:Name="PoolScroll" Grid.Row="3" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
             <Grid x:Name="PoolGrid" HorizontalAlignment="Left" VerticalAlignment="Stretch" />
         </ScrollViewer>
 
-        <Border x:Name="TxtToast" Grid.Row="2" Background="#E6112230" CornerRadius="8" Padding="16,8"
+        <!-- 底部状态 -->
+        <Border Grid.Row="4" Margin="0,10,0,0" Background="#FFFFFF" BorderBrush="#E2ECF5"
+                BorderThickness="1" CornerRadius="10" Padding="14,7">
+            <TextBlock x:Name="TxtBottomStatus" Text="就绪"
+                       FontSize="10.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                       TextTrimming="CharacterEllipsis" />
+        </Border>
+
+        <Border x:Name="TxtToast" Grid.Row="3" Background="#E6112230" CornerRadius="8" Padding="16,8"
                 HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
                 Visibility="Collapsed" Panel.ZIndex="10">
             <TextBlock x:Name="TxtToastText" Text="" FontSize="12" Foreground="#EAF6FF" />

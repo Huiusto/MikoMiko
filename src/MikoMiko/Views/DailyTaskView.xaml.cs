@@ -582,6 +582,41 @@ public partial class DailyTaskView : UserControl
         }
     }
 
+    private async Task<SignService.ActionResult> SignRoleWithVerifyAsync(HoyoAccount account,
+        SignService.GameCheckin game, SignRole role)
+    {
+        var result = await SignService.SignRoleAsync(account.Cookie, game, role);
+        if (result.Retcode != 1034) return result;
+
+        AppendLog(new SignLogEntry { Text = $"{game.Name} 触发验证码，已打开软件内安全验证", Level = "WARN" });
+        var completed = VerifyDialog.Show(Window.GetWindow(this), account, result.Aigis);
+        if (!completed)
+        {
+            AppendLog(new SignLogEntry { Text = "已取消安全验证，本次签到未完成", Level = "WARN" });
+            return result;
+        }
+
+        AppendLog(new SignLogEntry { Text = "验证完成，正在重试签到…", Level = "INFO" });
+        return await SignService.SignRoleAsync(account.Cookie, game, role);
+    }
+
+    private async Task<SignService.ActionResult> BbsCheckInWithVerifyAsync(HoyoAccount account, string cookie)
+    {
+        var result = await SignService.BbsCheckInAsync(cookie);
+        if (result.Retcode != 1034) return result;
+
+        AppendLog(new SignLogEntry { Text = "米游社打卡触发验证码，已打开软件内安全验证", Level = "WARN" });
+        var completed = VerifyDialog.Show(Window.GetWindow(this), account, result.Aigis);
+        if (!completed)
+        {
+            AppendLog(new SignLogEntry { Text = "已取消安全验证，本次打卡未完成", Level = "WARN" });
+            return result;
+        }
+
+        AppendLog(new SignLogEntry { Text = "验证完成，正在重试米游社打卡…", Level = "INFO" });
+        return await SignService.BbsCheckInAsync(cookie);
+    }
+
     private async Task SignOneAsync(RoleRow row)
     {
         if (_account is null || row.Game is null || row.Busy) return;
@@ -590,7 +625,7 @@ public partial class DailyTaskView : UserControl
         row.Action.Content = "签到中";
         try
         {
-            var result = await SignService.SignRoleAsync(_account.Cookie, row.Game, row.Role);
+            var result = await SignRoleWithVerifyAsync(_account, row.Game, row.Role);
             foreach (var line in result.Log)
                 AppendLog(new SignLogEntry { Text = line.Text, Level = line.Level });
             if (result.Ok)
@@ -640,7 +675,7 @@ public partial class DailyTaskView : UserControl
                 return;
             }
 
-            var check = await SignService.BbsCheckInAsync(cookie);
+            var check = await BbsCheckInWithVerifyAsync(row.Account, cookie);
             foreach (var line in check.Log)
                 AppendLog(new SignLogEntry { Text = line.Text, Level = check.Ok ? "OK" : line.Level });
 
@@ -664,7 +699,7 @@ public partial class DailyTaskView : UserControl
                 var game = SignService.GetByBiz(role.GameBiz);
                 if (game is not { CheckinEnabled: true }) continue;
                 attempted++;
-                var result = await SignService.SignRoleAsync(cookie, game, role);
+                var result = await SignRoleWithVerifyAsync(row.Account, game, role);
                 if (result.Ok) success++;
                 foreach (var line in result.Log)
                     AppendLog(new SignLogEntry { Text = line.Text, Level = line.Level });

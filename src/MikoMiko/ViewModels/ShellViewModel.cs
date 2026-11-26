@@ -84,6 +84,7 @@ public sealed partial class ShellViewModel : ObservableObject
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
         HomeTabs.Add(new TabOption("Posts", "Home.Posts"));
         HomeTabs.Add(new TabOption("Web", "Home.Web"));
+        HomeTabs.Add(new TabOption("Anime", "Home.Anime"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -101,7 +102,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private bool _showGlobalSearch = true;
 
-    [ObservableProperty] private Views.FlutterAnimeView? _animePage;
+    [ObservableProperty] private Views.AnimeHubView? _animePage;
     [ObservableProperty] private bool _isAnimePageOpen;
 
     /// <summary>软件内阅读器（帖子 / 视频帖都在这里打开，不跳页、不弹独立窗口）。</summary>
@@ -246,7 +247,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void ShowAnimePage()
     {
-        AnimePage ??= new Views.FlutterAnimeView(OpenAnimeFromRule, OpenBilibiliInApp);
+        AnimePage ??= new Views.AnimeHubView(OpenBilibiliInApp);
         IsAnimePageOpen = true;
         ShowGlobalSearch = false;
     }
@@ -343,7 +344,17 @@ public sealed partial class ShellViewModel : ObservableObject
 
         if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
         {
-            AnimePage?.ShowToast("这部作品暂时取不到可播放的视频流，请稍后重试。");
+            // 版权/地区限制拿不到直连流时，改在软件内 WebView2 打开哔哩哔哩官方播放页，仍然不跳出软件。
+            AnimePage?.ShowToast("直连取流失败，已切换为软件内网页播放");
+            ShowAnimeSitePlayer(new AnimeItem
+            {
+                Title = title,
+                Url = url,
+                PlayUrl = url,
+                Source = "哔哩哔哩",
+                Note = "软件内网页播放",
+                Kind = "番剧",
+            }, url);
             return;
         }
         ShowAnimePlayer(playback);
@@ -670,7 +681,7 @@ public sealed partial class ShellViewModel : ObservableObject
         AnimePlayerView = new Views.AnimePlayerView(playback,
             playback.IsBilibili ? Array.Empty<AnimeProvider>() : _anime.Providers,
             _animeFollows, _animeDanmaku, CloseAnimePlayer, anime4K,
-            playback.IsBilibili ? null : url => ShowAnimeSiteFromPlayback(playback, url));
+            url => ShowAnimeSiteFromPlayback(playback, url));
         // WebView2 是原生子窗口，会盖在 WPF 内容之上；播放时必须先隐藏 Flutter 宿主。
         AnimePage?.Suspend();
         IsAnimePageOpen = false;
