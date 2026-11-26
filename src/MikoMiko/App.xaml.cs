@@ -23,6 +23,24 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // 安装程序在复制完文件后调用：提前铺好启动页壁纸与页面资源，首次打开不再等下载。
+        if (e.Args.Contains("--prepare-launch"))
+        {
+            try
+            {
+                Views.LaunchView.PrepareLaunchAssetsForInstall();
+                Task.Run(async () => await LauncherBackgroundService.PrefetchAllAsync())
+                    .Wait(TimeSpan.FromSeconds(20));
+            }
+            catch
+            {
+                // 安装期预热失败不影响软件启动，首次打开时会再拉取
+            }
+            Shutdown(0);
+            Environment.Exit(0);
+            return;
+        }
+
         // 单实例：同一台电脑只允许一个 MikoMiko 进程，避免两个进程同时写 settings.json /
         // 登录态 / 弹幕库，造成数据互相覆盖。再次启动时把已有窗口唤到前台并退出。
         _instanceMutex = new Mutex(true, @"Local\MikoMiko.SingleInstance", out var isFirst);
@@ -154,7 +172,7 @@ public partial class App : Application
         var path = args[2];
         Log(path, "start page=" + page);
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page == "Video" ? 10 : 2) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page == "Video" ? 10 : page == "Anime" ? 6 : 2) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
@@ -166,7 +184,7 @@ public partial class App : Application
                 MainWindow.Top = 0;
                 Log(path, "resized");
                 var navPage = page is "Reader" or "ReaderComments" or "Search" or "Posts" or "UserProfile" or "UserGame" ? "Home"
-                    : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap" ? "Home"
+                    : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap" ? "Anime"
                     : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
@@ -176,8 +194,6 @@ public partial class App : Application
                 Shell.Navigate(navPage, pushHistory: false);
                 if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap")
                 {
-                    var animeTab = Shell.HomeTabs.FirstOrDefault(t => t.Key == "Anime");
-                    if (animeTab is not null) Shell.SelectTabCommand.Execute(animeTab);
                     if (page == "AnimeTap")
                     {
                         var tapDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(7) };

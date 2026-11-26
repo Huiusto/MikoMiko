@@ -71,7 +71,7 @@ public partial class VideoView : UserControl
         };
     }
 
-    /// <summary>Q 点赞 / E 收藏 / W 或 ↑ 上一个 / S 或 ↓ 下一个；输入框聚焦时不拦截。</summary>
+    /// <summary>Q/q 点赞 / E/e 收藏 / W/w 或 ↑ 上一个 / S/s 或 ↓ 下一个；输入框聚焦时不拦截。</summary>
     private async void OnHostPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         // 只在本页的输入框（评论框等）里让出按键；顶部搜索框聚焦时也要能用快捷键。
@@ -84,7 +84,12 @@ public partial class VideoView : UserControl
             return;
         if (CommentLightbox.Visibility == Visibility.Visible) return;
 
-        switch (e.Key)
+        // 中文输入法激活时字母键会变成 ImeProcessed，这里还原真实键值，保证 q/e/w/s 小写同样生效。
+        var key = e.Key;
+        if (key == Key.System) key = e.SystemKey;
+        if (key == Key.ImeProcessed) key = e.ImeProcessedKey;
+
+        switch (key)
         {
             case Key.Q:
                 _vm.LikeCommand.Execute(null);
@@ -681,24 +686,6 @@ public partial class VideoView : UserControl
         var window = Window.GetWindow(this);
         if (window is null) return;
         window.WindowState = window.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-    }
-
-    private void SendDanmaku_Click(object sender, RoutedEventArgs e)
-    {
-        var text = DanmakuInput.Text.Trim();
-        if (string.IsNullOrWhiteSpace(text) || _vm.Selected is null) return;
-
-        var entry = new DanmakuService.Entry
-        {
-            PostId = _vm.Selected.PostId,
-            Text = text,
-            Time = Media.Position.TotalSeconds,
-            Author = string.IsNullOrWhiteSpace(_settings.Nickname) ? "我" : _settings.Nickname,
-            CreatedAt = DateTimeOffset.Now.ToUnixTimeSeconds(),
-        };
-        _danmaku.Add(entry);
-        ShowDanmakuText(entry.Text, entry.Author);
-        DanmakuInput.Clear();
     }
 
     private void ShowDanmakuText(string text, string author)

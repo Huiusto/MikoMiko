@@ -516,22 +516,36 @@
   function renderMainButton() {
     const g = state.games.find(x => x.key === state.selected) || {};
     const btn = $('btnMain');
-    if (g.running) {
+    const inst = state.install;
+    if (inst && inst.active) {
+      if (inst.cancelling) {
+        btn.textContent = '正在取消安装…';
+        btn.disabled = true;
+      } else {
+        btn.textContent = `${inst.paused ? '继续安装' : '暂停安装'} ${inst.percent}%`;
+        btn.disabled = false;
+      }
+      btn.title = `${inst.stage || ''} ${inst.done || ''} / ${inst.total || ''}`;
+    } else if (g.running) {
       btn.textContent = '游戏启动中';
       btn.disabled = true;
+      btn.title = '';
     } else if (g.located) {
       btn.textContent = '开始游戏';
       btn.disabled = false;
+      btn.title = '';
     } else {
       btn.textContent = '获取游戏';
       btn.disabled = false;
+      btn.title = '';
     }
     $('gameLabel').textContent = `当前游戏：${g.name || ''}`;
     $('hintText').textContent = state.hint || '';
     $('btnLocate').style.display = '';
+    $('btnLocate').textContent = inst && inst.active ? '取消安装并清理' : '定位游戏';
     const pre = $('btnPre');
     pre.classList.toggle('on', !!g.preDownload);
-    pre.disabled = !g.preDownload;
+    pre.disabled = !g.preDownload || !!(inst && inst.active);
     pre.title = g.preDownload
       ? `官方预下载${g.preDownloadVersion ? ' · ' + g.preDownloadVersion : ''}，点击打开米哈游官方预下载`
       : '当前没有官方预下载';
@@ -619,10 +633,16 @@
   $('btnMhyy').onclick = () => send({ type: 'mhyy' });
   $('btnPre').onclick = () => send({ type: 'predownload' });
   $('btnMain').onclick = () => {
+    if (state.install && state.install.active) {
+      return send({ type: 'installPauseToggle' });
+    }
     const game = state.games.find(x => x.key === state.selected);
     return send({ type: game && game.located ? 'start' : 'install' });
   };
-  $('btnLocate').onclick = () => send({ type: 'locate' });
+  $('btnLocate').onclick = () => {
+    if (state.install && state.install.active) return send({ type: 'cancelInstall' });
+    send({ type: 'locate' });
+  };
   document.querySelectorAll('.reserve .card').forEach(c =>
     c.onclick = () => send({ type: 'reserve', url: c.dataset.url }));
 

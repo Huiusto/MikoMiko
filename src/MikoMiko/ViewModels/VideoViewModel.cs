@@ -4,7 +4,6 @@ using MikoMiko.Models;
 using MikoMiko.Services;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Windows.Threading;
 
 namespace MikoMiko.ViewModels;
 
@@ -17,14 +16,10 @@ public sealed partial class VideoViewModel : ObservableObject
     private List<FeedItem> _all = new();
     private readonly HashSet<string> _seen = new();
     private readonly HashSet<string> _batchAuthors = new();
+    private readonly HashSet<string> _batchOfficialVideos = new();
     private readonly VideoAuthorHistory _authorHistory;
     private readonly VideoAuthorHistory _officialHistory;
-    private readonly DispatcherTimer _placeholderTimer;
-    private static readonly string[] DanmakuPlaceholders =
-    {
-        "请输入文本", "MikoMiko", "弹幕输入中", "要不写条弹幕？", "111", "666", "弹幕输入在这里",
-        "好好好", "关注了", "难道说", "米哈游！", "启动！", "怎么说",
-    };
+    private int _downloadTextVersion;
 
     public VideoViewModel(ContentService content, Action<string>? openUser = null, AppSettings? settings = null,
         VideoAuthorHistory? authorHistory = null, VideoAuthorHistory? officialHistory = null)
@@ -35,14 +30,8 @@ public sealed partial class VideoViewModel : ObservableObject
         _authorHistory = authorHistory ?? new VideoAuthorHistory();
         _officialHistory = officialHistory ?? new VideoAuthorHistory(
             Path.Combine(SettingsService.DataDirectory, "video-official-history.json"),
-            TimeSpan.FromHours(5));
-        DanmakuPlaceholder = PickPlaceholder();
-        _placeholderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
-        _placeholderTimer.Tick += (_, _) => DanmakuPlaceholder = PickPlaceholder();
-        _placeholderTimer.Start();
+            TimeSpan.FromHours(2));
     }
-
-    private static string PickPlaceholder() => DanmakuPlaceholders[Random.Shared.Next(DanmakuPlaceholders.Length)];
 
     public ObservableCollection<FeedItem> Videos { get; } = new();
     public ObservableCollection<FeedItem> Related { get; } = new();
@@ -63,7 +52,6 @@ public sealed partial class VideoViewModel : ObservableObject
     [ObservableProperty] private bool _isMuted;
     [ObservableProperty] private double _volume = 60;
     [ObservableProperty] private bool _showDanmaku = true;
-    [ObservableProperty] private string _danmakuText = string.Empty;
     [ObservableProperty] private string _speedText = "倍速";
     [ObservableProperty] private string _filter = string.Empty;
     [ObservableProperty] private string _indexText = string.Empty;
@@ -133,6 +121,7 @@ public sealed partial class VideoViewModel : ObservableObject
         {
             _seen.Clear();
             _batchAuthors.Clear();
+            _batchOfficialVideos.Clear();
             _all.Clear();
             Videos.Clear();
             var fetched = await _content.GetRandomVideosAsync(36, _seen);
@@ -140,22 +129,21 @@ public sealed partial class VideoViewModel : ObservableObject
             {
                 if (!CanPushAuthor(item)) continue;
                 _seen.Add(item.PostId);
-                _batchAuthors.Add(AuthorKeyOf(item));
+                MarkBatch(item);
                 _all.Add(item);
                 Videos.Add(item);
                 if (Videos.Count >= 12) break;
             }
             IsDemo = _content.IsDemo;
 
-            // 36 条候选可能全部来自刚刷过的作者。此时宁可临时放宽作者冷却，也不能让视频页空白。
+            // 36 条候选可能全部来自刚刷过的作者。此时宁可临时放宽冷却，也不能让视频页空白。
             if (Videos.Count == 0)
             {
                 foreach (var item in fetched)
                 {
-                    var key = AuthorKeyOf(item);
-                    if (key.Length > 0 && _batchAuthors.Contains(key)) continue;
+                    if (IsDuplicatedInBatch(item)) continue;
                     _seen.Add(item.PostId);
-                    if (key.Length > 0) _batchAuthors.Add(key);
+                    MarkBatch(item);
                     _all.Add(item);
                     Videos.Add(item);
                     if (Videos.Count >= 12) break;
@@ -190,10 +178,17 @@ public sealed partial class VideoViewModel : ObservableObject
 
     public void Select(FeedItem item)
     {
-        // 真正展示给用户时才写入后台记录：普通作者 2 天、官方账号 5 小时内不再推送。
-        if (item.IsOfficial) _officialHistory.Remember(item.AuthorUid, item.Author);
-        else _authorHistory.Remember(item.AuthorUid, item.Author);
-        _batchAuthors.Add(AuthorKeyOf(item));
+        // 真正展示给用户时才写入后台记录：普通作者 1 天、官方视频 2 小时内不再推送。
+        if (item.IsOfficial)
+        {
+            var videoKey = OfficialVideoKeyOf(item);
+            if (videoKey.Length > 0) _officialHistory.RememberKey(videoKey, item.AuthorUid, item.Author);
+        }
+        else
+        {
+            _authorHistory.Remember(item.AuthorUid, item.Author);
+        }
+        MarkBatch(item);
         Selected = item;
         VideoLikeText = item.LikeText;
         HasSource = !string.IsNullOrWhiteSpace(item.VideoUrl);
@@ -359,15 +354,55 @@ public sealed partial class VideoViewModel : ObservableObject
         _openUser?.Invoke(comment.UserId);
     }
 
-    /// <summary>普通作者 2 天、官方账号 5 小时内只推送一次；同一批次内也不重复。</summary>
+    /// <summary>普通作者 1 天内只推送一次；官方视频按 BV 号 2 小时内只推送一次。</summary>
     private bool CanPushAuthor(FeedItem item)
     {
+        if (item.IsOfficial)
+        {
+            var videoKey = OfficialVideoKeyOf(item);
+            if (videoKey.Length == 0) return true;
+            return !_batchOfficialVideos.Contains(videoKey) && !_officialHistory.IsBlockedKey(videoKey);
+        }
+
         var key = AuthorKeyOf(item);
         if (key.Length == 0) return true;
         if (_batchAuthors.Contains(key)) return false;
-        return item.IsOfficial
-            ? !_officialHistory.IsBlocked(item.AuthorUid, item.Author)
-            : !_authorHistory.IsBlocked(item.AuthorUid, item.Author);
+        return !_authorHistory.IsBlocked(item.AuthorUid, item.Author);
+    }
+
+    private bool IsDuplicatedInBatch(FeedItem item)
+    {
+        if (item.IsOfficial)
+        {
+            var videoKey = OfficialVideoKeyOf(item);
+            return videoKey.Length > 0 && _batchOfficialVideos.Contains(videoKey);
+        }
+
+        var key = AuthorKeyOf(item);
+        return key.Length > 0 && _batchAuthors.Contains(key);
+    }
+
+    private void MarkBatch(FeedItem item)
+    {
+        if (item.IsOfficial)
+        {
+            var videoKey = OfficialVideoKeyOf(item);
+            if (videoKey.Length > 0) _batchOfficialVideos.Add(videoKey);
+            return;
+        }
+
+        var key = AuthorKeyOf(item);
+        if (key.Length > 0) _batchAuthors.Add(key);
+    }
+
+    private static string OfficialVideoKeyOf(FeedItem item)
+    {
+        var bvid = item.Bvid?.Trim() ?? string.Empty;
+        if (bvid.Length > 0) return "bvid:" + bvid;
+        var postId = item.PostId?.Trim() ?? string.Empty;
+        if (postId.Length > 0) return "post:" + postId;
+        var author = AuthorKeyOf(item);
+        return author.Length > 0 ? "official:" + author : string.Empty;
     }
 
     private static string AuthorKeyOf(FeedItem item)
@@ -419,7 +454,7 @@ public sealed partial class VideoViewModel : ObservableObject
         if (Selected is null || IsDownloading) return;
         IsQualityOpen = false;
         IsDownloading = true;
-        DownloadText = "正在准备下载…";
+        _ = ShowDownloadTextAsync("正在准备下载…");
         try
         {
             if (string.IsNullOrWhiteSpace(Selected.VideoUrl))
@@ -428,7 +463,7 @@ public sealed partial class VideoViewModel : ObservableObject
             }
             if (string.IsNullOrWhiteSpace(Selected.VideoUrl))
             {
-                DownloadText = "该视频没有可下载的直链";
+                await ShowDownloadTextAsync("该视频没有可下载的直链");
                 return;
             }
 
@@ -437,20 +472,25 @@ public sealed partial class VideoViewModel : ObservableObject
                 ? $"{Selected.Author}_{Selected.PostId}"
                 : Selected.Title;
             var path = await DownloadService.DownloadAsync(Selected.VideoUrl, directory, name, ".mp4");
-            DownloadText = "下载完成";
-            await Task.Delay(3000);
-            if (DownloadText == "下载完成") DownloadText = string.Empty;
+            await ShowDownloadTextAsync("下载完成");
         }
         catch (Exception ex)
         {
-            DownloadText = "下载失败：" + ex.Message;
-            await Task.Delay(3000);
-            DownloadText = string.Empty;
+            await ShowDownloadTextAsync("下载失败：" + ex.Message);
         }
         finally
         {
             IsDownloading = false;
         }
+    }
+
+    /// <summary>下载过程中的文本提示统一只保留 3 秒，避免遮挡播放器。</summary>
+    private async Task ShowDownloadTextAsync(string text, int seconds = 3)
+    {
+        var version = ++_downloadTextVersion;
+        DownloadText = text;
+        await Task.Delay(TimeSpan.FromSeconds(seconds));
+        if (version == _downloadTextVersion) DownloadText = string.Empty;
     }
 
     [RelayCommand]
@@ -570,7 +610,7 @@ public sealed partial class VideoViewModel : ObservableObject
             {
                 if (_seen.Contains(item.PostId) || !CanPushAuthor(item)) continue;
                 _seen.Add(item.PostId);
-                _batchAuthors.Add(AuthorKeyOf(item));
+                MarkBatch(item);
                 _all.Add(item);
                 Videos.Add(item);
             }

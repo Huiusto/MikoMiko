@@ -74,6 +74,7 @@ public sealed partial class ShellViewModel : ObservableObject
         Navigation.Add(new NavItem("Home", "Nav.Home", "home"));
         Navigation.Add(new NavItem("Launch", "Nav.Launch", "launch"));
         Navigation.Add(new NavItem("Video", "Nav.Video", "video"));
+        Navigation.Add(new NavItem("Anime", "Home.Anime", "anime"));
         Navigation.Add(new NavItem("Moment", "Nav.Moment", "following"));
         Navigation.Add(new NavItem("Gacha", "Nav.Gacha", "gacha"));
         Navigation.Add(new NavItem("Daily", "Nav.Daily", "daily"));
@@ -84,7 +85,6 @@ public sealed partial class ShellViewModel : ObservableObject
         HomeTabs.Add(new TabOption("Recommend", "Home.Recommend"));
         HomeTabs.Add(new TabOption("Posts", "Home.Posts"));
         HomeTabs.Add(new TabOption("Web", "Home.Web"));
-        HomeTabs.Add(new TabOption("Anime", "Home.Anime"));
         HomeTabs[0].IsSelected = true;
 
         Brand = Loc.Instance["Header.Brand"];
@@ -184,23 +184,10 @@ public sealed partial class ShellViewModel : ObservableObject
     private async Task SelectTab(TabOption? tab)
     {
         if (tab is null) return;
-        // 在推荐 / 帖子 / 追番影视之间切换时，任何已打开的帖子阅读器都先自动关闭。
+        // 在推荐 / 帖子 / 网页之间切换时，任何已打开的帖子阅读器都先自动关闭。
         if (IsReaderOpen) CloseReader();
         CloseProfile();
         foreach (var option in HomeTabs) option.IsSelected = option == tab;
-
-        if (tab.Key == "Anime")
-        {
-            CloseWebHub();
-            _home.DeactivatePosts();
-            if (_currentKey != "Home")
-            {
-                Navigate("Home");
-                if (IsAnimePageOpen) return;
-            }
-            ShowAnimePage();
-            return;
-        }
 
         if (tab.Key == "Web")
         {
@@ -247,6 +234,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void ShowAnimePage()
     {
+        // 追剧页是覆盖层。先摘掉底下的页面，避免启动页 / 网页页的 WebView2
+        // 这类原生子窗口盖在 WPF 覆盖层上面，造成页面被透明化。
+        CurrentView = null;
         AnimePage ??= new Views.AnimeHubView(OpenBilibiliInApp);
         IsAnimePageOpen = true;
         ShowGlobalSearch = false;
@@ -391,6 +381,42 @@ public sealed partial class ShellViewModel : ObservableObject
     public void Navigate(string key, bool pushHistory = true)
     {
         PauseAllPlayback();
+
+        // 追剧 / 影视是左侧导航里的独立板块，不再挂在「推荐」页的页签栏上。
+        if (key == "Anime")
+        {
+            if (_currentKey == "Anime")
+            {
+                CloseProfile();
+                ShowAnimePage();
+                return;
+            }
+
+            if (IsReaderOpen) CloseReader();
+            if (IsBrowserOpen) CloseBrowser();
+            if (IsUploadOpen) CloseUpload();
+            CloseProfile();
+            CloseWebHub();
+            if (_currentKey == "Video") VideoPage?.PausePlayback();
+
+            if (!string.IsNullOrEmpty(_currentKey) && pushHistory && _currentKey != "Anime")
+            {
+                _history.Push(_currentKey);
+                CanGoBack = true;
+            }
+
+            _currentKey = "Anime";
+            IsHome = false;
+            foreach (var item in Navigation.Concat(FooterNavigation))
+            {
+                item.IsSelected = item.Key == "Anime";
+            }
+            SelectedNav = Navigation.Concat(FooterNavigation).FirstOrDefault(i => i.IsSelected);
+            ShowAnimePage();
+            _settings.LastPage = "Anime";
+            return;
+        }
+
         if (_currentKey == key)
         {
             CloseProfile();
@@ -398,11 +424,7 @@ public sealed partial class ShellViewModel : ObservableObject
             {
                 if (IsReaderOpen) CloseReader();
                 var tab = HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key;
-                if (tab == "Anime")
-                {
-                    ShowAnimePage();
-                }
-                else if (tab == "Web")
+                if (tab == "Web")
                 {
                     ShowWebHub();
                 }
@@ -456,8 +478,10 @@ public sealed partial class ShellViewModel : ObservableObject
         if (key == "Home")
         {
             var tab = HomeTabs.FirstOrDefault(t => t.IsSelected)?.Key;
-            if (tab == "Anime") ShowAnimePage();
-            else if (tab == "Web") ShowWebHub();
+            if (tab == "Web")
+            {
+                ShowWebHub();
+            }
             else
             {
                 CloseWebHub();

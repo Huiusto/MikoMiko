@@ -53,6 +53,24 @@ public partial class LaunchView : UserControl
     private readonly HashSet<string> _runningGames = new();
     private List<string> _gameOrder = new();
     private Dictionary<string, GameUpdateService.UpdateState> _updateStates = new();
+    private readonly Dictionary<string, InstallJob> _installJobs = new();
+
+    /// <summary>启动页安装任务：配置页关闭后继续在后台下载，按钮原位显示进度。</summary>
+    private sealed class InstallJob
+    {
+        public string GameKey { get; init; } = string.Empty;
+        public string Target { get; init; } = string.Empty;
+        public CancellationTokenSource Cts { get; } = new();
+        public GameInstallService.PauseController Pause { get; } = new();
+        public string Stage { get; set; } = "正在准备安装…";
+        public long Done { get; set; }
+        public long Total { get; set; }
+        public double Speed { get; set; }
+        public bool Cancelling { get; set; }
+        public bool OwnsTarget { get; set; }
+
+        public double Percent => Total > 0 ? Math.Clamp(Done * 100.0 / Total, 0, 100) : 0;
+    }
 
     /// <summary>启动页需要在内置浏览器打开的网址（米哈云游等），由 Shell 接管。</summary>
     public event Action<string>? OpenUrlRequested;
@@ -133,6 +151,13 @@ public partial class LaunchView : UserControl
             MessageBox.Show("启动页初始化失败：" + ex.Message, "MikoMiko",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    /// <summary>安装程序结束时调用：把启动页 HTML、壁纸与图标提前写入用户数据目录。</summary>
+    internal static void PrepareLaunchAssetsForInstall()
+    {
+        Directory.CreateDirectory(SettingsService.DataDirectory);
+        PrepareFiles();
     }
 
     /// <summary>把 HTML、兜底壁纸与游戏图标复制到 WebView2 虚拟目录。</summary>
@@ -317,6 +342,7 @@ public partial class LaunchView : UserControl
             showMhyy = _showMhyy,
             customBackground = custom != null,
             gameInfo,
+            install = InstallStateFor(_selectedKey),
         };
 
         _ = Web.CoreWebView2.ExecuteScriptAsync(
@@ -330,6 +356,212 @@ public partial class LaunchView : UserControl
             $"window.mikoUpdate({JsonSerializer.Serialize(patch)});");
     }
 
+    private object? InstallStateFor(string key)
+    {
+        if (!_installJobs.TryGetValue(key, out var job)) return null;
+        return new
+        {
+            active = true,
+            paused = job.Pause.IsPaused,
+            cancelling = job.Cancelling,
+            percent = Math.Round(job.Percent, 1),
+            stage = job.Stage,
+            done = FormatSize(job.Done),
+            total = FormatSize(job.Total),
+            speed = job.Speed > 0 ? $"{job.Speed / 1024.0 / 1024.0:0.0} MB/s" : string.Empty,
+        };
+    }
+
+    private void PushInstallState(string key)
+    {
+        if (key != _selectedKey) return;
+        PushPatch(new
+        {
+            install = InstallStateFor(key),
+            hint = BuildHint(),
+        });
+    }
+
+    private async Task RunInstallAsync(string key, string name, string target, string language)
+    {
+        if (_installJobs.ContainsKey(key)) return;
+
+        var job = new InstallJob { GameKey = key, Target = target };
+        try
+        {
+            // 安装前目标目录为空时，整个目录都是这次安装新建的，取消可以直接清掉。
+            job.OwnsTarget = !Directory.Exists(target) || !Directory.EnumerateFileSystemEntries(target).Any();
+        }
+        catch
+        {
+            job.OwnsTarget = false;
+        }
+        _installJobs[key] = job;
+        PushInstallState(key);
+        Toast($"已开始安装「{name}」，可在按钮上暂停");
+
+        var progress = new Progress<GameInstallService.Progress>(p =>
+        {
+            var total = p.Total > 0 ? p.Total : p.InstallTotal;
+            var done = p.Done > 0 ? p.Done : p.InstallDone;
+            var stage = string.IsNullOrWhiteSpace(p.Stage) ? job.Stage : p.Stage;
+            if (job.Pause.IsPaused) stage = "已暂停，正在完成当前分块";
+            else if (job.Cancelling) stage = "正在取消安装并清理…";
+
+            job.Stage = stage;
+            job.Done = done;
+            job.Total = total;
+            job.Speed = p.BytesPerSecond;
+            PushInstallState(key);
+        });
+
+        try
+        {
+            var installed = await GameInstallService.InstallAsync(
+                key, target, language, progress, job.Cts.Token, job.Pause);
+            MikoNestBridge.SetLocalGamePath(key, installed);
+            SaveInstalledByApp(key, installed);
+            _updateStates.Remove(key);
+            Toast($"「{name}」安装完成，可以开始游戏了");
+        }
+        catch (OperationCanceledException)
+        {
+            CleanupCancelledInstall(job);
+            Toast("已取消安装，本次写入的文件已清理");
+        }
+        catch (Exception ex)
+        {
+            Toast($"「{name}」安装失败：{ex.Message}");
+        }
+        finally
+        {
+            _installJobs.Remove(key);
+            if (key == _selectedKey) PushState();
+        }
+    }
+
+    private void ToggleInstallPause(string key)
+    {
+        if (!_installJobs.TryGetValue(key, out var job) || job.Cancelling) return;
+        if (job.Pause.IsPaused)
+        {
+            job.Pause.Resume();
+            job.Stage = "继续安装…";
+            Toast("已继续安装");
+        }
+        else
+        {
+            job.Pause.Pause();
+            job.Stage = "已暂停，正在完成当前分块";
+            Toast("安装已暂停");
+        }
+        PushInstallState(key);
+    }
+
+    private void CancelInstall(string key)
+    {
+        if (!_installJobs.TryGetValue(key, out var job) || job.Cancelling) return;
+        job.Cancelling = true;
+        job.Stage = "正在取消安装并清理…";
+        job.Cts.Cancel();
+        job.Pause.Resume();
+        PushInstallState(key);
+        Toast("正在取消安装并清理本次写入的文件");
+    }
+
+    /// <summary>取消安装后收拾目录：本次新建的目录整体删除，原来就有内容的只清空目录壳。</summary>
+    private static void CleanupCancelledInstall(InstallJob job)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(job.Target) || !Directory.Exists(job.Target)) return;
+            if (job.OwnsTarget)
+            {
+                Directory.Delete(job.Target, recursive: true);
+                return;
+            }
+
+            foreach (var dir in Directory.GetDirectories(job.Target, "*", SearchOption.AllDirectories)
+                         .OrderByDescending(path => path.Length))
+            {
+                try
+                {
+                    if (!Directory.EnumerateFileSystemEntries(dir).Any())
+                        Directory.Delete(dir, recursive: false);
+                }
+                catch
+                {
+                    // 被占用的目录留给后续手动清理
+                }
+            }
+        }
+        catch
+        {
+            // 清理失败不覆盖取消结果
+        }
+    }
+
+    private static string InstallRegistryFile =>
+        Path.Combine(SettingsService.DataDirectory, "launch-installed-games.json");
+
+    private static Dictionary<string, string> LoadInstalledByApp()
+    {
+        try
+        {
+            if (!File.Exists(InstallRegistryFile)) return new();
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(
+                       File.ReadAllText(InstallRegistryFile)) ?? new();
+        }
+        catch
+        {
+            return new();
+        }
+    }
+
+    private static void SaveInstalledByApp(string key, string path)
+    {
+        try
+        {
+            var map = LoadInstalledByApp();
+            map[key] = path;
+            Directory.CreateDirectory(SettingsService.DataDirectory);
+            File.WriteAllText(InstallRegistryFile, JsonSerializer.Serialize(map));
+        }
+        catch
+        {
+            // 记录失败不影响游戏启动
+        }
+    }
+
+    private static void RemoveInstalledByApp(string key)
+    {
+        try
+        {
+            var map = LoadInstalledByApp();
+            if (!map.Remove(key)) return;
+            File.WriteAllText(InstallRegistryFile, JsonSerializer.Serialize(map));
+        }
+        catch
+        {
+            // 清理失败不影响卸载流程
+        }
+    }
+
+    private static bool SamePath(string a, string b)
+    {
+        try
+        {
+            return string.Equals(
+                Path.GetFullPath(a).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                Path.GetFullPath(b).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private void Toast(string text)
     {
         if (!_webReady) return;
@@ -338,6 +570,12 @@ public partial class LaunchView : UserControl
 
     private string BuildHint()
     {
+        if (_installJobs.TryGetValue(_selectedKey, out var job))
+        {
+            var detail = $"{job.Stage} {FormatSize(job.Done)} / {FormatSize(job.Total)}";
+            if (job.Speed > 0) detail += $"　{job.Speed / 1024.0 / 1024.0:0.0} MB/s";
+            return job.Cancelling ? "正在取消安装并清理已写入的文件…" : detail;
+        }
         if (_runningGames.Contains(_selectedKey)) return "游戏运行中，退出游戏后按钮会自动恢复。";
         var dir = MikoNestBridge.GetGameDir(_selectedKey);
         if (dir == null) return "未找到本地游戏，点「获取游戏」可直接在 MikoMiko 内安装；安装后也能点「定位游戏」选择已有目录。";
@@ -347,6 +585,20 @@ public partial class LaunchView : UserControl
     }
 
     private bool IsLocated(string key) => MikoNestBridge.FindGameExe(key) != null;
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes <= 0) return "0 B";
+        var units = new[] { "B", "KB", "MB", "GB", "TB" };
+        var value = (double)bytes;
+        var i = 0;
+        while (value >= 1024 && i < units.Length - 1)
+        {
+            value /= 1024;
+            i++;
+        }
+        return $"{value:0.##} {units[i]}";
+    }
 
     private static string FormatFreeSpace(string? dir)
     {
@@ -427,7 +679,16 @@ public partial class LaunchView : UserControl
                     break;
 
                 case "install":
-                    InstallGame();
+                    if (_installJobs.ContainsKey(_selectedKey)) ToggleInstallPause(_selectedKey);
+                    else InstallGame();
+                    break;
+
+                case "installPauseToggle":
+                    ToggleInstallPause(_selectedKey);
+                    break;
+
+                case "cancelInstall":
+                    CancelInstall(_selectedKey);
                     break;
 
                 case "predownload":
@@ -654,9 +915,15 @@ public partial class LaunchView : UserControl
         }
     }
 
-    /// <summary>只调用米哈游启动器的官方卸载入口，不自行删除任何游戏文件。</summary>
+    /// <summary>MikoMiko 直接安装的游戏自行删除并清理；官方启动器安装的游戏仍走官方卸载入口。</summary>
     private void UninstallGame()
     {
+        if (_installJobs.ContainsKey(_selectedKey))
+        {
+            CancelInstall(_selectedKey);
+            return;
+        }
+
         var game = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
         var dir = MikoNestBridge.GetGameDir(_selectedKey);
         if (game == null || string.IsNullOrWhiteSpace(dir))
@@ -665,10 +932,46 @@ public partial class LaunchView : UserControl
             return;
         }
 
-        var answer = MessageBox.Show(
+        var installedByApp = LoadInstalledByApp();
+        var appPath = installedByApp.GetValueOrDefault(_selectedKey);
+        if (!string.IsNullOrWhiteSpace(appPath) && Directory.Exists(appPath) && SamePath(appPath, dir))
+        {
+            var answer = MessageBox.Show(
+                $"将删除由 MikoMiko 安装的「{game.Name}」全部文件：\n{dir}\n\n此操作不可撤销，确定卸载并清理吗？",
+                "卸载并清理", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+            if (answer != MessageBoxResult.Yes) return;
+            try
+            {
+                if (_runningGames.Contains(_selectedKey))
+                {
+                    Toast("游戏仍在运行，请先退出游戏再卸载");
+                    return;
+                }
+                var full = Path.GetFullPath(appPath).TrimEnd(Path.DirectorySeparatorChar);
+                var root = Path.GetPathRoot(full)?.TrimEnd(Path.DirectorySeparatorChar);
+                if (string.IsNullOrWhiteSpace(root) || string.Equals(root, full, StringComparison.OrdinalIgnoreCase))
+                {
+                    Toast("安装目录异常，已停止删除");
+                    return;
+                }
+                Directory.Delete(full, true);
+                RemoveInstalledByApp(_selectedKey);
+                MikoNestBridge.SetLocalGamePath(_selectedKey, string.Empty);
+                _updateStates.Remove(_selectedKey);
+                PushState();
+                Toast($"「{game.Name}」已卸载，安装文件已清理");
+            }
+            catch (Exception ex)
+            {
+                Toast("卸载清理失败：" + ex.Message);
+            }
+            return;
+        }
+
+        var officialAnswer = MessageBox.Show(
             $"将通过米哈游启动器卸载「{game.Name}」。\n这会关闭游戏并删除游戏文件，确定继续吗？",
             "卸载游戏", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-        if (answer != MessageBoxResult.Yes) return;
+        if (officialAnswer != MessageBoxResult.Yes) return;
 
         var launcher = FindLauncher(dir);
         if (launcher is null)
@@ -715,22 +1018,24 @@ public partial class LaunchView : UserControl
 
     private void InstallGame()
     {
-        var game = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
+        var key = _selectedKey;
+        var game = MikoNestBridge.Games.FirstOrDefault(g => g.Key == key);
         if (game == null) return;
-        var dialog = new InstallGameDialog(_selectedKey, game.Name)
+        if (_installJobs.ContainsKey(key))
+        {
+            ToggleInstallPause(key);
+            return;
+        }
+
+        var dialog = new InstallGameDialog(key, game.Name)
         {
             Owner = Window.GetWindow(this),
         };
         if (dialog.ShowDialog() != true) return;
+        if (string.IsNullOrWhiteSpace(dialog.TargetDirectory)) return;
 
-        var path = dialog.InstalledPath;
-        if (!string.IsNullOrWhiteSpace(path) && MikoNestBridge.FindGameExe(_selectedKey) != null)
-        {
-            MikoNestBridge.SetLocalGamePath(_selectedKey, path);
-            _updateStates.Remove(_selectedKey);
-            PushState();
-            Toast("游戏安装完成，可以开始游戏了");
-        }
+        // 配置页已经关闭；实际安装转到启动页按钮的进度状态里继续执行。
+        _ = RunInstallAsync(key, game.Name, dialog.TargetDirectory!, dialog.InstallLanguage);
     }
 
     private void OpenOfficialLauncher(string biz)

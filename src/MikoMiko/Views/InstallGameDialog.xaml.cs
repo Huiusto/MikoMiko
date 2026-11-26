@@ -1,25 +1,20 @@
 using MikoMiko.Services;
 using System;
-using System.ComponentModel;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
 namespace MikoMiko.Views;
 
-/// <summary>软件内安装游戏：选择目录、语言，显示下载/写入进度，支持暂停与取消。</summary>
+/// <summary>软件内安装游戏的配置页：只选择目录与语言，点「开始安装」后立即关闭，进度回到启动页。</summary>
 public partial class InstallGameDialog : Window
 {
     private readonly string _gameKey;
     private readonly string _gameName;
     private string _baseDir;
-    private bool _installing;
-    private CancellationTokenSource? _cts;
-    private GameInstallService.PauseController? _pause;
 
-    public string? InstalledPath { get; private set; }
+    public string? TargetDirectory { get; private set; }
+    public string InstallLanguage { get; private set; } = "zh-cn";
 
     public InstallGameDialog(string gameKey, string gameName)
     {
@@ -127,9 +122,8 @@ public partial class InstallGameDialog : Window
         }
     }
 
-    private async void BtnInstall_Click(object sender, RoutedEventArgs e)
+    private void BtnInstall_Click(object sender, RoutedEventArgs e)
     {
-        if (_installing) return;
         var target = CurrentTarget();
         try
         {
@@ -150,114 +144,20 @@ public partial class InstallGameDialog : Window
             if (answer != MessageBoxResult.Yes) return;
         }
 
-        _installing = true;
-        _cts = new CancellationTokenSource();
-        _pause = new GameInstallService.PauseController();
-        BtnInstall.IsEnabled = false;
-        BtnBrowse.IsEnabled = false;
-        ChkSubFolder.IsEnabled = false;
-        RdoZh.IsEnabled = RdoEn.IsEnabled = RdoJa.IsEnabled = RdoKo.IsEnabled = false;
-        BtnPause.Visibility = Visibility.Visible;
-        BtnPause.Content = "暂停";
-        Bar.Value = 0;
-        TxtProgress.Text = "正在准备…";
-
-        var lang = RdoEn.IsChecked == true ? "en-us"
+        TargetDirectory = target;
+        InstallLanguage = RdoEn.IsChecked == true ? "en-us"
             : RdoJa.IsChecked == true ? "ja-jp"
             : RdoKo.IsChecked == true ? "ko-kr"
             : "zh-cn";
 
-        var progress = new Progress<GameInstallService.Progress>(p =>
-        {
-            var total = p.Total > 0 ? p.Total : p.InstallTotal;
-            var done = p.Done > 0 ? p.Done : p.InstallDone;
-            if (total <= 0) Bar.Value = 0;
-            else Bar.Value = Math.Clamp(done * 100.0 / total, 0, 100);
-
-            var detail = $"{p.Stage}　{FormatSize(done)} / {FormatSize(total)}";
-            if (p.BytesPerSecond > 0) detail += $"　{p.BytesPerSecond / 1024.0 / 1024.0:0.0} MB/s";
-            if (total > 0) detail += $"　{Math.Clamp(done * 100.0 / total, 0, 100):0.0}%";
-            TxtProgress.Text = detail;
-        });
-
-        try
-        {
-            var installed = await GameInstallService.InstallAsync(
-                _gameKey, target, lang, progress, _cts.Token, _pause);
-            InstalledPath = installed;
-            Bar.Value = 100;
-            TxtProgress.Text = "安装完成";
-            MessageBox.Show($"「{_gameName}」已安装完成。", "MikoMiko",
-                MessageBoxButton.OK, MessageBoxImage.Information);
-            _installing = false;
-            DialogResult = true;
-        }
-        catch (OperationCanceledException)
-        {
-            TxtProgress.Text = "安装已取消，已清理本次写入的文件";
-            _installing = false;
-        }
-        catch (Exception ex)
-        {
-            TxtProgress.Text = "安装失败：" + ex.Message;
-            MessageBox.Show("安装失败：" + ex.Message, "MikoMiko",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-            _installing = false;
-        }
-        finally
-        {
-            BtnInstall.IsEnabled = true;
-            BtnBrowse.IsEnabled = true;
-            ChkSubFolder.IsEnabled = true;
-            RdoZh.IsEnabled = RdoEn.IsEnabled = RdoJa.IsEnabled = RdoKo.IsEnabled = true;
-            BtnPause.Visibility = Visibility.Collapsed;
-        }
+        // 配置页立即消失，真正的安装进度改为显示在启动页的「获取游戏」按钮上。
+        DialogResult = true;
     }
 
-    private void BtnPause_Click(object sender, RoutedEventArgs e)
-    {
-        if (_pause == null) return;
-        if (_pause.IsPaused)
-        {
-            _pause.Resume();
-            BtnPause.Content = "暂停";
-            TxtProgress.Text = "已继续安装…";
-        }
-        else
-        {
-            _pause.Pause();
-            BtnPause.Content = "继续";
-            TxtProgress.Text = "已暂停，正在下载的少量分块会先完成";
-        }
-    }
-
-    private void BtnClose_Click(object sender, RoutedEventArgs e)
-    {
-        if (_installing)
-        {
-            var answer = MessageBox.Show("安装正在进行，关闭会取消安装并清理本次写入的文件。确定关闭吗？",
-                "取消安装", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
-            if (answer != MessageBoxResult.Yes) return;
-            _cts?.Cancel();
-            _pause?.Resume();
-            DialogResult = false;
-            return;
-        }
-        DialogResult = false;
-    }
+    private void BtnClose_Click(object sender, RoutedEventArgs e) => DialogResult = false;
 
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.LeftButton == MouseButtonState.Pressed) DragMove();
-    }
-
-    protected override void OnClosing(CancelEventArgs e)
-    {
-        if (_installing)
-        {
-            _cts?.Cancel();
-            _pause?.Resume();
-        }
-        base.OnClosing(e);
     }
 }

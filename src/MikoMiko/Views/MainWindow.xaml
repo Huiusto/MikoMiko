@@ -205,7 +205,7 @@
                             Focusable="False"
                             Visibility="{Binding IsWebHubOpen, Converter={StaticResource BoolToVis}}" />
 
-            <!-- ==================== 追番/影视（首页第三页签，独立模块页） ==================== -->
+            <!-- ==================== 追剧/影视（左侧导航独立板块） ==================== -->
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding AnimePage}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             Focusable="False"

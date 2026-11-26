@@ -254,7 +254,6 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
@@ -268,39 +267,7 @@
                         <TextBlock x:Name="TimeText" Grid.Column="1" Text="00:00 / 00:00" Foreground="#D9FFFFFF"
                                    FontSize="11.5" VerticalAlignment="Center" Margin="4,0,12,0" />
 
-                        <Border Grid.Column="2" Width="300" Height="30" CornerRadius="15" Background="#26FFFFFF"
-                                VerticalAlignment="Center">
-                            <Grid>
-                                <TextBox x:Name="DanmakuInput" Background="Transparent" BorderThickness="0"
-                                         Foreground="White" CaretBrush="White" VerticalContentAlignment="Center"
-                                         FontSize="12" Padding="12,0" />
-                                <TextBlock Text="{Binding DanmakuPlaceholder}"
-                                           Foreground="#80FFFFFF" FontSize="12" VerticalAlignment="Center"
-                                           Margin="12,0,0,0" IsHitTestVisible="False">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Text, ElementName=DanmakuInput}" Value="">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Grid>
-                        </Border>
-
-                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
-                            <Button Content="{Binding [Video.Send], Source={x:Static loc:Loc.Instance}}"
-                                    Style="{StaticResource PlayerBarButton}" Padding="10,4"
-                                    Background="{DynamicResource Brush.Accent}" Foreground="White"
-                                    Click="SendDanmaku_Click" />
-                            <TextBlock Text="弹幕功能仅能自娱自乐。" Foreground="#8CFFFFFF" FontSize="10.5"
-                                       VerticalAlignment="Center" Margin="9,0,0,0" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                             <Button x:Name="QualityButton" Foreground="#E8FFFFFF" Style="{StaticResource PlayerBarButton}"
                                     Command="{Binding ToggleQualityCommand}" ToolTip="清晰度">
                                 <TextBlock Text="{Binding QualityText}" Foreground="#E8FFFFFF" FontSize="12" />

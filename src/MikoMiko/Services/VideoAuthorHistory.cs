@@ -16,13 +16,14 @@ public sealed class VideoAuthorHistory
 
     public VideoAuthorHistory(string? filePath = null, TimeSpan? cooldown = null)
     {
-        _cooldown = cooldown ?? TimeSpan.FromDays(2);
+        _cooldown = cooldown ?? TimeSpan.FromDays(1);
         _filePath = filePath ?? Path.Combine(SettingsService.DataDirectory, "video-author-history.json");
         Load();
     }
 
     private sealed class Entry
     {
+        public string Key { get; set; } = string.Empty;
         public string Uid { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public DateTime ShownAtUtc { get; set; }
@@ -31,8 +32,13 @@ public sealed class VideoAuthorHistory
     /// <summary>作者是否仍在冷却期。空作者不拦截。</summary>
     public bool IsBlocked(string? uid, string? name)
     {
-        var key = KeyOf(uid, name);
-        if (key.Length == 0) return false;
+        return IsBlockedKey(KeyOf(uid, name));
+    }
+
+    /// <summary>按完整键判断是否仍在冷却期，官方视频用 BVID 作为键。</summary>
+    public bool IsBlockedKey(string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return false;
         lock (_gate)
         {
             return _entries.TryGetValue(key, out var entry) && DateTime.UtcNow - entry.ShownAtUtc < _cooldown;
@@ -42,13 +48,19 @@ public sealed class VideoAuthorHistory
     /// <summary>记录一次展示；同名作者也会合并到同一个 key。</summary>
     public void Remember(string? uid, string? name)
     {
-        var key = KeyOf(uid, name);
-        if (key.Length == 0) return;
+        RememberKey(KeyOf(uid, name), uid, name);
+    }
+
+    /// <summary>按完整键记录一次展示。</summary>
+    public void RememberKey(string? key, string? uid = null, string? name = null)
+    {
+        if (string.IsNullOrWhiteSpace(key)) return;
         lock (_gate)
         {
             Prune();
             _entries[key] = new Entry
             {
+                Key = key,
                 Uid = uid?.Trim() ?? string.Empty,
                 Name = name?.Trim() ?? string.Empty,
                 ShownAtUtc = DateTime.UtcNow,
@@ -87,8 +99,10 @@ public sealed class VideoAuthorHistory
             if (list is null) return;
             foreach (var entry in list)
             {
-                var key = KeyOf(entry.Uid, entry.Name);
-                if (key.Length > 0) _entries[key] = entry;
+                var key = string.IsNullOrWhiteSpace(entry.Key) ? KeyOf(entry.Uid, entry.Name) : entry.Key;
+                if (key.Length <= 0) continue;
+                entry.Key = key;
+                _entries[key] = entry;
             }
             Prune();
             Save();
