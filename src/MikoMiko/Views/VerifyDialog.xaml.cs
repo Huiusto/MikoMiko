@@ -18,6 +18,9 @@ public partial class VerifyDialog : Window
     private bool _initialized;
     private string? _validation;
     private string? _challenge;
+    private bool _closing;
+    private readonly TaskCompletionSource<(string? Validation, string? Challenge)> _completion =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public VerifyDialog(HoyoAccount account, string? aigis)
     {
@@ -27,8 +30,9 @@ public partial class VerifyDialog : Window
         TxtAccount.Text = $"账号 {account.DisplayName} 触发了米游社风险验证，验证码已直接在软件内载入";
         PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == System.Windows.Input.Key.Escape) DialogResult = false;
+            if (e.Key == System.Windows.Input.Key.Escape) CloseDialog();
         };
+        Closed += (_, _) => _completion.TrySetResult((_validation, _challenge));
         Loaded += OnLoaded;
     }
 
@@ -38,8 +42,19 @@ public partial class VerifyDialog : Window
         owner ??= Application.Current?.MainWindow;
         var dialog = new VerifyDialog(account, aigis);
         if (owner is not null && owner.IsVisible) dialog.Owner = owner;
-        dialog.ShowDialog();
-        return Task.FromResult((dialog._validation, dialog._challenge));
+        // 不使用模态 ShowDialog：WebView2 在模态窗口内关闭时偶发卡住消息循环，
+        // 改为 Show + TaskCompletionSource，关闭后立即把结果交回任务页。
+        dialog.Show();
+        return dialog._completion.Task;
+    }
+
+    private void CloseDialog()
+    {
+        if (_closing) return;
+        _closing = true;
+        // 先隐藏再关闭，避免极验成功提示层盖住关闭动画、看起来像「卡住」。
+        try { Hide(); } catch { }
+        Close();
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -54,7 +69,7 @@ public partial class VerifyDialog : Window
         if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) DragMove();
     }
 
-    private void Close_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+    private void Close_Click(object sender, RoutedEventArgs e) => CloseDialog();
 
     private async Task ReloadChallengeAsync()
     {
@@ -117,18 +132,14 @@ public partial class VerifyDialog : Window
                 break;
 
             case "close":
-                DialogResult = false;
+                CloseDialog();
                 break;
 
             case "validate":
                 if (string.IsNullOrWhiteSpace(data)) break;
                 _validation = data;
-                // 对齐 MikoNest：拿到极验结果后立刻关闭弹窗，后续校验与重试交回任务页，
-                // 不再在模态窗口里等待接口，也不会出现「验证成功」后画面定格。
-                Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    if (IsLoaded) DialogResult = true;
-                }), System.Windows.Threading.DispatcherPriority.Background);
+                // 拿到极验结果后立刻隐藏并关闭弹窗，后续校验与重试交回任务页。
+                Dispatcher.BeginInvoke(new Action(CloseDialog), System.Windows.Threading.DispatcherPriority.Background);
                 break;
         }
     }
@@ -183,5 +194,5 @@ public partial class VerifyDialog : Window
         return "";
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+    private void Cancel_Click(object sender, RoutedEventArgs e) => CloseDialog();
 }

@@ -209,6 +209,9 @@ public partial class MainWindow : Window
         ResizeMode = ResizeMode.NoResize;
         Topmost = true;
         ApplyMonitorBounds();
+        // 切换 WindowStyle 后 DWM 可能再按旧尺寸布局一次，延后到本次布局完成再覆盖一次。
+        Dispatcher.BeginInvoke(new Action(ApplyMonitorBounds),
+            System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     public void ExitVideoFullscreen()
@@ -254,15 +257,20 @@ public partial class MainWindow : Window
             cbSize = Marshal.SizeOf<MonitorInfo>(),
         };
         if (!GetMonitorInfo(monitor, ref info)) return;
+        // 无边框窗口仍带 1px 非客户区与 DWM 阴影，正好贴在显示器边界时四边会漏出桌面。
+        // 向四周各多铺 FullscreenOverscan 像素，把边框推到屏幕外。
         SetWindowPos(hwnd, HwndTopmost,
-            info.rcMonitor.Left, info.rcMonitor.Top,
-            info.rcMonitor.Right - info.rcMonitor.Left,
-            info.rcMonitor.Bottom - info.rcMonitor.Top,
-            SwpShowWindow);
+            info.rcMonitor.Left - FullscreenOverscan, info.rcMonitor.Top - FullscreenOverscan,
+            info.rcMonitor.Right - info.rcMonitor.Left + FullscreenOverscan * 2,
+            info.rcMonitor.Bottom - info.rcMonitor.Top + FullscreenOverscan * 2,
+            SwpShowWindow | SwpFrameChanged | SwpNoActivate);
     }
 
+    private const int FullscreenOverscan = 10;
     private const int MonitorDefaultToNearest = 2;
     private const uint SwpShowWindow = 0x0040;
+    private const uint SwpFrameChanged = 0x0020;
+    private const uint SwpNoActivate = 0x0010;
     private static readonly IntPtr HwndTopmost = new(-1);
 
     [StructLayout(LayoutKind.Sequential)]

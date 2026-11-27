@@ -152,9 +152,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.52"), "v0.1.52", "MikoMiko 0.1.52",
-                    "· 首页板块排序「最新发布」改为「最新」，启动页安装主按钮显示实时进度\n· 米哈云游与预约游戏补齐跳转链接\n· 视频页支持鼠标控制显隐，空格键暂停/继续\n· 每日任务验证码弹窗精简为极验面板，验证完成自动关闭并修复打卡失败\n· 抽卡页去掉右上角三点菜单，记录区上移并新增游戏图标\n· 我的合集点击外部自动关闭，他人主页显示「TA还没有合集」\n· 缓存管理下载位置移到右侧\n· 启动时自动检查更新并弹出更新提示",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.52.exe", "");
+                    new Version("0.1.53"), "v0.1.53", "MikoMiko 0.1.53",
+                    "· 修复每日任务极验弹窗点击「完成验证」后卡住\n· 修复视频全屏四边仍能看见桌面背景",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.53.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();
