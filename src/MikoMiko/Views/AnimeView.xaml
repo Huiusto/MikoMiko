@@ -174,11 +174,11 @@
                 <Grid Margin="24,0,22,0">
                     <Button Style="{StaticResource GhostButton}" Height="32" Padding="12,0"
                             HorizontalAlignment="Left" VerticalAlignment="Center"
-                            Command="{Binding ShowWatchlistCommand}" ToolTip="查看已追剧的作品">
+                            Command="{Binding ShowWatchlistCommand}" ToolTip="查看已追番的作品">
                         <StackPanel Orientation="Horizontal">
                             <Path Data="M3 1 H11 V15 L7 12 L3 15 Z" Stroke="#4EA4DD" StrokeThickness="1.4"
                                   Width="12" Height="15" Stretch="Uniform" VerticalAlignment="Center" />
-                            <TextBlock Text="我的追剧" FontSize="11" FontWeight="SemiBold" Foreground="#2F86B9"
+                            <TextBlock Text="我的追番" FontSize="11" FontWeight="SemiBold" Foreground="#2F86B9"
                                        Margin="7,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -432,9 +432,9 @@
                             <StackPanel HorizontalAlignment="Center">
                                 <Path Data="M3 1 H11 V15 L7 12 L3 15 Z" Stroke="#7DBFE3"
                                       StrokeThickness="1.4" Width="24" Height="28" Stretch="Uniform" />
-                                <TextBlock Text="还没有追剧作品" FontSize="14" FontWeight="SemiBold" Margin="0,12,0,0"
+                                <TextBlock Text="还没有追番作品" FontSize="14" FontWeight="SemiBold" Margin="0,12,0,0"
                                            HorizontalAlignment="Center" />
-                                <TextBlock Text="打开任意作品，在播放页点击「追剧」就会同步到这里。" FontSize="11.5"
+                                <TextBlock Text="打开任意作品，在播放页点击「追番」就会同步到这里。" FontSize="11.5"
                                            Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,6,0,0"
                                            HorizontalAlignment="Center" />
                                 <Button Content="去挑一部" Style="{StaticResource GhostButton}" Height="32" Padding="16,0"

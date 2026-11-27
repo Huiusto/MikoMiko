@@ -18,8 +18,8 @@ using VerticalAlignment = System.Windows.VerticalAlignment;
 namespace MikoMiko.Views;
 
 /// <summary>
-/// 追剧 / 影视原生目录页：只展示用户指定的哔哩哔哩番剧与官方音乐会，
-/// 点击卡片后交给内置播放器解析直连流，失败时由 Shell 切换站内网页播放。
+/// 追番 / 影视原生目录页：只展示用户指定的哔哩哔哩番剧与官方音乐会，
+/// 点击卡片后交给内置播放器解析直连流；播放失败时直接提示，不跳转到网页。
 /// </summary>
 public partial class AnimeHubView : UserControl
 {
@@ -32,7 +32,6 @@ public partial class AnimeHubView : UserControl
         public Border Card = null!;
         public Border CoverHost = null!;
         public TextBlock Meta = null!;
-        public bool Failed;
     }
 
     private static readonly Entry[] Catalog =
@@ -67,7 +66,6 @@ public partial class AnimeHubView : UserControl
     private Border _bangumiSection = null!;
     private Border _concertSection = null!;
     private string _filter = "all";
-    private int _loadedCount;
     private bool _started;
 
     public AnimeHubView(Action<string, string> playRequested)
@@ -106,8 +104,8 @@ public partial class AnimeHubView : UserControl
 
     private void BuildSections()
     {
-        _bangumiSection = CreateSection("番剧", "TV 动画、特别篇与概念 PV", 7, out _bangumiPanel);
-        _concertSection = CreateSection("音乐会", "官方交响音乐会与年度 LIVE", 10, out _concertPanel);
+        _bangumiSection = CreateSection("番剧", out _bangumiPanel);
+        _concertSection = CreateSection("音乐会", out _concertPanel);
         Sections.Children.Add(_bangumiSection);
         Sections.Children.Add(_concertSection);
 
@@ -120,12 +118,12 @@ public partial class AnimeHubView : UserControl
         }
     }
 
-    private Border CreateSection(string title, string subtitle, int count, out WrapPanel panel)
+    private Border CreateSection(string title, out WrapPanel panel)
     {
         var root = new Border
         {
             Background = Brushes.Transparent,
-            Margin = new Thickness(0, 0, 0, 8),
+            Margin = new Thickness(0, 0, 0, 12),
         };
         var stack = new StackPanel();
         var header = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
@@ -145,28 +143,6 @@ public partial class AnimeHubView : UserControl
             FontWeight = FontWeights.Bold,
             Foreground = (Brush)FindResource("Brush.TextPrimary"),
             VerticalAlignment = VerticalAlignment.Center,
-        });
-        header.Children.Add(new TextBlock
-        {
-            Text = $"  {subtitle}",
-            FontSize = 11,
-            Foreground = (Brush)FindResource("Brush.TextTertiary"),
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 4, 0, 0),
-        });
-        header.Children.Add(new Border
-        {
-            Background = new SolidColorBrush(title == "番剧" ? Color.FromRgb(0xEE, 0xF4, 0xFF) : Color.FromRgb(0xFA, 0xF4, 0xE6)),
-            CornerRadius = new CornerRadius(9),
-            Padding = new Thickness(8, 2, 8, 2),
-            Margin = new Thickness(10, 0, 0, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Child = new TextBlock
-            {
-                Text = $"{count} 部",
-                FontSize = 10,
-                Foreground = new SolidColorBrush(title == "番剧" ? Color.FromRgb(0x52, 0x70, 0x9E) : Color.FromRgb(0x8A, 0x68, 0x2C)),
-            },
         });
         stack.Children.Add(header);
 
@@ -330,11 +306,7 @@ public partial class AnimeHubView : UserControl
                 var brush = info is null ? null : await CreateImageBrushAsync(info.Cover);
                 await Dispatcher.InvokeAsync(() =>
                 {
-                    if (info is null)
-                    {
-                        entry.Failed = true;
-                    }
-                    else
+                    if (info is not null)
                     {
                         if (!string.IsNullOrWhiteSpace(info.Meta)) entry.Meta.Text = info.Meta;
                         if (brush is not null)
@@ -342,14 +314,12 @@ public partial class AnimeHubView : UserControl
                             entry.CoverHost.Background = brush;
                         }
                     }
-                    _loadedCount++;
-                    TxtStatus.Text = $"已载入 {_loadedCount}/{Catalog.Length} 部作品" +
-                                     (entry.Failed ? " · 个别封面暂用占位图" : "");
+                    TxtStatus.Text = "封面加载中…";
                 });
             }
             catch
             {
-                entry.Failed = true;
+                // 单条封面读取失败时保留渐变占位，不影响其他卡片。
             }
             finally
             {
@@ -359,7 +329,7 @@ public partial class AnimeHubView : UserControl
 
         await Task.WhenAll(tasks);
         if (!ct.IsCancellationRequested)
-            TxtStatus.Text = $"共 {Catalog.Length} 部作品 · 点击卡片即可在软件内观看";
+            TxtStatus.Text = "";
     }
 
     private async Task<Brush?> CreateImageBrushAsync(string url)

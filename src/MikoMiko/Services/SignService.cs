@@ -267,7 +267,8 @@ public static class SignService
     }
 
     /// <summary>单角色签到（luna sign，X6 类型 2 DS）</summary>
-    public static async Task<ActionResult> SignRoleAsync(string cookie, GameCheckin game, SignRole role)
+    public static async Task<ActionResult> SignRoleAsync(string cookie, GameCheckin game, SignRole role,
+        string? challenge = null)
     {
         var log = new List<LogLine>();
         if (!game.CheckinEnabled || string.IsNullOrEmpty(game.ActId))
@@ -290,6 +291,7 @@ public static class SignService
             "POST", body, MiHoYoHttp.X6Salt, isSign: false,
             clientType: 2, ua: PcUa, referer: "https://webstatic.mihoyo.com");
         headers["x-rpc-signgame"] = game.Host;
+        if (!string.IsNullOrWhiteSpace(challenge)) headers["x-rpc-challenge"] = challenge;
 
         var api = await MiHoYoHttp.SendWithHeadersAsync("POST", $"{LunaApi}/{game.Host}/sign", body, headers);
         var label = $"{game.Name}-{RegionLabel(role)}-{role.Uid}";
@@ -396,8 +398,59 @@ public static class SignService
         return (snap, null, false);
     }
 
+    /// <summary>极验创建响应：v3 带 challenge，v4 只给 captchaId(gt) 与 risk_type。</summary>
+    public sealed record GeetestChallenge(string Gt, string? Challenge, string? RiskType, bool UseV4);
+
+    /// <summary>
+    /// 创建极验验证（对齐 TeyvatGuide `miscReq.create`，bbs-api misc/api/createVerification）。
+    /// 使用 CookieToken V2 的 X4 签名，返回 gt / challenge / risk_type。
+    /// </summary>
+    public static async Task<(GeetestChallenge? Data, string? Error)> CreateVerificationAsync(string cookie)
+    {
+        var ck = SubCookie(cookie, "cookie_token", "account_id");
+        if (string.IsNullOrEmpty(CookieValue(ck, "cookie_token")))
+            return (null, "账号缺少 cookie_token，无法发起极验验证");
+
+        var query = "is_high=true";
+        var headers = BuildHeader(ck, "GET", query, MiHoYoHttp.X4Salt, isSign: true);
+        // 极验接口走 CookieToken V2 时不带客户端类型，与网页登录态保持一致。
+        headers.Remove("x-rpc-client_type");
+        var api = await MiHoYoHttp.SendWithHeadersAsync(
+            "GET", $"{BbsApi}/misc/api/createVerification?{query}", null, headers);
+        if (api.Retcode != 0 || api.Data is not { } data)
+            return (null, $"{api.Message}（{api.Retcode}）");
+
+        var gt = data.GetProp("gt");
+        if (string.IsNullOrWhiteSpace(gt)) return (null, "极验返回数据缺少 gt");
+        var challenge = data.TryGetProperty("challenge", out var c) ? c.GetString() : null;
+        var risk = data.TryGetProperty("risk_type", out var r) ? r.ToString() : null;
+        var useV4 = data.TryGetProperty("use_v4", out var v) &&
+                    (v.ValueKind == JsonValueKind.True || (v.ValueKind == JsonValueKind.Number && AsInt(v) == 1));
+        return (new GeetestChallenge(gt, challenge, risk, useV4 || string.IsNullOrWhiteSpace(challenge)), null);
+    }
+
+    /// <summary>
+    /// 提交极验结果，换取 `x-rpc-challenge` 值（对齐 TeyvatGuide `miscReq.verify`）。
+    /// </summary>
+    public static async Task<(string? Challenge, string? Error)> VerifyCaptchaAsync(string cookie, string validateJson)
+    {
+        var ck = SubCookie(cookie, "cookie_token", "account_id");
+        var headers = BuildHeader(ck, "POST", validateJson, MiHoYoHttp.X4Salt, isSign: false);
+        headers.Remove("x-rpc-client_type");
+        var api = await MiHoYoHttp.SendWithHeadersAsync(
+            "POST", $"{BbsApi}/misc/api/verifyVerification", validateJson, headers);
+        if (api.Retcode != 0 || api.Data is not { } data)
+            return (null, $"验证未通过：{api.Message}（{api.Retcode}）");
+
+        var challenge = data.TryGetProperty("challenge", out var c) ? c.GetString() : null;
+        return string.IsNullOrWhiteSpace(challenge)
+            ? (null, "验证通过但没有拿到 challenge")
+            : (challenge, null);
+    }
+
     /// <summary>米游社社区打卡（apihub/app/api/signIn，X6 类型 2 DS + 移动端 UA）</summary>
-    public static async Task<ActionResult> BbsCheckInAsync(string cookie, int gid = DefaultGid)
+    public static async Task<ActionResult> BbsCheckInAsync(string cookie, int gid = DefaultGid,
+        string? challenge = null)
     {
         var log = new List<LogLine>();
         if (!HasStoken(cookie))
@@ -409,6 +462,7 @@ public static class SignService
         var body = $"{{\"gids\":{gid}}}";
         var headers = BuildHeader(ck, "POST", body, MiHoYoHttp.X6Salt, isSign: false,
             clientType: 2, ua: MobileUa, referer: "https://app.mihoyo.com");
+        if (!string.IsNullOrWhiteSpace(challenge)) headers["x-rpc-challenge"] = challenge;
         var api = await MiHoYoHttp.SendWithHeadersAsync("POST", $"{BbsApi}/apihub/app/api/signIn", body, headers);
 
         if (api.Retcode == 0)

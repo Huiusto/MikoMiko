@@ -299,26 +299,13 @@ public partial class LaunchView : UserControl
                 video = ToUrl(item.VideoPath),
             });
         }
-        if (officialItems.Count == 0)
-        {
-            var fallback = LauncherBackgroundService.FallbackImage(_selectedKey);
-            if (fallback != null)
-                officialItems.Add(new { id = "fallback", image = ToUrl(fallback), video = (string?)null });
-        }
 
-        var custom = LauncherBackgroundService.LoadCustomBackground(_selectedKey);
-        var items = new List<object>();
-        if (custom != null)
-        {
-            items.Add(new { id = "custom", image = ToUrl(custom), video = (string?)null });
-        }
-        else
-        {
-            items.AddRange(officialItems);
-        }
+        // 启动页只使用官方启动器同步下来的壁纸：没有官方壁纸时留空，
+        // 不再回退到内置占位图，也不读取用户自定义背景。
+        var items = new List<object>(officialItems);
 
-        if (_bgIndex >= officialItems.Count) _bgIndex = Math.Max(0, officialItems.Count - 1);
-        var shownIndex = custom != null ? 0 : _bgIndex;
+        _bgIndex = Math.Clamp(_bgIndex, 0, Math.Max(0, officialItems.Count - 1));
+        var shownIndex = _bgIndex;
 
         var selectedGame = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
         var selectedDir = MikoNestBridge.GetGameDir(_selectedKey);
@@ -360,7 +347,7 @@ public partial class LaunchView : UserControl
             hint = BuildHint(),
             showReserve = _showReserve,
             showMhyy = _showMhyy,
-            customBackground = custom != null,
+            customBackground = false,
             gameInfo,
             install = InstallStateFor(_selectedKey),
         };
@@ -699,7 +686,6 @@ public partial class LaunchView : UserControl
                     break;
 
                 case "officialBg":
-                    LauncherBackgroundService.ClearCustomBackground(_selectedKey);
                     await SelectBackgroundAsync((int)ReadNumber(e.WebMessageAsJson, "index"));
                     break;
 
@@ -739,28 +725,6 @@ public partial class LaunchView : UserControl
                     }
                     break;
                 }
-
-                case "customBg":
-                {
-                    var dlg = new Microsoft.Win32.OpenFileDialog
-                    {
-                        Title = "选择启动页背景图片",
-                        Filter = "图片文件|*.png;*.jpg;*.jpeg;*.webp;*.bmp|所有文件|*.*",
-                    };
-                    if (dlg.ShowDialog() == true)
-                    {
-                        LauncherBackgroundService.SaveCustomBackground(_selectedKey, dlg.FileName);
-                        PushState();
-                        Toast("已更换自定义背景");
-                    }
-                    break;
-                }
-
-                case "restoreBg":
-                    LauncherBackgroundService.ClearCustomBackground(_selectedKey);
-                    PushState();
-                    Toast("已恢复官方壁纸");
-                    break;
 
                 case "moveGame":
                 {

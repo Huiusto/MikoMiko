@@ -588,16 +588,16 @@ public partial class DailyTaskView : UserControl
         var result = await SignService.SignRoleAsync(account.Cookie, game, role);
         if (result.Retcode != 1034) return result;
 
-        AppendLog(new SignLogEntry { Text = $"{game.Name} 触发验证码，已打开软件内安全验证", Level = "WARN" });
-        var completed = VerifyDialog.Show(Window.GetWindow(this), account, result.Aigis);
-        if (!completed)
+        AppendLog(new SignLogEntry { Text = $"{game.Name} 触发验证码，正在软件内直接载入极验", Level = "WARN" });
+        var challenge = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
+        if (string.IsNullOrWhiteSpace(challenge))
         {
             AppendLog(new SignLogEntry { Text = "已取消安全验证，本次签到未完成", Level = "WARN" });
             return result;
         }
 
         AppendLog(new SignLogEntry { Text = "验证完成，正在重试签到…", Level = "INFO" });
-        return await SignService.SignRoleAsync(account.Cookie, game, role);
+        return await SignService.SignRoleAsync(account.Cookie, game, role, challenge);
     }
 
     private async Task<SignService.ActionResult> BbsCheckInWithVerifyAsync(HoyoAccount account, string cookie)
@@ -605,16 +605,16 @@ public partial class DailyTaskView : UserControl
         var result = await SignService.BbsCheckInAsync(cookie);
         if (result.Retcode != 1034) return result;
 
-        AppendLog(new SignLogEntry { Text = "米游社打卡触发验证码，已打开软件内安全验证", Level = "WARN" });
-        var completed = VerifyDialog.Show(Window.GetWindow(this), account, result.Aigis);
-        if (!completed)
+        AppendLog(new SignLogEntry { Text = "米游社打卡触发验证码，正在软件内直接载入极验", Level = "WARN" });
+        var challenge = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
+        if (string.IsNullOrWhiteSpace(challenge))
         {
             AppendLog(new SignLogEntry { Text = "已取消安全验证，本次打卡未完成", Level = "WARN" });
             return result;
         }
 
         AppendLog(new SignLogEntry { Text = "验证完成，正在重试米游社打卡…", Level = "INFO" });
-        return await SignService.BbsCheckInAsync(cookie);
+        return await SignService.BbsCheckInAsync(cookie, challenge: challenge);
     }
 
     private async Task SignOneAsync(RoleRow row)

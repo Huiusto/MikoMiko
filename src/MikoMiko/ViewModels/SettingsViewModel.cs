@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MikoMiko.Localization;
 using MikoMiko.Models;
 using MikoMiko.Services;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
@@ -378,14 +379,68 @@ public sealed partial class SettingsViewModel : ObservableObject
             System.Windows.MessageBoxImage.Information);
         if (result != System.Windows.MessageBoxResult.OK) return;
 
+        var uninstaller = FindUninstaller();
+        if (uninstaller is null)
+        {
+            System.Windows.MessageBox.Show(
+                "没有找到安装版卸载程序。当前可能是开发版或便携版，请直接关闭软件后删除所在目录。",
+                Loc.Instance["S.Uninstall"],
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+            return;
+        }
+
         try
         {
-            Process.Start(new ProcessStartInfo("appwiz.cpl") { UseShellExecute = true });
+            // 先拉起独立卸载进程，再退出主程序；卸载器内部还会兜底结束残留进程，
+            // 这样播放器、WebView2 与托盘窗口都会一起关闭，不会占用待删除的文件。
+            Process.Start(new ProcessStartInfo(uninstaller)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(uninstaller),
+            });
         }
         catch
         {
             Toast = Loc.Instance["Common.Fail"];
+            return;
         }
+
+        System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            System.Windows.Application.Current?.Shutdown();
+            Environment.Exit(0);
+        }));
+    }
+
+    /// <summary>从注册表 InstallDir 或当前运行目录查找安装版卸载程序。</summary>
+    private static string? FindUninstaller()
+    {
+        var candidates = new List<string>();
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\MikoMiko");
+            if (key?.GetValue("InstallDir") is string dir && !string.IsNullOrWhiteSpace(dir))
+                candidates.Add(Path.Combine(dir, "Uninstall.exe"));
+        }
+        catch
+        {
+            // 注册表读取失败时继续尝试当前目录。
+        }
+        candidates.Add(Path.Combine(AppInfo.InstallDirectory, "Uninstall.exe"));
+
+        foreach (var path in candidates)
+        {
+            try
+            {
+                if (File.Exists(path)) return path;
+            }
+            catch
+            {
+                // 单个候选路径无效时继续下一个。
+            }
+        }
+        return null;
     }
 
     [RelayCommand]

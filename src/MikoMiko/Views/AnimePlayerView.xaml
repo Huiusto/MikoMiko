@@ -188,7 +188,7 @@
                                     <Path x:Name="FollowIcon" Data="M3 1 H10 V14 L6.5 11 L3 14 Z"
                                           Stroke="White" StrokeThickness="1.2" Width="10" Height="13"
                                           Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                    <TextBlock x:Name="FollowText" Text="追剧" FontSize="12" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="FollowText" Text="追番" FontSize="12" FontWeight="SemiBold" />
                                 </StackPanel>
                             </Button>
                             <Border Grid.Column="1" Background="#1A2B3A" CornerRadius="18" Padding="14,0"

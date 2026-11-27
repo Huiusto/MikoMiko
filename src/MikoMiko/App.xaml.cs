@@ -148,9 +148,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.43"), "v0.1.43", "MikoMiko 0.1.43",
-                    "· 启动画面改为整张少女探头 MikoMiko 海报\n· 首页、视频缓冲、网页、追番、播放器、动态与帖子详情统一使用加载 GIF\n· 抽卡记录页仿 MikoNest 重做为 262 宽卡池卡、平铺记录行与保底进度条",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.43.exe", "");
+                    new Version("0.1.45"), "v0.1.45", "MikoMiko 0.1.45",
+                    "· 安装时可自选安装位置，升级默认沿用原目录\n· 「追番/影视」排版重做，播放失败直接在软件内提示\n· 每日任务验证码直接在软件内载入极验滑块\n· 切换账号浮层支持一键添加账号，并显示头像与米游社 UID\n· 卸载前自动关闭软件，避免文件占用",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.45.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();
@@ -232,6 +232,7 @@ public partial class App : Application
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
                     : page == "MineQr" ? "Mine"
                     : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
+                    : page == "MineAccount" ? "Mine"
                     : page is "Upload" or "UploadType" or "UploadArticle" ? "Home"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
@@ -396,6 +397,21 @@ public partial class App : Application
                             settingsView.ScrollToSection("AppInfo");
                         }
                     }
+                }
+                if (page == "MineAccount")
+                {
+                    var switchDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+                    switchDelay.Tick += (_, _) =>
+                    {
+                        switchDelay.Stop();
+                        var mine = FindChild<Views.MineView>(MainWindow!);
+                        if (mine?.FindName("BtnSwitchMineAccount") is System.Windows.Controls.Button btn)
+                        {
+                            btn.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                            Log(path, "mine-account-click");
+                        }
+                    };
+                    switchDelay.Start();
                 }
                 if (page is "VideoPlay" or "VideoOptions" or "VideoComments")
                 {

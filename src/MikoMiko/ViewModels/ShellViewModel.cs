@@ -268,7 +268,7 @@ public sealed partial class ShellViewModel : ObservableObject
         if (IsHome && _views.TryGetValue("Home", out var homeView)) CurrentView = homeView;
     }
 
-    /// <summary>Flutter 模块点击选集后，先尝试提取直连流；取不到就转站内网页播放。</summary>
+    /// <summary>Flutter 模块点击选集后尝试提取直连流；失败时直接提示，不跳网页。</summary>
     private async void OpenAnimeFromRule(AnimeItem item, bool anime4K)
     {
         if (item is null) return;
@@ -281,7 +281,6 @@ public sealed partial class ShellViewModel : ObservableObject
         try
         {
             var resolve = _animeStreams.ResolveAsync(item, timeoutSource.Token);
-            // 部分站点会直接掐断 .NET 请求，不能让用户干等 18 秒，6 秒拿不到就走网页播放。
             var first = await Task.WhenAny(resolve, Task.Delay(TimeSpan.FromSeconds(6)));
             if (first == resolve)
             {
@@ -303,32 +302,7 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        ShowAnimeSitePlayer(item, pageUrl);
-    }
-
-    /// <summary>直连流播放器报错时，切到同一集的站点网页播放。</summary>
-    private void ShowAnimeSiteFromPlayback(AnimePlayback playback, string pageUrl)
-    {
-        try
-        {
-            CloseAnimePlayer();
-            CloseAnimeSitePlayer();
-            AnimePage?.Suspend();
-            IsAnimePageOpen = false;
-            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
-                pageUrl,
-                playback.Referer,
-                playback.Title,
-                playback.Episode,
-                playback.Source,
-                CloseAnimeSitePlayer);
-            IsAnimeSitePlayerOpen = true;
-        }
-        catch
-        {
-            AnimePage?.Resume();
-            IsAnimePageOpen = true;
-        }
+        AnimePage?.ShowToast($"播放失败：《{item.Title}》暂时无法获取视频流");
     }
 
     /// <summary>哔哩哔哩番剧/视频：解析官方直连流后在软件内播放，选集、弹幕与评论一并载入。</summary>
@@ -349,48 +323,12 @@ public sealed partial class ShellViewModel : ObservableObject
 
         if (playback is null || string.IsNullOrWhiteSpace(playback.StreamUrl))
         {
-            // 版权/地区限制拿不到直连流时，改在软件内 WebView2 打开哔哩哔哩官方播放页，仍然不跳出软件。
-            AnimePage?.ShowToast("直连取流失败，已切换为软件内网页播放");
-            ShowAnimeSitePlayer(new AnimeItem
-            {
-                Title = title,
-                Url = url,
-                PlayUrl = url,
-                Source = "哔哩哔哩",
-                Note = "软件内网页播放",
-                Kind = "番剧",
-            }, url);
+            // 版权/地区限制或直连流不可用时直接提示失败，不再打开网页播放器。
+            AnimePage?.ShowToast($"播放失败：《{title}》暂时无法获取视频流");
             return;
         }
         ShowAnimePlayer(playback);
         AnimePage?.ShowToast($"已在软件内缓冲《{playback.Title}》");
-    }
-
-    /// <summary>直连流不可用时，用软件内 WebView2 打开站点播放页。</summary>
-    private void ShowAnimeSitePlayer(AnimeItem item, string pageUrl)
-    {
-        if (string.IsNullOrWhiteSpace(pageUrl)) return;
-        try
-        {
-            CloseAnimePlayer();
-            CloseAnimeSitePlayer();
-            AnimePage?.Suspend();
-            IsAnimePageOpen = false;
-            AnimeSitePlayerView = new Views.AnimeSitePlayerView(
-                pageUrl,
-                item.Url,
-                item.Title,
-                item.Note,
-                item.Source,
-                CloseAnimeSitePlayer);
-            IsAnimeSitePlayerOpen = true;
-        }
-        catch (Exception ex)
-        {
-            AnimePage?.Resume();
-            IsAnimePageOpen = true;
-            AnimePage?.ShowToast("网页播放器打开失败：" + ex.Message);
-        }
     }
 
     public void Navigate(string key, bool pushHistory = true)
@@ -711,7 +649,11 @@ public sealed partial class ShellViewModel : ObservableObject
         AnimePlayerView = new Views.AnimePlayerView(playback,
             playback.IsBilibili ? Array.Empty<AnimeProvider>() : _anime.Providers,
             _animeFollows, _animeDanmaku, CloseAnimePlayer, anime4K,
-            url => ShowAnimeSiteFromPlayback(playback, url));
+            _ =>
+            {
+                CloseAnimePlayer();
+                AnimePage?.ShowToast($"播放失败：《{playback.Title}》暂时无法播放");
+            });
         // WebView2 是原生子窗口，会盖在 WPF 内容之上；播放时必须先隐藏 Flutter 宿主。
         AnimePage?.Suspend();
         IsAnimePageOpen = false;

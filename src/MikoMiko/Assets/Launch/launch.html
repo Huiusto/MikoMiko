@@ -380,19 +380,9 @@
         <label class="check"><input type="checkbox" id="chkMhyy"> 显示「米哈云游」按钮</label>
       </div>
       <div class="divider"></div>
-      <div class="gs-section">启动页背景</div>
+      <div class="gs-section">官方启动器壁纸</div>
       <div class="kv"><div class="key">当前背景</div><div class="val" id="gsBg">官方壁纸</div></div>
       <div class="bg-grid" id="gsBgGrid"></div>
-      <div class="gs-actions" style="margin-top:14px">
-        <button class="gs-btn" id="gsCustomBg">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.7"/><path d="M4.5 17l5-5 4 4 3-2.6 3 3.1"/></svg>
-          自定义背景
-        </button>
-        <button class="gs-btn" id="gsRestoreBg">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v5h5"/><path d="M5 9.8A7.6 7.6 0 1 1 4.8 14"/></svg>
-          恢复官方壁纸
-        </button>
-      </div>
       <div class="gs-actions">
         <button class="gs-btn" id="gsOpenDir">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.2c0-1 .8-1.8 1.8-1.8h4l2 2.2h7.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8H5.3c-1 0-1.8-.8-1.8-1.8Z"/><path d="M3.8 10.4h16.4"/></svg>
@@ -521,7 +511,7 @@
   function renderDots() {
     const box = $('dots');
     box.innerHTML = '';
-    box.style.display = state.customBackground ? 'none' : '';
+    box.style.display = '';
     const list = state.backgrounds || [];
     for (let i = 0; i < list.length; i++) {
       const d = document.createElement('div');
@@ -667,7 +657,7 @@
     list.forEach((item, i) => {
       if (!item || !item.image) return;
       const cell = document.createElement('div');
-      cell.className = 'bg-item' + (!state.customBackground && i === (state.officialIndex || 0) ? ' on' : '');
+      cell.className = 'bg-item' + (i === (state.officialIndex || 0) ? ' on' : '');
       const img = document.createElement('img');
       img.src = item.image;
       img.alt = '';
@@ -693,11 +683,14 @@
     $('chkReserve').checked = state.showReserve !== false;
     $('chkMhyy').checked = state.showMhyy !== false;
     const officialIndex = state.officialIndex || 0;
-    $('gsBg').textContent = state.customBackground
-      ? '自定义背景（已启用）'
-      : `官方壁纸 · 第 ${officialIndex + 1} 张`;
-    $('gsRestoreBg').disabled = !state.customBackground;
+    $('gsBg').textContent = listLength()
+      ? `官方壁纸 · 第 ${officialIndex + 1} 张`
+      : '暂无官方壁纸，正在同步…';
     renderBgGrid();
+  }
+
+  function listLength() {
+    return (state.officialBackgrounds || []).filter(i => i && i.image).length;
   }
 
   function openSettings() {
@@ -784,8 +777,6 @@
   $('gsOpenDir').onclick = () => send({ type: 'openDir' });
   $('gsRelocate').onclick = () => send({ type: 'locate' });
   $('gsUninstall').onclick = () => send({ type: 'uninstall' });
-  $('gsCustomBg').onclick = () => send({ type: 'customBg' });
-  $('gsRestoreBg').onclick = () => send({ type: 'restoreBg' });
   $('chkReserve').onchange = e => setUiFlag('showReserve', e.target.checked);
   $('chkMhyy').onchange = e => setUiFlag('showMhyy', e.target.checked);
 

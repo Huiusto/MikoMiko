@@ -10,7 +10,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
-    <Version>0.1.43</Version>
+    <Version>0.1.45</Version>
     <Product>MikoMiko</Product>
     <AssemblyTitle>MikoMiko</AssemblyTitle>
     <Company>Huiusto</Company>
@@ -49,6 +49,7 @@
     <Resource Include="Assets\Sections\*.jpg" />
     <Resource Include="Assets\Sections\*.jpeg" />
     <Resource Include="Assets\Sections\*.png" />
+    <Resource Include="Assets\Verify\*.html" />
   </ItemGroup>
 
   <ItemGroup>

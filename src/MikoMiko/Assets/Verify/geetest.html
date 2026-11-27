@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+    background: linear-gradient(160deg, #f7fbff 0%, #edf6ff 55%, #f9fcff 100%);
+    color: #40566b;
+  }
+  .wrap {
+    height: 100%; display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .card {
+    width: 100%; max-width: 360px; min-height: 220px;
+    background: #ffffff;
+    border: 1px solid #dbe9f6;
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(54, 102, 150, .10);
+    padding: 20px 16px 16px;
+    text-align: center;
+  }
+  .title { font-size: 15px; font-weight: 600; color: #2d3e50; }
+  .sub { margin-top: 6px; font-size: 11px; color: #8a9bac; line-height: 1.7; }
+  .stage { margin-top: 18px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+  #geetest { width: 100%; }
+  .loading { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .spinner {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 3px solid #dbeaf9; border-top-color: #4b9cef;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error { color: #b2564b; font-size: 12px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="title">请完成如下极验测试</div>
+    <div class="sub">验证码已在软件内载入，完成后会自动继续任务</div>
+    <div class="stage">
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <div class="sub">正在加载验证码…</div>
+      </div>
+      <div id="geetest" style="display:none"></div>
+    </div>
+  </div>
+</div>
+<script>
+  const DATA = __DATA__;
+
+  function post(type, payload) {
+    const body = Object.assign({ type: type }, payload || {});
+    if (window.chrome && chrome.webview) chrome.webview.postMessage(JSON.stringify(body));
+  }
+
+  function showError(message) {
+    const loading = document.getElementById('loading');
+    loading.className = 'error';
+    loading.innerHTML = message || '验证码加载失败，请取消后重试';
+  }
+
+  function showStage() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('geetest').style.display = 'block';
+    post('ready');
+  }
+
+  function finish(captchaObj, done) {
+    if (done.value) return;
+    done.value = true;
+    let validate = null;
+    try { validate = captchaObj.getValidate(); } catch (e) { validate = null; }
+    if (!validate) {
+      post('close');
+      return;
+    }
+    post('validate', { data: validate });
+  }
+
+  function loadScript(src, readyCheck, onReady, onFail) {
+    if (readyCheck()) { onReady(); return; }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    const timer = setTimeout(() => onFail('验证码 SDK 加载超时，请检查网络'), 10000);
+    script.onload = () => {
+      clearTimeout(timer);
+      if (readyCheck()) onReady(); else onFail('验证码 SDK 初始化失败');
+    };
+    script.onerror = () => {
+      clearTimeout(timer);
+      onFail('验证码 SDK 加载失败，请检查网络');
+    };
+    document.head.appendChild(script);
+  }
+
+  const done = { value: false };
+
+  if (DATA.useV4) {
+    loadScript('https://static.geetest.com/v4/gt4.js',
+      () => typeof initGeetest4 === 'function',
+      () => {
+        initGeetest4({
+          captchaId: DATA.gt,
+          riskType: DATA.riskType || 'slide',
+          product: 'popup',
+          nextWidth: '300px',
+          lang: 'zho',
+          userInfo: JSON.stringify({ session_id: DATA.sessionId || '' }),
+          https: true,
+          protocol: 'https'
+        }, function (captchaObj) {
+          const host = document.getElementById('geetest');
+          host.innerHTML = '';
+          captchaObj.appendTo('#geetest');
+          captchaObj.onReady(showStage);
+          captchaObj.onSuccess(() => finish(captchaObj, done));
+          captchaObj.onClose(() => { if (!done.value) post('close'); });
+        });
+      },
+      showError);
+  } else {
+    loadScript('https://static.geetest.com/static/js/gt.0.4.9.js',
+      () => typeof initGeetest === 'function',
+      () => {
+        initGeetest({
+          gt: DATA.gt,
+          challenge: DATA.challenge,
+          offline: false,
+          new_captcha: true,
+          product: 'custom',
+          area: '#geetest',
+          width: '300px',
+          https: true
+        }, function (captchaObj) {
+          const host = document.getElementById('geetest');
+          host.innerHTML = '';
+          captchaObj.appendTo('#geetest');
+          captchaObj.onReady(showStage);
+          captchaObj.onSuccess(() => finish(captchaObj, done));
+          captchaObj.onClose(() => { if (!done.value) post('close'); });
+        });
+      },
+      showError);
+  }
+</script>
+</body>
+</html>

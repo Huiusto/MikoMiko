@@ -8,122 +8,171 @@ using System.Windows;
 namespace MikoMiko.Views;
 
 /// <summary>
-/// 每日任务 1034 验证弹窗：在软件内嵌 WebView2 打开米游社/通行证验证页面，
-/// 用户完成滑块或短信验证后直接关闭并重试原任务，不再要求跳到手机 App。
+/// 每日任务 1034 验证弹窗：参考 TeyvatGuide 实用脚本页的极验流程，
+/// 在软件内直接创建极验验证并显示滑块，验证成功后拿到 challenge 交给签到接口重试。
 /// </summary>
 public partial class VerifyDialog : Window
 {
     private readonly HoyoAccount _account;
-    private readonly string _url;
+    private readonly string? _aigis;
     private bool _initialized;
+    private string? _challenge;
 
     public VerifyDialog(HoyoAccount account, string? aigis)
     {
         InitializeComponent();
         _account = account;
-        _url = BuildVerifyUrl(aigis);
-        TxtAccount.Text = $"账号 {account.DisplayName} 触发了米游社风险验证，请在下方完成验证";
+        _aigis = aigis;
+        TxtAccount.Text = $"账号 {account.DisplayName} 触发了米游社风险验证，验证码已直接在软件内载入";
         Loaded += OnLoaded;
     }
 
-    public static bool Show(Window? owner, HoyoAccount account, string? aigis = null)
+    public static Task<string?> ShowAsync(Window? owner, HoyoAccount account, string? aigis = null)
     {
         owner ??= Application.Current?.MainWindow;
         var dialog = new VerifyDialog(account, aigis);
         if (owner is not null && owner.IsVisible) dialog.Owner = owner;
-        return dialog.ShowDialog() == true;
+        dialog.ShowDialog();
+        return Task.FromResult(dialog._challenge);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (_initialized) return;
         _initialized = true;
+        await ReloadChallengeAsync();
+    }
+
+    private async Task ReloadChallengeAsync()
+    {
+        LoadingPanel.Visibility = Visibility.Visible;
+        TxtLoading.Text = "正在向米游社申请极验验证…";
         try
         {
+            var (create, error) = await SignService.CreateVerificationAsync(_account.Cookie);
+            if (create is null)
+            {
+                TxtLoading.Text = "申请验证码失败：" + (error ?? "未知错误");
+                return;
+            }
+
             var dataDir = Path.Combine(SettingsService.CacheDirectory, "webview-verify");
             Directory.CreateDirectory(dataDir);
-            var environment = await CoreWebView2Environment.CreateAsync(null, dataDir);
-            await Web.EnsureCoreWebView2Async(environment);
-            InjectCookies();
-            Web.CoreWebView2.NavigationCompleted += (_, _) => LoadingPanel.Visibility = Visibility.Collapsed;
-            Web.CoreWebView2.NewWindowRequested += (_, args) =>
+            if (Web.CoreWebView2 is null)
             {
-                args.Handled = true;
-                Web.CoreWebView2.Navigate(args.Uri);
-            };
-            Web.CoreWebView2.Navigate(_url);
+                var environment = await CoreWebView2Environment.CreateAsync(null, dataDir);
+                await Web.EnsureCoreWebView2Async(environment);
+                var core = Web.CoreWebView2;
+                if (core is null) throw new InvalidOperationException("WebView2 初始化失败");
+                core.WebMessageReceived += OnWebMessageReceived;
+                core.NewWindowRequested += (_, args) => args.Handled = true;
+            }
+
+            var html = BuildHtml(create);
+            LoadingPanel.Visibility = Visibility.Collapsed;
+            Web.NavigateToString(html);
         }
         catch (Exception ex)
         {
-            LoadingPanel.Visibility = Visibility.Collapsed;
-            TxtAccount.Text = "验证页面初始化失败：" + ex.Message;
+            TxtLoading.Text = "验证码初始化失败：" + ex.Message;
         }
     }
 
-    private void InjectCookies()
+    private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        var raw = _account.Cookie;
-        if (string.IsNullOrWhiteSpace(raw) || Web.CoreWebView2 is null) return;
-
-        foreach (var part in raw.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        string? type = null;
+        string? data = null;
+        try
         {
-            var split = part.IndexOf('=');
-            if (split <= 0) continue;
-            var name = part[..split].Trim();
-            var value = part[(split + 1)..].Trim();
-            if (name.Length == 0 || value.Length == 0) continue;
-            foreach (var domain in new[]
-                     {
-                         ".miyoushe.com", "www.miyoushe.com", ".user.miyoushe.com",
-                         ".mihoyo.com", "user.mihoyo.com", ".webstatic.mihoyo.com",
-                     })
-            {
-                try
-                {
-                    var cookie = Web.CoreWebView2.CookieManager.CreateCookie(name, value, domain, "/");
-                    cookie.IsHttpOnly = false;
-                    cookie.IsSecure = true;
-                    Web.CoreWebView2.CookieManager.AddOrUpdateCookie(cookie);
-                }
-                catch
-                {
-                    // 单个域写入失败不影响其他域。
-                }
-            }
+            var raw = e.WebMessageAsJson;
+            using var doc = JsonDocument.Parse(raw);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("type", out var t)) type = t.GetString();
+            if (root.TryGetProperty("data", out var d))
+                data = d.ValueKind == JsonValueKind.String ? d.GetString() : d.GetRawText();
         }
-    }
-
-    private static string BuildVerifyUrl(string? aigis)
-    {
-        if (!string.IsNullOrWhiteSpace(aigis))
+        catch
         {
-            try
-            {
-                using var doc = JsonDocument.Parse(aigis);
-                var root = doc.RootElement;
-                var gt = root.TryGetProperty("gt", out var g) ? g.GetString() : null;
-                var challenge = root.TryGetProperty("challenge", out var c) ? c.GetString() : null;
-                if (!string.IsNullOrWhiteSpace(gt) && !string.IsNullOrWhiteSpace(challenge))
+            return;
+        }
+
+        switch (type)
+        {
+            case "ready":
+                LoadingPanel.Visibility = Visibility.Collapsed;
+                break;
+
+            case "close":
+                DialogResult = false;
+                break;
+
+            case "validate":
+                if (string.IsNullOrWhiteSpace(data)) break;
+                TxtLoading.Text = "正在提交验证结果…";
+                LoadingPanel.Visibility = Visibility.Visible;
+                var (challenge, error) = await SignService.VerifyCaptchaAsync(_account.Cookie, data);
+                if (!string.IsNullOrWhiteSpace(challenge))
                 {
-                    return "https://webstatic.mihoyo.com/bbs/event/e2021/verify/index.html" +
-                           $"?gt={Uri.EscapeDataString(gt)}&challenge={Uri.EscapeDataString(challenge)}&lang=zh-cn";
+                    _challenge = challenge;
+                    DialogResult = true;
+                    break;
                 }
-            }
-            catch
+                TxtLoading.Text = error ?? "验证未通过，请重试";
+                LoadingPanel.Visibility = Visibility.Visible;
+                await ReloadChallengeAsync();
+                break;
+        }
+    }
+
+    private string BuildHtml(SignService.GeetestChallenge create)
+    {
+        var sessionId = ReadSessionId(_aigis);
+        var payload = JsonSerializer.Serialize(new
+        {
+            gt = create.Gt,
+            challenge = create.Challenge,
+            riskType = create.RiskType ?? "slide",
+            useV4 = create.UseV4,
+            sessionId,
+        });
+
+        try
+        {
+            var uri = new Uri("pack://application:,,,/Assets/Verify/geetest.html");
+            var info = Application.GetResourceStream(uri);
+            if (info is not null)
             {
-                // 非 JSON 或字段缺失时走米游社验证中心。
+                using var reader = new StreamReader(info.Stream);
+                return reader.ReadToEnd().Replace("__DATA__", payload);
             }
         }
-        return "https://user.mihoyo.com/";
+        catch
+        {
+            // 资源读取失败时走下方提示页。
+        }
+
+        return "<html><body style=\"font-family:sans-serif;padding:24px;color:#b2564b\">" +
+               "验证码页面资源缺失，请重新安装软件。</body></html>";
     }
 
-    private void Done_Click(object sender, RoutedEventArgs e)
+    private static string ReadSessionId(string? aigis)
     {
-        DialogResult = true;
+        if (string.IsNullOrWhiteSpace(aigis)) return "";
+        try
+        {
+            using var doc = JsonDocument.Parse(aigis);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("session_id", out var s) && s.ValueKind == JsonValueKind.String)
+                return s.GetString() ?? "";
+            if (root.TryGetProperty("sessionId", out var s2) && s2.ValueKind == JsonValueKind.String)
+                return s2.GetString() ?? "";
+        }
+        catch
+        {
+            // aigis 不是 JSON 时忽略，v4 用空 session_id 也能继续。
+        }
+        return "";
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e)
-    {
-        DialogResult = false;
-    }
+    private void Cancel_Click(object sender, RoutedEventArgs e) => DialogResult = false;
 }

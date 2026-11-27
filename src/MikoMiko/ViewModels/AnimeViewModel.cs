@@ -398,7 +398,7 @@ public sealed partial class AnimeViewModel : ObservableObject
         IsMorePage = false;
         IsHomeMode = false;
         IsWatchlistPage = true;
-        SectionTitle = "我的追剧";
+        SectionTitle = "我的追番";
         StatusText = string.Empty;
         RefreshWatchlist();
         WatchlistCountText = $"共 {Watchlist.Count} 部";

@@ -6,7 +6,7 @@ SetCompressor /SOLID lzma
 !include "FileFunc.nsh"
 
 !define APP_NAME "MikoMiko"
-!define APP_VERSION "0.1.43"
+!define APP_VERSION "0.1.45"
 !define APP_EXE "MikoMiko.exe"
 !define APP_PUBLISHER "MikoMiko Contributors"
 !define APP_URL "https://github.com/Huiusto/MikoMiko"
@@ -18,7 +18,7 @@ InstallDir "$LOCALAPPDATA\Programs\MikoMiko"
 InstallDirRegKey HKCU "Software\MikoMiko" "InstallDir"
 RequestExecutionLevel user
 
-VIProductVersion "0.1.43.0"
+VIProductVersion "0.1.45.0"
 VIAddVersionKey /LANG=2052 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=2052 "CompanyName" "${APP_PUBLISHER}"
 VIAddVersionKey /LANG=2052 "FileDescription" "${APP_NAME} 安装程序"
@@ -51,7 +51,10 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "MIT License"
 !define MUI_UNFINISHPAGE_TEXT "MikoMiko 已从这台电脑移除。$\r$\n$\r$\n谢谢你曾经让它陪你一段时间。"
 
 !insertmacro MUI_PAGE_WELCOME
-; 更新时直接沿用注册表中已有的 InstallDir，不再让用户选择安装位置。
+; 允许用户自选安装位置；升级时目录页会默认带出注册表里上一次的 InstallDir。
+!define MUI_DIRECTORYPAGE_TEXT_TOP "选择 MikoMiko 的安装位置。升级安装时会默认沿用上一次的目录，也可以改到其他磁盘。"
+!define MUI_DIRECTORYPAGE_TEXT_DESTINATION "安装到："
+!insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 
@@ -107,6 +110,9 @@ Section "MikoMiko 主程序" SecMain
 SectionEnd
 
 Section "Uninstall"
+  ; 软件内点「卸载」会先退出主程序；这里再兜底结束残留进程，确保程序文件不被占用。
+  nsExec::Exec 'taskkill /IM "${APP_EXE}" /F'
+  Sleep 1200
   Delete "$DESKTOP\MikoMiko.lnk"
   RMDir /r "$SMPROGRAMS\MikoMiko"
 

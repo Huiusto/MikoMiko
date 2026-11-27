@@ -501,19 +501,19 @@ public partial class AnimePlayerView : UserControl
     {
         if (_playback.CatalogItem is null)
         {
-            SwitchStatus.Text = "缺少作品信息，暂时无法加入追剧。";
+            SwitchStatus.Text = "缺少作品信息，暂时无法加入追番。";
             return;
         }
 
         var following = _follows.Toggle(_playback);
         UpdateFollowState();
-        SwitchStatus.Text = following ? "已同步到「我的追剧」" : "已从「我的追剧」移除";
+        SwitchStatus.Text = following ? "已同步到「我的追番」" : "已从「我的追番」移除";
     }
 
     private void UpdateFollowState()
     {
         _isFollowing = _follows.Contains(_playback.CatalogItem?.Url);
-        FollowText.Text = _isFollowing ? "已追剧" : "追剧";
+        FollowText.Text = _isFollowing ? "已追番" : "追番";
         FollowButton.Background = new SolidColorBrush(_isFollowing
             ? Color.FromRgb(0xDF, 0xF2, 0xFE)
             : Color.FromRgb(0x2F, 0x86, 0xB9));
