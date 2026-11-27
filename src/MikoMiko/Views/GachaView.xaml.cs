@@ -10,6 +10,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using MikoMiko.Models;
 using MikoMiko.Services;
 using Button = System.Windows.Controls.Button;
 using Brushes = System.Windows.Media.Brushes;
@@ -223,11 +224,20 @@ public partial class GachaView : UserControl
         };
         TxtSubtitle.Text = $"本地库 {_records.Count:N0} 条 · {label} {gameRecords.Count:N0} 条";
         TxtDataDir.Text = "数据目录：" + MikoNestBridge.DataDir;
+        TxtUid.Text = _uid.Length == 0 ? "UID —" : $"UID {_uid}";
+        TxtSidebarStats.Text = $"{gameRecords.Count:N0} 条";
+        TxtSummarySub.Text = gameRecords.Count == 0
+            ? $"{label} · 暂无记录"
+            : $"{label} · 最近 {gameRecords.Max(r => ParseTime(r.Time)):yyyy/MM/dd HH:mm}";
+        var activeAccount = HoyoAccountService.Active;
+        TxtAccount.Text = activeAccount is null
+            ? "未登录米游社 · 仅能读取游戏缓存"
+            : $"米游社：{activeAccount.Nickname}（{activeAccount.Uid}）";
         TxtStatus.Text = _records.Count == 0
-            ? "本地库为空 · 等待从 MikoNest 同步记录"
+            ? "本地库为空 · 点击「更新记录」从游戏缓存或账号拉取"
             : gameRecords.Count == 0
-                ? $"UID {(_uid.Length == 0 ? "—" : _uid)} 暂无{label}记录"
-                : $"UID {_uid} · {label} {gameRecords.Count:N0} 条 · 最近 {gameRecords.Max(r => ParseTime(r.Time)):yyyy/MM/dd HH:mm}";
+                ? $"UID {(_uid.Length == 0 ? "—" : _uid)} 暂无{label}记录，可点击「更新记录」"
+                : $"UID {_uid} · {label} {gameRecords.Count:N0} 条 · 已同步";
 
         var stats = new List<(PoolDef Def, PoolStat Stat)>();
         var matched = new HashSet<GachaRecord>();
@@ -245,6 +255,8 @@ public partial class GachaView : UserControl
 
         var totalPulls = stats.Sum(p => p.Stat.Total);
         var topPulls = stats.Sum(p => p.Stat.TopCount);
+        BuildSummary(stats, totalPulls, topPulls);
+        BuildChart(stats);
 
         PoolGrid.Children.Clear();
         PoolGrid.ColumnDefinitions.Clear();
@@ -257,6 +269,168 @@ public partial class GachaView : UserControl
             Grid.SetColumn(card, i);
             PoolGrid.Children.Add(card);
         }
+    }
+
+    private void BuildSummary(List<(PoolDef Def, PoolStat Stat)> stats, int totalPulls, int topPulls)
+    {
+        SummaryPanel.Children.Clear();
+        var topLabel = $"{TopRank}★";
+        var secondLabel = $"{TopRank - 1}★";
+        var thirdLabel = $"{TopRank - 2}★";
+        var topAverage = topPulls > 0 ? totalPulls / (double)topPulls : 0;
+        var limitedTop = stats
+            .Where(p => p.Stat.Name.Contains("活动") || p.Stat.Name.Contains("限定") ||
+                        p.Stat.Name.Contains("独家") || p.Stat.Name.Contains("角色") ||
+                        p.Stat.Name.Contains("武器") || p.Stat.Name.Contains("联动") ||
+                        p.Stat.Name.Contains("扩充") || p.Stat.Name.Contains("精准"))
+            .Sum(p => p.Stat.TopCount);
+        var secondTotal = stats.Sum(p => p.Stat.SecondCount);
+        var thirdTotal = stats.Sum(p => p.Stat.ThirdCount);
+
+        AddSummaryRow($"{topLabel} 平均", topPulls > 0 ? $"{topAverage:0.0}" : "—", "抽", "#E4BB72");
+        AddSummaryRow($"{topLabel} 统计", topPulls.ToString(), $"{Rate(topPulls, totalPulls)}", "#E4BB72");
+        AddSummaryRow("UP 出货", limitedTop.ToString(), "限定卡池", "#E9A23B");
+        AddSummaryRow($"{secondLabel} 统计", secondTotal.ToString(), $"{Rate(secondTotal, totalPulls)}", "#B18AE0");
+        AddSummaryRow($"{thirdLabel} 统计", thirdTotal.ToString(), $"{Rate(thirdTotal, totalPulls)}", "#7E96AF");
+
+        var totalLine = new Border
+        {
+            Margin = new Thickness(0, 10, 0, 0),
+            Padding = new Thickness(0, 9, 0, 0),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x27, 0x33, 0x41)),
+            BorderThickness = new Thickness(0, 1, 0, 0),
+            Child = new TextBlock
+            {
+                Text = $"共 {totalPulls:N0} 抽",
+                FontSize = 10,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x78, 0x89, 0x9B)),
+            },
+        };
+        SummaryPanel.Children.Add(totalLine);
+    }
+
+    private static string Rate(int part, int total) => total > 0 ? $"{part * 100d / total:0.0}%" : "—";
+
+    private void AddSummaryRow(string label, string value, string hint, string colorText)
+    {
+        var color = (Color)System.Windows.Media.ColorConverter.ConvertFromString(colorText);
+        var grid = new Grid { Margin = new Thickness(0, 5, 0, 5) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var text = new TextBlock
+        {
+            Text = label,
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0xAD, 0xBD)),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        grid.Children.Add(text);
+        var right = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        right.Children.Add(new TextBlock
+        {
+            Text = value,
+            FontSize = 16,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = new SolidColorBrush(color),
+            VerticalAlignment = VerticalAlignment.Center,
+        });
+        right.Children.Add(new TextBlock
+        {
+            Text = hint,
+            FontSize = 9,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x72, 0x84, 0x96)),
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(5, 0, 0, 2),
+        });
+        Grid.SetColumn(right, 1);
+        grid.Children.Add(right);
+        SummaryPanel.Children.Add(grid);
+    }
+
+    private void BuildChart(List<(PoolDef Def, PoolStat Stat)> stats)
+    {
+        ChartPanel.Children.Clear();
+        var gold = Color.FromRgb(0xE0, 0xB1, 0x5C);
+        var purple = Color.FromRgb(0xA9, 0x82, 0xD6);
+
+        ChartPanel.Children.Add(new TextBlock
+        {
+            Text = $"{TopRank}★ 分段",
+            FontSize = 10,
+            Foreground = new SolidColorBrush(gold),
+            Margin = new Thickness(0, 2, 0, 5),
+        });
+        var tops = stats.SelectMany(p => p.Stat.TopRows).Select(r => r.Pity).ToList();
+        ChartPanel.Children.Add(BuildPityStrip(tops, PityTarget, gold));
+
+        ChartPanel.Children.Add(new TextBlock
+        {
+            Text = $"{TopRank - 1}★ 分段",
+            FontSize = 10,
+            Foreground = new SolidColorBrush(purple),
+            Margin = new Thickness(0, 12, 0, 5),
+        });
+        var seconds = stats.SelectMany(p => p.Stat.SecondRows).Select(r => r.Pity).ToList();
+        ChartPanel.Children.Add(BuildPityStrip(seconds, 10, purple));
+
+        ChartPanel.Children.Add(new TextBlock
+        {
+            Text = "分段条宽 = 该区间出货次数；悬停查看具体数量。",
+            FontSize = 9,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x77, 0x88)),
+            Margin = new Thickness(0, 9, 0, 0),
+            TextWrapping = TextWrapping.Wrap,
+        });
+    }
+
+    private static Grid BuildPityStrip(List<int> values, int max, Color color)
+    {
+        const int buckets = 10;
+        var counts = new int[buckets];
+        foreach (var value in values)
+        {
+            var index = max <= 0 ? 0 : Math.Clamp(value * buckets / (max + 1), 0, buckets - 1);
+            counts[index]++;
+        }
+        var total = values.Count;
+        var grid = new Grid { Height = 13 };
+        for (var i = 0; i < buckets; i++)
+        {
+            var count = counts[i];
+            grid.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = new GridLength(Math.Max(count, 0.25), GridUnitType.Star),
+            });
+            var start = i * max / buckets + 1;
+            var end = (i + 1) * max / buckets;
+            var bar = new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(
+                    count == 0 ? (byte)0x2A : (byte)0xD8, color.R, color.G, color.B)),
+                CornerRadius = new CornerRadius(3),
+                Margin = new Thickness(1, 0, 1, 0),
+                ToolTip = $"{start}-{end} 抽：{count} 次",
+            };
+            Grid.SetColumn(bar, i);
+            grid.Children.Add(bar);
+        }
+        if (total == 0)
+        {
+            var empty = new TextBlock
+            {
+                Text = "暂无出货记录",
+                FontSize = 9.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x62, 0x73, 0x84)),
+            };
+            var host = new Grid();
+            host.Children.Add(grid);
+            host.Children.Add(empty);
+            Grid.SetColumn(empty, 0);
+            var wrapper = new Grid();
+            wrapper.Children.Add(host);
+            return wrapper;
+        }
+        return grid;
     }
 
     /// <summary>与 MikoNest 抽卡页一致：每列固定 262，横向滚动。</summary>
@@ -329,26 +503,26 @@ public partial class GachaView : UserControl
     {
         var accent = _game switch
         {
-            "starrail" => Color.FromRgb(0x7C, 0x86, 0xD9),
-            "zzz" => Color.FromRgb(0xE0, 0xA9, 0x3B),
-            "bh3" => Color.FromRgb(0xC7, 0x7D, 0xDB),
-            "genshin_beyond" => Color.FromRgb(0xD9, 0xA9, 0x3C),
-            _ => Color.FromRgb(0x56, 0xB3, 0xD6),
+            "starrail" => Color.FromRgb(0x8C, 0x96, 0xE6),
+            "zzz" => Color.FromRgb(0xE0, 0xB0, 0x48),
+            "bh3" => Color.FromRgb(0xD0, 0x8C, 0xE4),
+            "genshin_beyond" => Color.FromRgb(0xE0, 0xB0, 0x48),
+            _ => Color.FromRgb(0x74, 0xC4, 0xE2),
         };
-        var topColor = Color.FromRgb(0xD9, 0xA2, 0x4A);
-        var secondColor = Color.FromRgb(0xA4, 0x7B, 0xD0);
-        var thirdColor = Color.FromRgb(0x7C, 0x93, 0xB0);
+        var topColor = Color.FromRgb(0xE0, 0xB1, 0x5C);
+        var secondColor = Color.FromRgb(0xA9, 0x82, 0xD6);
+        var thirdColor = Color.FromRgb(0x86, 0x9C, 0xB3);
         var topLabel = $"{TopRank}★";
         var secondLabel = $"{TopRank - 1}★";
         var thirdLabel = $"{TopRank - 2}★";
 
         var card = new Border
         {
-            Margin = new Thickness(0, 0, 10, 0),
-            CornerRadius = new CornerRadius(16),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0xE2, 0xE9, 0xF1)),
+            Margin = new Thickness(0, 0, 12, 0),
+            CornerRadius = new CornerRadius(14),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x27, 0x34, 0x42)),
             BorderThickness = new Thickness(1),
-            Background = Brushes.White,
+            Background = new SolidColorBrush(Color.FromRgb(0x11, 0x18, 0x21)),
             Padding = new Thickness(0),
         };
 
@@ -398,7 +572,7 @@ public partial class GachaView : UserControl
             Text = stat.Name,
             FontSize = 15,
             FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x2A, 0x2F, 0x36)),
+            Foreground = new SolidColorBrush(Color.FromRgb(0xEC, 0xF3, 0xF9)),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
@@ -408,7 +582,7 @@ public partial class GachaView : UserControl
         {
             Text = stat.Total.ToString(),
             FontSize = 15,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x5B, 0x63, 0x6D)),
+            Foreground = new SolidColorBrush(Color.FromRgb(0xA8, 0xB8, 0xC8)),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 0, 0),
         };
@@ -424,7 +598,7 @@ public partial class GachaView : UserControl
         {
             Text = period,
             FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x9B, 0xA3, 0xAD)),
+            Foreground = new SolidColorBrush(Color.FromRgb(0x75, 0x87, 0x99)),
             Margin = new Thickness(0, 5, 0, 0),
         };
         Grid.SetRow(periodText, 1);
@@ -452,16 +626,16 @@ public partial class GachaView : UserControl
         segmented.Children.Add(new Border
         {
             CornerRadius = new CornerRadius(7),
-            Background = new SolidColorBrush(Color.FromRgb(0xF3, 0xF7, 0xFB)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0xDD, 0xE7, 0xF0)),
+            Background = new SolidColorBrush(Color.FromRgb(0x0D, 0x14, 0x1D)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x27, 0x34, 0x42)),
             BorderThickness = new Thickness(1),
         });
         var topBtn = new Button
         {
             Content = topLabel,
-            Background = topSelected ? Brushes.White : Brushes.Transparent,
+            Background = topSelected ? new SolidColorBrush(Color.FromRgb(0x1B, 0x27, 0x34)) : Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Foreground = topSelected ? new SolidColorBrush(Color.FromRgb(0x2B, 0x8B, 0xC8)) : (Brush)FindResource("Brush.TextTertiary"),
+            Foreground = topSelected ? new SolidColorBrush(topColor) : (Brush)new SolidColorBrush(Color.FromRgb(0x6D, 0x7E, 0x90)),
             FontWeight = topSelected ? FontWeights.SemiBold : FontWeights.Normal,
             FontSize = 11,
             Cursor = Cursors.Hand,
@@ -479,9 +653,9 @@ public partial class GachaView : UserControl
         var secondBtn = new Button
         {
             Content = secondLabel,
-            Background = !topSelected ? Brushes.White : Brushes.Transparent,
+            Background = !topSelected ? new SolidColorBrush(Color.FromRgb(0x1B, 0x27, 0x34)) : Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Foreground = !topSelected ? new SolidColorBrush(secondColor) : (Brush)FindResource("Brush.TextTertiary"),
+            Foreground = !topSelected ? new SolidColorBrush(secondColor) : new SolidColorBrush(Color.FromRgb(0x6D, 0x7E, 0x90)),
             FontWeight = !topSelected ? FontWeights.SemiBold : FontWeights.Normal,
             FontSize = 11,
             Cursor = Cursors.Hand,
@@ -514,7 +688,7 @@ public partial class GachaView : UserControl
             {
                 Text = "暂无记录",
                 FontSize = 11.5,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x9B, 0xA3, 0xAD)),
+                Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x77, 0x88)),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 30, 0, 0),
             });
@@ -536,19 +710,19 @@ public partial class GachaView : UserControl
 
     private Border BuildRecordRow((string Name, int Pity, DateTime Time) row, bool topSelected, bool limited)
     {
-        var rankColor = topSelected ? Color.FromRgb(0xD9, 0xA2, 0x4A) : Color.FromRgb(0xA4, 0x7B, 0xD0);
+        var rankColor = topSelected ? Color.FromRgb(0xE0, 0xB1, 0x5C) : Color.FromRgb(0xA9, 0x82, 0xD6);
         var pityColor = PityColor(row.Pity, topSelected ? PityTarget : 10, topSelected);
         var wrap = new StackPanel { Margin = new Thickness(0, 0, 0, 2) };
 
         // 平铺记录行：高 32，行底 rank 软色，无独立卡片
         var rowBorder = new Border
         {
-            Height = 32,
-            CornerRadius = new CornerRadius(6),
+            Height = 34,
+            CornerRadius = new CornerRadius(7),
             Padding = new Thickness(6, 0, 8, 0),
             Background = new SolidColorBrush(topSelected
-                ? Color.FromArgb(0x26, 0xD9, 0xA2, 0x4A)
-                : Color.FromArgb(0x1F, 0xA4, 0x7B, 0xD0)),
+                ? Color.FromArgb(0x24, 0xE0, 0xB1, 0x5C)
+                : Color.FromArgb(0x20, 0xA9, 0x82, 0xD6)),
         };
         var line = new Grid();
         line.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -562,8 +736,10 @@ public partial class GachaView : UserControl
             {
                 Width = 26,
                 Height = 26,
-                CornerRadius = new CornerRadius(7),
-                Background = new LinearGradientBrush(rankColor, Colors.White, new Point(0, 0), new Point(0, 1)),
+                CornerRadius = new CornerRadius(13),
+                Background = new SolidColorBrush(Color.FromArgb(0x38, rankColor.R, rankColor.G, rankColor.B)),
+                BorderBrush = new SolidColorBrush(Color.FromArgb(0x99, rankColor.R, rankColor.G, rankColor.B)),
+                BorderThickness = new Thickness(1),
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 7, 0),
                 Child = new TextBlock
@@ -588,7 +764,7 @@ public partial class GachaView : UserControl
         {
             Text = row.Name,
             FontSize = 12,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x2A, 0x33, 0x3D)),
+            Foreground = new SolidColorBrush(Color.FromRgb(0xDF, 0xE9, 0xF2)),
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
         };
@@ -731,7 +907,7 @@ public partial class GachaView : UserControl
 
     private void DisplayOption_Changed(object sender, RoutedEventArgs e)
     {
-        if (PoolGrid is null) return;
+        if (PoolGrid is null || ChkShow4 is null || ChkShowIcon is null) return;
         _show4 = ChkShow4.IsChecked != false;
         _showIcon = ChkShowIcon.IsChecked != false;
         Render();
@@ -766,10 +942,86 @@ public partial class GachaView : UserControl
         Render();
     }
 
-    private void BtnUpdate_Click(object sender, RoutedEventArgs e)
+    private bool _updating;
+
+    private async void BtnUpdate_Click(object sender, RoutedEventArgs e)
     {
-        ReloadData();
-        ShowToast($"已同步离线抽卡库，共 {_records.Count:N0} 条记录");
+        if (_updating) return;
+        var gameKey = CurrentBaseGame;
+        var gameLabel = Games.FirstOrDefault(g => g.Key == gameKey)?.Name ?? gameKey;
+        var uid = _uid;
+        var account = HoyoAccountService.Active;
+        var roleList = new List<SignRole>();
+        var cookie = account?.Cookie ?? "";
+        var biz = gameKey switch
+        {
+            "starrail" => "hkrpg_cn",
+            "zzz" => "nap_cn",
+            "bh3" => "bh3_cn",
+            _ => "hk4e_cn",
+        };
+
+        _updating = true;
+        BtnUpdate.IsEnabled = false;
+        TxtStatus.Text = $"正在读取 {gameLabel} 抽卡记录…";
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(cookie))
+            {
+                var roles = await SignService.GetRolesAsync(cookie, biz);
+                roleList = roles.roles;
+                if (string.IsNullOrWhiteSpace(uid))
+                {
+                    var role = roleList.FirstOrDefault();
+                    if (role is not null) uid = role.Uid;
+                }
+            }
+            if (string.IsNullOrWhiteSpace(uid))
+            {
+                ShowToast("请先登录米游社，或在游戏内打开一次抽卡记录页面");
+                return;
+            }
+
+            var roleInfo = roleList.FirstOrDefault(r => r.Uid == uid);
+            var region = roleInfo?.Region ?? (gameKey switch
+            {
+                "genshin" => "cn_gf01",
+                "starrail" => "prod_gf_cn",
+                "zzz" => "prod_gf_cn",
+                _ => "prod_gf_cn",
+            });
+
+            var resolved = await GachaFetchService.ResolveUrlAsync(gameKey, cookie, uid, region,
+                string.IsNullOrWhiteSpace(cookie));
+            if (resolved.Url is null)
+            {
+                ShowToast("获取抽卡链接失败：" + resolved.Message);
+                TxtStatus.Text = resolved.Message;
+                return;
+            }
+
+            TxtStatus.Text = $"{resolved.Message}，正在拉取 {gameLabel} 记录…";
+            var fetched = await GachaFetchService.FetchAllAsync(gameKey, uid, resolved.Url, CancellationToken.None);
+            var added = GachaFetchService.MergeRecords(fetched.Records);
+            _uid = uid;
+            ReloadData();
+            if (fetched.Records.Count == 0)
+                ShowToast(fetched.Message);
+            else
+                ShowToast(added > 0
+                    ? $"已更新 {gameLabel} {fetched.Records.Count:N0} 条记录（新增 {added:N0} 条）"
+                    : $"已更新 {gameLabel} {fetched.Records.Count:N0} 条记录，没有新增");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("更新失败：" + ex.Message);
+            TxtStatus.Text = "更新失败：" + ex.Message;
+        }
+        finally
+        {
+            _updating = false;
+            BtnUpdate.IsEnabled = true;
+        }
     }
 
     private void BtnMore_Click(object sender, RoutedEventArgs e)

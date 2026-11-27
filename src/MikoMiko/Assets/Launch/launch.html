@@ -476,10 +476,17 @@
     const url = item ? item.image : null;
 
     if (url) {
-      if (bgImage.getAttribute('src') !== url) bgImage.src = url;
       bgImage.classList.remove('hide');
-    } else {
-      bgImage.removeAttribute('src');
+      if (bgImage.getAttribute('src') !== url) {
+        // 先解码新图再替换，避免切换壁纸时中间出现一整块黑屏。
+        const next = new Image();
+        next.onload = () => {
+          bgImage.src = url;
+          bgImage.classList.remove('hide');
+        };
+        next.src = url;
+      }
+    } else if (!bgImage.getAttribute('src')) {
       bgImage.classList.add('hide');
     }
 
@@ -719,8 +726,29 @@
     $('saving').classList.toggle('on', !!state.preparing);
   }
 
-  window.mikoInit = function (json) {
-    state = typeof json === 'string' ? JSON.parse(json) : json;
+  // 页面被切回前台时，WebView2 可能保留黑色视频帧或未重绘的合成层，强制重建背景。
+  window.mikoRepaintBackground = function () {
+    if (!state) return;
+    render();
+    const item = curBg();
+    if (!item) return;
+    if (item.image) {
+      const bust = item.image + (item.image.includes('?') ? '&' : '?') + '_r=' + Date.now();
+      bgImage.classList.remove('hide');
+      bgImage.src = bust;
+    }
+    if (item.video && !state.paused) {
+      try { bgVideo.load(); } catch (e) {}
+      const p = bgVideo.play();
+      if (p && p.catch) p.catch(() => {});
+    }
+  };
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) window.mikoRepaintBackground();
+  });
+
+  window.mikoInit = function (json) {    state = typeof json === 'string' ? JSON.parse(json) : json;
     if (!state.backgrounds) state.backgrounds = [];
     if (typeof state.index !== 'number') state.index = 0;
     applyAccent(state.accent);

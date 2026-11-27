@@ -59,6 +59,7 @@ public partial class AnimeHubView : UserControl
     private static readonly HttpClient Http = CreateHttpClient();
     private readonly Action<string, string> _playRequested;
     private readonly BilibiliAnimeService _bilibili = new();
+    private readonly AnimeFollowService? _follows;
     private readonly DispatcherTimer _toastTimer;
     private CancellationTokenSource? _cts;
     private WrapPanel _bangumiPanel = null!;
@@ -66,12 +67,16 @@ public partial class AnimeHubView : UserControl
     private Border _bangumiSection = null!;
     private Border _concertSection = null!;
     private string _filter = "all";
+    private string _query = "";
+    private bool _followMode;
     private bool _started;
 
-    public AnimeHubView(Action<string, string> playRequested)
+    public AnimeHubView(Action<string, string> playRequested, AnimeFollowService? follows = null)
     {
         InitializeComponent();
         _playRequested = playRequested;
+        _follows = follows;
+        if (_follows is not null) _follows.Changed += OnFollowsChanged;
         _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.2) };
         _toastTimer.Tick += (_, _) =>
         {
@@ -81,7 +86,11 @@ public partial class AnimeHubView : UserControl
         BuildSections();
         ApplyFilter("all");
         Loaded += OnLoaded;
-        Unloaded += (_, _) => _cts?.Cancel();
+        Unloaded += (_, _) =>
+        {
+            _cts?.Cancel();
+            if (_follows is not null) _follows.Changed -= OnFollowsChanged;
+        };
     }
 
     private static HttpClient CreateHttpClient()
@@ -360,7 +369,50 @@ public partial class AnimeHubView : UserControl
 
     private void Filter_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: string key }) ApplyFilter(key);
+        if (sender is Button { Tag: string key })
+        {
+            _followMode = false;
+            BtnFollowed.Background = new SolidColorBrush(Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF));
+            BtnFollowed.Foreground = new SolidColorBrush(Color.FromRgb(0x24, 0x38, 0x4F));
+            BtnFollowed.BorderBrush = new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+            ContentScroll.Visibility = Visibility.Visible;
+            FollowScroll.Visibility = Visibility.Collapsed;
+            ApplyFilter(key);
+            ContentScroll.ScrollToTop();
+        }
+    }
+
+    private void Followed_Click(object sender, RoutedEventArgs e)
+    {
+        _followMode = !_followMode;
+        BtnFollowed.Background = new SolidColorBrush(_followMode
+            ? Color.FromRgb(0x4B, 0x7B, 0xC8)
+            : Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF));
+        BtnFollowed.Foreground = _followMode ? Brushes.White : new SolidColorBrush(Color.FromRgb(0x24, 0x38, 0x4F));
+        BtnFollowed.BorderBrush = new SolidColorBrush(_followMode
+            ? Color.FromRgb(0x4B, 0x7B, 0xC8)
+            : Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+        ContentScroll.Visibility = _followMode ? Visibility.Collapsed : Visibility.Visible;
+        FollowScroll.Visibility = _followMode ? Visibility.Visible : Visibility.Collapsed;
+        if (_followMode) BuildFollowed();
+        else ApplyFilter(_filter);
+        if (_followMode) FollowScroll.ScrollToTop();
+        else ContentScroll.ScrollToTop();
+    }
+
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        _query = SearchBox.Text.Trim();
+        SearchPlaceholder.Visibility = _query.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        BtnClearSearch.Visibility = _query.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
+        if (_followMode) BuildFollowed();
+        else ApplyCardVisibility();
+    }
+
+    private void ClearSearch_Click(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Text = "";
+        SearchBox.Focus();
     }
 
     private void ApplyFilter(string key)
@@ -371,12 +423,62 @@ public partial class AnimeHubView : UserControl
         foreach (var button in new[] { BtnAll, BtnBangumi, BtnConcert })
         {
             var selected = (string)button.Tag == key;
-            button.Background = new SolidColorBrush(selected ? Color.FromRgb(0x4B, 0x7B, 0xC8) : Colors.White);
-            button.Foreground = selected ? Brushes.White : (Brush)FindResource("Brush.TextSecondary");
-            button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.Normal;
-            button.BorderBrush = new SolidColorBrush(selected ? Color.FromRgb(0x4B, 0x7B, 0xC8) : Color.FromRgb(0xDC, 0xE8, 0xF3));
+            button.Background = new SolidColorBrush(selected ? Color.FromRgb(0x4B, 0x7B, 0xC8) : Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF));
+            button.Foreground = selected ? Brushes.White : new SolidColorBrush(Color.FromRgb(0x24, 0x38, 0x4F));
+            button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.SemiBold;
+            button.BorderBrush = new SolidColorBrush(selected ? Color.FromRgb(0x4B, 0x7B, 0xC8) : Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
         }
+        ApplyCardVisibility();
         ContentScroll.ScrollToTop();
+    }
+
+    private void ApplyCardVisibility()
+    {
+        foreach (var entry in Catalog)
+        {
+            var matches = _query.Length == 0 ||
+                          entry.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
+                          entry.Note.Contains(_query, StringComparison.OrdinalIgnoreCase);
+            entry.Card.Visibility = matches ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private async Task ApplyFollowPosterAsync(Entry entry, string url)
+    {
+        var brush = await CreateImageBrushAsync(url);
+        if (brush is not null) entry.CoverHost.Background = brush;
+    }
+
+    private void OnFollowsChanged()
+    {
+        if (_followMode) Dispatcher.BeginInvoke(new Action(BuildFollowed));
+    }
+
+    private void BuildFollowed()
+    {
+        if (_follows is null) return;
+        FollowPanel.Children.Clear();
+        var items = _follows.Items.Where(i => _query.Length == 0 ||
+                                             i.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
+                                             i.Note.Contains(_query, StringComparison.OrdinalIgnoreCase)).ToList();
+        foreach (var item in items)
+        {
+            var entry = new Entry
+            {
+                Title = item.Title,
+                Url = string.IsNullOrWhiteSpace(item.PlayUrl) ? item.Url : item.PlayUrl,
+                Kind = item.Kind,
+                Note = string.IsNullOrWhiteSpace(item.Note) ? item.Source : item.Note,
+            };
+            var card = BuildCard(entry);
+            if (!string.IsNullOrWhiteSpace(item.Poster))
+                _ = ApplyFollowPosterAsync(entry, item.Poster);
+            FollowPanel.Children.Add(card);
+        }
+        FollowEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        FollowEmpty.Text = _query.Length == 0
+            ? "还没有追番作品。打开任意作品，在播放页点击「追番」就会同步到这里。"
+            : $"没有找到与「{_query}」相关的追番作品。";
     }
 
     public void ShowToast(string text)

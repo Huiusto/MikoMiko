@@ -37,6 +37,8 @@ public partial class AnimePlayerView : UserControl
     private bool _disposed;
     private bool _anime4K;
     private bool _fallbackRequested;
+    private bool _windowFullscreen;
+    private GridLength _detailWidthBeforeFullscreen = new(400);
 
     public AnimePlayerView(AnimePlayback playback, IReadOnlyList<AnimeProvider> providers,
         AnimeFollowService follows, AnimeDanmakuService danmaku, Action? closeRequested = null,
@@ -60,6 +62,11 @@ public partial class AnimePlayerView : UserControl
         InitializeProviderList();
         InitializeSources();
         UpdateFollowState();
+        Unloaded += (_, _) =>
+        {
+            if (_windowFullscreen && Window.GetWindow(this) is MainWindow window)
+                window.ExitVideoFullscreen();
+        };
     }
 
     public Action? CloseRequested { get; set; }
@@ -386,6 +393,8 @@ public partial class AnimePlayerView : UserControl
             var root = doc.RootElement;
             var type = root.TryGetProperty("type", out var typeNode) ? typeNode.GetString() : null;
             if (type == "playerError") RequestWebFallback();
+            else if (type == "fullscreen") ToggleWindowFullscreen();
+            else if (type == "exitFullscreen" && _windowFullscreen) ToggleWindowFullscreen();
         }
         catch
         {
@@ -497,6 +506,28 @@ public partial class AnimePlayerView : UserControl
         }
     }
 
+    private void ToggleWindowFullscreen()
+    {
+        if (Window.GetWindow(this) is not MainWindow window) return;
+        if (!_windowFullscreen)
+        {
+            _windowFullscreen = true;
+            _detailWidthBeforeFullscreen = PlayerDetailColumn.Width;
+            PlayerDetailColumn.Width = new GridLength(0);
+            PlayerTopRow.Height = new GridLength(0);
+            window.EnterVideoFullscreen();
+            _ = Web.CoreWebView2?.ExecuteScriptAsync("window.mikoSetFullscreen && window.mikoSetFullscreen(true)");
+        }
+        else
+        {
+            _windowFullscreen = false;
+            window.ExitVideoFullscreen();
+            PlayerTopRow.Height = new GridLength(52);
+            PlayerDetailColumn.Width = _detailWidthBeforeFullscreen;
+            _ = Web.CoreWebView2?.ExecuteScriptAsync("window.mikoSetFullscreen && window.mikoSetFullscreen(false)");
+        }
+    }
+
     private void Follow_Click(object sender, RoutedEventArgs e)
     {
         if (_playback.CatalogItem is null)
@@ -594,6 +625,13 @@ public partial class AnimePlayerView : UserControl
             border:1px solid rgba(126,196,242,.25); pointer-events:none; }
   #caption { position:absolute; left:18px; top:16px; color:rgba(232,245,255,.66);
              font:12px "Microsoft YaHei UI", sans-serif; text-shadow:0 1px 4px #000; pointer-events:none; }
+  #fsFloat { position:absolute; right:18px; bottom:18px; z-index:25; width:46px; height:46px;
+             border:1px solid rgba(170,216,244,.42); border-radius:15px; cursor:pointer;
+             background:linear-gradient(160deg, rgba(26,46,64,.86), rgba(8,16,25,.9));
+             color:#E8F5FF; display:flex; align-items:center; justify-content:center;
+             box-shadow:0 6px 20px rgba(0,0,0,.35); transition:background .18s, transform .18s; }
+  #fsFloat:hover { background:rgba(78,164,221,.55); transform:translateY(-1px); }
+  #fsFloat svg { width:24px; height:24px; stroke:#E8F5FF; stroke-width:2; fill:none; }
 </style>
 </head>
 <body>
@@ -608,6 +646,9 @@ public partial class AnimePlayerView : UserControl
     <button id="muteBtn" type="button">静音</button>
     <button id="fullBtn" type="button">全屏</button>
   </div>
+  <button id="fsFloat" type="button" title="全屏播放">
+    <svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
+  </button>
   <div id="caption">{{title}} · {{episode}}</div>
   <div id="status">正在连接视频流…</div>
 </div>
@@ -628,6 +669,7 @@ public partial class AnimePlayerView : UserControl
   const seekBar = document.getElementById('seekBar');
   const muteBtn = document.getElementById('muteBtn');
   const fullBtn = document.getElementById('fullBtn');
+  const fsFloat = document.getElementById('fsFloat');
   let hls = null;
   let retried = 0;
   let a4k = false;
@@ -659,10 +701,25 @@ public partial class AnimePlayerView : UserControl
     else video.pause();
   });
   muteBtn.addEventListener('click', function () { video.muted = !video.muted; });
-  fullBtn.addEventListener('click', function () {
-    if (document.fullscreenElement) document.exitFullscreen();
-    else if (stage.requestFullscreen) stage.requestFullscreen();
+  function toggleWindowFullscreen() {
+    if (window.chrome && chrome.webview) {
+      chrome.webview.postMessage({ type: 'fullscreen' });
+    } else if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else if (stage.requestFullscreen) {
+      stage.requestFullscreen();
+    }
+  }
+  fullBtn.addEventListener('click', toggleWindowFullscreen);
+  fsFloat.addEventListener('click', toggleWindowFullscreen);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && window.chrome && chrome.webview)
+      chrome.webview.postMessage({ type: 'exitFullscreen' });
   });
+  window.mikoSetFullscreen = function (active) {
+    fsFloat.title = active ? '退出全屏' : '全屏播放';
+    fsFloat.classList.toggle('on', !!active);
+  };
   seekBar.addEventListener('input', function () {
     seekBar.dataset.dragging = '1';
     const duration = isFinite(video.duration) ? video.duration : 0;

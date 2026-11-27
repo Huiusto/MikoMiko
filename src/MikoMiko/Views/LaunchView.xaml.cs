@@ -92,7 +92,20 @@ public partial class LaunchView : UserControl
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        IsVisibleChanged += OnVisibleChanged;
         LauncherBackgroundService.BackgroundReady += OnBackgroundReady;
+    }
+
+    /// <summary>页面被切回来后 WebView2 / 动态壁纸可能停在黑帧，重新推送并恢复播放。</summary>
+    private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (!(bool)e.NewValue || !_webReady) return;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            PushState();
+            _ = Web.CoreWebView2?.ExecuteScriptAsync(
+                "try { if (window.mikoRepaintBackground) window.mikoRepaintBackground(); } catch(e) {}");
+        }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -300,12 +313,23 @@ public partial class LaunchView : UserControl
             });
         }
 
-        // 启动页只使用官方启动器同步下来的壁纸：没有官方壁纸时留空，
-        // 不再回退到内置占位图，也不读取用户自定义背景。
+        // 官方壁纸同步完成前先用内置同款壁纸占位，避免启动页整块变黑；
+        // 一旦官方列表到达，会立即替换为官方壁纸。
         var items = new List<object>(officialItems);
+        var usingFallback = false;
+        if (officialItems.Count == 0 && FallbackFiles.TryGetValue(_selectedKey, out var fallback))
+        {
+            var path = Path.Combine(SettingsService.DataDirectory, "launch", "assets", fallback.Target);
+            var url = ToUrl(path);
+            if (url != null)
+            {
+                items.Add(new { id = "fallback", image = url, video = (string?)null });
+                usingFallback = true;
+            }
+        }
 
-        _bgIndex = Math.Clamp(_bgIndex, 0, Math.Max(0, officialItems.Count - 1));
-        var shownIndex = _bgIndex;
+        _bgIndex = Math.Clamp(_bgIndex, 0, Math.Max(0, items.Count - 1));
+        var shownIndex = usingFallback ? 0 : _bgIndex;
 
         var selectedGame = MikoNestBridge.Games.FirstOrDefault(g => g.Key == _selectedKey);
         var selectedDir = MikoNestBridge.GetGameDir(_selectedKey);

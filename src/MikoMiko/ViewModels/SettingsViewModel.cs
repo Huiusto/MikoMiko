@@ -22,6 +22,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         _service = service;
         _content = content;
 
+        // 账号卡片有两处文案由 VM 拼接，切换语言时主动刷新，避免停留在旧语言。
+        Loc.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(AccountName));
+            OnPropertyChanged(nameof(AccountUid));
+            OnPropertyChanged(nameof(AccountActionText));
+        };
+
         Sections = new ObservableCollection<ChoiceOption>
         {
             new("General", Loc.Instance["S.General"]),
@@ -89,16 +97,18 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string InstallPath => AppInfo.InstallDirectory;
     public string RepositoryUrl => AppInfo.RepositoryUrl;
     public string AccountName => IsLoggedIn
-        ? (string.IsNullOrWhiteSpace(Settings.Nickname) ? "已登录" : Settings.Nickname)
-        : "未登录";
+        ? (string.IsNullOrWhiteSpace(Settings.Nickname) ? Loc.Instance.TranslateText("已登录") : Settings.Nickname)
+        : Loc.Instance.TranslateText("未登录");
 
     public string AccountAvatar => IsLoggedIn && !string.IsNullOrWhiteSpace(Settings.Avatar)
         ? Settings.Avatar
         : "pack://application:,,,/Assets/icon.png";
 
-    public string AccountUid => IsLoggedIn ? "已绑定米游社账号" : "扫码登录后同步米游社账号信息";
+    public string AccountUid => Loc.Instance.TranslateText(IsLoggedIn ? "已绑定米游社账号" : "扫码登录后同步米游社账号信息");
 
-    public string AccountActionText => IsLoggedIn ? "前往我的主页" : Loc.Instance["Mine.Bind"];
+    public string AccountActionText => IsLoggedIn
+        ? Loc.Instance.TranslateText("前往我的主页")
+        : Loc.Instance["Mine.Bind"];
 
     public string DownloadDirectory => string.IsNullOrWhiteSpace(Settings.DownloadPath)
         ? AppInfo.DefaultDownloadDirectory

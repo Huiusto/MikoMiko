@@ -27,6 +27,14 @@ public partial class MainWindow : Window
         DataContext = shell;
 
         RestoreWindowBounds();
+        PreviewKeyDown += (_, e) =>
+        {
+            if (IsVideoFullscreen && e.Key == Key.Escape)
+            {
+                ExitVideoFullscreen();
+                e.Handled = true;
+            }
+        };
         StateChanged += (_, _) =>
         {
             UpdateMaximizeVisual();
@@ -107,8 +115,12 @@ public partial class MainWindow : Window
         => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private WindowState _stateBeforeVideoFullscreen = WindowState.Normal;
+    private WindowStyle _styleBeforeVideoFullscreen = WindowStyle.SingleBorderWindow;
+    private ResizeMode _resizeBeforeVideoFullscreen = ResizeMode.CanResize;
+    private Rect _boundsBeforeVideoFullscreen;
+    private bool _topmostBeforeVideoFullscreen;
 
-    /// <summary>视频页最大化：隐藏左侧导航、页头与窗口边距，让画面铺满整个窗口。</summary>
+    /// <summary>视频页最大化：隐藏左侧导航、页头与窗口边距，并真正覆盖任务栏所在的整块屏幕。</summary>
     public void ToggleVideoFullscreen()
     {
         if (IsVideoFullscreen) ExitVideoFullscreen();
@@ -121,12 +133,24 @@ public partial class MainWindow : Window
     {
         if (IsVideoFullscreen) return;
         _stateBeforeVideoFullscreen = WindowState;
+        _styleBeforeVideoFullscreen = WindowStyle;
+        _resizeBeforeVideoFullscreen = ResizeMode;
+        _boundsBeforeVideoFullscreen = WindowState == WindowState.Normal
+            ? new Rect(Left, Top, Width, Height)
+            : RestoreBounds;
+        _topmostBeforeVideoFullscreen = Topmost;
         IsVideoFullscreen = true;
         NavColumn.Width = new GridLength(0);
         HeaderRow.Height = new GridLength(0);
         RootBorder.BorderThickness = new Thickness(0);
         RootBorder.CornerRadius = new CornerRadius(0);
-        WindowState = WindowState.Maximized;
+
+        // 仅最大化只会铺满工作区，任务栏仍会露出来；这里改成无边框 + 显示器物理边界。
+        WindowState = WindowState.Normal;
+        WindowStyle = WindowStyle.None;
+        ResizeMode = ResizeMode.NoResize;
+        Topmost = true;
+        ApplyMonitorBounds();
     }
 
     public void ExitVideoFullscreen()
@@ -137,10 +161,75 @@ public partial class MainWindow : Window
         HeaderRow.Height = new GridLength(64);
         RootBorder.BorderThickness = new Thickness(1);
         RootBorder.CornerRadius = new CornerRadius(
-            WindowState == WindowState.Maximized ? 0 : 10);
-        WindowState = _stateBeforeVideoFullscreen;
+            _stateBeforeVideoFullscreen == WindowState.Maximized ? 0 : 10);
+
+        Topmost = _topmostBeforeVideoFullscreen;
+        WindowStyle = _styleBeforeVideoFullscreen;
+        ResizeMode = _resizeBeforeVideoFullscreen;
+        if (_stateBeforeVideoFullscreen == WindowState.Maximized)
+        {
+            WindowState = WindowState.Maximized;
+        }
+        else
+        {
+            WindowState = WindowState.Normal;
+            Left = _boundsBeforeVideoFullscreen.Left;
+            Top = _boundsBeforeVideoFullscreen.Top;
+            Width = _boundsBeforeVideoFullscreen.Width;
+            Height = _boundsBeforeVideoFullscreen.Height;
+        }
         UpdateMaximizeVisual();
     }
+
+    /// <summary>把窗口定位到当前显示器的完整物理边界（包含任务栏区域）。</summary>
+    private void ApplyMonitorBounds()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+        var monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+        var info = new MonitorInfo
+        {
+            cbSize = Marshal.SizeOf<MonitorInfo>(),
+        };
+        if (!GetMonitorInfo(monitor, ref info)) return;
+        SetWindowPos(hwnd, HwndTopmost,
+            info.rcMonitor.Left, info.rcMonitor.Top,
+            info.rcMonitor.Right - info.rcMonitor.Left,
+            info.rcMonitor.Bottom - info.rcMonitor.Top,
+            SwpShowWindow);
+    }
+
+    private const int MonitorDefaultToNearest = 2;
+    private const uint SwpShowWindow = 0x0040;
+    private static readonly IntPtr HwndTopmost = new(-1);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int cbSize;
+        public NativeRect rcMonitor;
+        public NativeRect rcWork;
+        public uint dwFlags;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo lpmi);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+        int x, int y, int cx, int cy, uint flags);
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
@@ -298,12 +387,6 @@ public partial class MainWindow : Window
         public int dwFlags;
     }
 
-    [DllImport("user32.dll")]
-    private static extern IntPtr MonitorFromWindow(IntPtr handle, int flags);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
-
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
@@ -311,28 +394,30 @@ public partial class MainWindow : Window
     {
         if (msg == 0x0024)
         {
-            AdjustMaximizedBounds(hwnd, lParam);
+            AdjustMaximizedBounds(hwnd, lParam, IsVideoFullscreen);
             handled = true;
         }
 
         return IntPtr.Zero;
     }
 
-    private static void AdjustMaximizedBounds(IntPtr hwnd, IntPtr lParam)
+    private static void AdjustMaximizedBounds(IntPtr hwnd, IntPtr lParam, bool fullMonitor)
     {
         var info = Marshal.PtrToStructure<MINMAXINFO>(lParam);
         var monitor = MonitorFromWindow(hwnd, 2);
         if (monitor != IntPtr.Zero)
         {
-            var monitorInfo = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+            var monitorInfo = new MonitorInfo { cbSize = Marshal.SizeOf<MonitorInfo>() };
             if (GetMonitorInfo(monitor, ref monitorInfo))
             {
                 var work = monitorInfo.rcWork;
                 var area = monitorInfo.rcMonitor;
-                info.ptMaxPosition.x = Math.Abs(work.left - area.left);
-                info.ptMaxPosition.y = Math.Abs(work.top - area.top);
-                info.ptMaxSize.x = Math.Abs(work.right - work.left);
-                info.ptMaxSize.y = Math.Abs(work.bottom - work.top);
+                // 视频全屏使用显示器物理边界，普通最大化仍使用工作区（避开任务栏）。
+                var target = fullMonitor ? area : work;
+                info.ptMaxPosition.x = Math.Abs(target.Left - area.Left);
+                info.ptMaxPosition.y = Math.Abs(target.Top - area.Top);
+                info.ptMaxSize.x = Math.Abs(target.Right - target.Left);
+                info.ptMaxSize.y = Math.Abs(target.Bottom - target.Top);
                 info.ptMaxTrackSize.x = info.ptMaxSize.x;
                 info.ptMaxTrackSize.y = info.ptMaxSize.y;
             }

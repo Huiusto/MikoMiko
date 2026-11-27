@@ -152,8 +152,8 @@ public partial class MineView : UserControl
             Child = border,
             CustomPopupPlacementCallback = (popupSize, targetSize, _) =>
                 new[] { new CustomPopupPlacement(
-                    new Point(targetSize.Width - popupSize.Width, targetSize.Height + 8),
-                    PopupPrimaryAxis.Horizontal) },
+                    new Point(targetSize.Width + 10, 0),
+                    PopupPrimaryAxis.Vertical) },
         };
         return popup;
     }

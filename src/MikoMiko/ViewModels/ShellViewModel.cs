@@ -250,7 +250,7 @@ public sealed partial class ShellViewModel : ObservableObject
         // 追剧页是覆盖层。先摘掉底下的页面，避免启动页 / 网页页的 WebView2
         // 这类原生子窗口盖在 WPF 覆盖层上面，造成页面被透明化。
         CurrentView = null;
-        AnimePage ??= new Views.AnimeHubView(OpenBilibiliInApp);
+        AnimePage ??= new Views.AnimeHubView(OpenBilibiliInApp, _animeFollows);
         IsAnimePageOpen = true;
         ShowGlobalSearch = false;
     }
