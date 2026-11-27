@@ -255,7 +255,7 @@ public sealed partial class ShellViewModel : ObservableObject
         // 追剧页是覆盖层。先摘掉底下的页面，避免启动页 / 网页页的 WebView2
         // 这类原生子窗口盖在 WPF 覆盖层上面，造成页面被透明化。
         CurrentView = null;
-        AnimePage ??= new Views.AnimeHubView(OpenBilibiliInApp, _animeFollows);
+        AnimePage ??= new Views.AnimeHubView(OpenAnimeCatalogInApp, _animeFollows);
         IsAnimePageOpen = true;
         ShowGlobalSearch = false;
     }
@@ -334,6 +334,44 @@ public sealed partial class ShellViewModel : ObservableObject
         }
         ShowAnimePlayer(playback);
         AnimePage?.ShowToast($"已在软件内缓冲《{playback.Title}》");
+    }
+
+    /// <summary>追番目录里的指定作品：优先解析樱花TV 直连流，失败时在软件内打开站点播放页。</summary>
+    private async void OpenAnimeCatalogInApp(string url, string title)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return;
+        AnimePage?.ShowToast($"正在缓冲《{title}》…");
+        AnimePlayback? playback = null;
+        try
+        {
+            var item = new AnimeItem
+            {
+                Title = title,
+                Url = url,
+                PlayUrl = url,
+                Source = "樱花动漫",
+                Note = "推荐",
+            };
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(14));
+            playback = await _animeStreams.ResolveAsync(item, timeout.Token);
+        }
+        catch
+        {
+            playback = null;
+        }
+
+        if (playback is not null && !string.IsNullOrWhiteSpace(playback.StreamUrl))
+        {
+            ShowAnimePlayer(playback);
+            AnimePage?.ShowToast($"已在软件内缓冲《{playback.Title}》");
+            return;
+        }
+
+        AnimePage?.Suspend();
+        IsAnimePageOpen = false;
+        AnimeSitePlayerView = new Views.AnimeSitePlayerView(url, url, title, "第 1 集", "樱花动漫",
+            CloseAnimeSitePlayer);
+        IsAnimeSitePlayerOpen = true;
     }
 
     public void Navigate(string key, bool pushHistory = true)
@@ -675,7 +713,9 @@ public sealed partial class ShellViewModel : ObservableObject
         CloseAnimePlayer();
         CloseAnimeSitePlayer();
         AnimePlayerView = new Views.AnimePlayerView(playback,
-            playback.IsBilibili ? Array.Empty<AnimeProvider>() : _anime.Providers,
+            playback.IsBilibili || string.Equals(playback.CatalogItem?.Source, "樱花动漫", StringComparison.Ordinal)
+                ? Array.Empty<AnimeProvider>()
+                : _anime.Providers,
             _animeFollows, _animeDanmaku, CloseAnimePlayer, anime4K,
             _ =>
             {

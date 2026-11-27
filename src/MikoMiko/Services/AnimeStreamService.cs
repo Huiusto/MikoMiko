@@ -90,6 +90,9 @@ public sealed class AnimeStreamService
     private static readonly Regex StatusPattern = new(
         @"(?:已完结|完结|全\s*\d+\s*集|更新(?:至|到)?\s*第?\s*\d+\s*[集话期]?|连载中|正片)",
         RegexOptions.IgnoreCase);
+    private static readonly Regex YhdmtvPlayerPattern = new(
+        @"Iyplayer\s*=\s*\{[^}]*?id\s*:\s*(?<id>\d+)",
+        RegexOptions.IgnoreCase);
 
     public async Task<AnimePlayback?> ResolveAsync(AnimeItem item, CancellationToken cancellationToken = default)
     {
@@ -175,7 +178,9 @@ public sealed class AnimeStreamService
         {
             var html = await FetchAsync(episode.PageUrl, item.Url, cancellationToken).ConfigureAwait(false);
             if (string.IsNullOrWhiteSpace(html)) return null;
-            return ParseHtml(html, episode.PageUrl, item, details, source, episode);
+            var yhdmtvStream = await ResolveYhdmtvStreamAsync(html, episode.PageUrl, cancellationToken)
+                .ConfigureAwait(false);
+            return ParseHtml(html, episode.PageUrl, item, details, source, episode, yhdmtvStream);
         }
         catch
         {
@@ -183,13 +188,49 @@ public sealed class AnimeStreamService
         }
     }
 
+    /// <summary>
+    /// 樱花TV 的播放器不把 m3u8 写进 HTML，而是先用播放页里的线路 id 换取短期令牌，
+    /// 再请求 /openapi/playline/{id} 取得真实直链。这里复刻同一套公开请求。
+    /// </summary>
+    private static async Task<string> ResolveYhdmtvStreamAsync(string html, string pageUrl,
+        CancellationToken cancellationToken)
+    {
+        if (!SafeHost(pageUrl).Contains("yhdmtv", StringComparison.OrdinalIgnoreCase)) return string.Empty;
+
+        var match = YhdmtvPlayerPattern.Match(html);
+        if (!match.Success) return string.Empty;
+
+        try
+        {
+            var host = new Uri(pageUrl).GetLeftPart(UriPartial.Authority);
+            var tokenJson = await FetchAsync(host + "/openapi/playline/0", pageUrl, cancellationToken)
+                .ConfigureAwait(false);
+            using var tokenDocument = JsonDocument.Parse(tokenJson);
+            if (!tokenDocument.RootElement.TryGetProperty("t", out var tokenNode)) return string.Empty;
+            var token = tokenNode.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(token)) return string.Empty;
+
+            var lineUrl = $"{host}/openapi/playline/{match.Groups["id"].Value}?pt={Uri.EscapeDataString(token)}";
+            var lineJson = await FetchAsync(lineUrl, pageUrl, cancellationToken).ConfigureAwait(false);
+            using var lineDocument = JsonDocument.Parse(lineJson);
+            if (!lineDocument.RootElement.TryGetProperty("info", out var info)) return string.Empty;
+            if (!info.TryGetProperty("file", out var fileNode)) return string.Empty;
+            var file = fileNode.GetString() ?? string.Empty;
+            return MediaPattern.IsMatch(file) ? file : string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
     private static bool detailUrlInvalid(string url)
         => string.IsNullOrWhiteSpace(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase);
 
     private static AnimePlayback? ParseHtml(string html, string pageUrl, AnimeItem item, AnimeDetails? details,
-        AnimeSource? source, AnimeEpisode? episode)
+        AnimeSource? source, AnimeEpisode? episode, string? knownStream = null)
     {
-        var stream = ParsePlayerJson(html, pageUrl);
+        var stream = string.IsNullOrWhiteSpace(knownStream) ? ParsePlayerJson(html, pageUrl) : knownStream;
         if (string.IsNullOrWhiteSpace(stream))
             stream = ParseDirectMedia(html, pageUrl);
         if (string.IsNullOrWhiteSpace(stream)) return null;
@@ -201,7 +242,9 @@ public sealed class AnimeStreamService
             StreamUrl = stream,
             Referer = pageUrl,
             Source = source?.Name ?? item.Source,
-            Poster = item.Poster,
+            Poster = !string.IsNullOrWhiteSpace(item.Poster)
+                ? item.Poster
+                : (string.IsNullOrWhiteSpace(details?.Poster) ? string.Empty : details.Poster),
             Description = details?.Description ?? string.Empty,
             Meta = details?.Meta ?? item.Note,
             Details = details,
@@ -217,7 +260,7 @@ public sealed class AnimeStreamService
         return new AnimeDetails
         {
             Title = string.IsNullOrWhiteSpace(item.Title) ? ReadTitle(html) : item.Title,
-            Poster = item.Poster,
+            Poster = !string.IsNullOrWhiteSpace(item.Poster) ? item.Poster : ReadPoster(html),
             Description = ReadDescription(html, item.Note),
             Meta = BuildMeta(html, item),
             Sources = sources,
@@ -320,7 +363,7 @@ public sealed class AnimeStreamService
             var absolute = Normalize(href, pageUrl);
             if (string.IsNullOrWhiteSpace(absolute) || !seen.Add(absolute)) continue;
             var route = PlayRoute(href);
-            if (route.Nid == 0) continue;
+            if (route.Nid < 0) continue;
             var label = Text(anchor.Groups["body"].Value);
             if (label.Length == 0) label = Attribute(anchor.Groups["attrs"].Value, "title");
             var episode = CreateEpisode(label, href, route.Nid, pageUrl);
@@ -594,6 +637,16 @@ public sealed class AnimeStreamService
         if (!episode.Success) return "第 1 集";
         if (!int.TryParse(episode.Groups["nid"].Value, out var nid) || nid <= 0) return "第 1 集";
         return $"第 {nid} 集";
+    }
+
+    private static string ReadPoster(string html)
+    {
+        var poster = Attribute(html, "content", "og:image");
+        if (!string.IsNullOrWhiteSpace(poster)) return poster;
+        var match = Regex.Match(html,
+            @"class=""module-info-poster"">.*?data-original=""(?<url>https?://[^""]+)""",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups["url"].Value : string.Empty;
     }
 
     private static string ReadTitle(string html)

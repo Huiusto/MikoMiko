@@ -484,10 +484,16 @@ public partial class MainWindow : Window
                 var area = monitorInfo.rcMonitor;
                 // 视频全屏使用显示器物理边界，普通最大化仍使用工作区（避开任务栏）。
                 var target = fullMonitor ? area : work;
-                info.ptMaxPosition.x = Math.Abs(target.Left - area.Left);
-                info.ptMaxPosition.y = Math.Abs(target.Top - area.Top);
-                info.ptMaxSize.x = Math.Abs(target.Right - target.Left);
-                info.ptMaxSize.y = Math.Abs(target.Bottom - target.Top);
+                var overscan = fullMonitor ? FullscreenOverscan : 0;
+                var areaWidth = Math.Abs(target.Right - target.Left);
+                var areaHeight = Math.Abs(target.Bottom - target.Top);
+                info.ptMaxPosition.x = Math.Abs(target.Left - area.Left) - overscan;
+                info.ptMaxPosition.y = Math.Abs(target.Top - area.Top) - overscan;
+                info.ptMaxSize.x = areaWidth + overscan * 2;
+                info.ptMaxSize.y = areaHeight + overscan * 2;
+                // 关键：Windows 会按 ptMaxTrackSize 限制普通 SetWindowPos 的最大尺寸。
+                // 若只把目标尺寸加 padding 而不放开上限，窗口会被裁回显示器大小，
+                // 从负坐标铺出去的左/上边有效，右/下边就会各漏一条桌面背景。
                 info.ptMaxTrackSize.x = info.ptMaxSize.x;
                 info.ptMaxTrackSize.y = info.ptMaxSize.y;
             }

@@ -55,12 +55,8 @@
                 <!-- 左上：分类；右上：我追的 -->
                 <Grid VerticalAlignment="Top" Margin="18,16,18,0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Button x:Name="BtnAll" Content="全部" Tag="all" Click="Filter_Click" Style="{StaticResource FilterButton}"
+                        <Button x:Name="BtnRecommend" Content="推荐" Tag="recommend" Click="Filter_Click" Style="{StaticResource FilterButton}"
                                 Height="34" Padding="17,0" FontSize="12" Cursor="Hand" Margin="0,0,8,0" />
-                        <Button x:Name="BtnBangumi" Content="番剧" Tag="bangumi" Click="Filter_Click" Style="{StaticResource FilterButton}"
-                                Height="34" Padding="17,0" FontSize="12" Cursor="Hand" Margin="0,0,8,0" />
-                        <Button x:Name="BtnConcert" Content="音乐会" Tag="concert" Click="Filter_Click" Style="{StaticResource FilterButton}"
-                                Height="34" Padding="17,0" FontSize="12" Cursor="Hand" />
                     </StackPanel>
                     <Button x:Name="BtnFollowed" Content="★  我追的" Tag="followed" Click="Followed_Click"
                             HorizontalAlignment="Right" Height="34" Padding="17,0" FontSize="12"

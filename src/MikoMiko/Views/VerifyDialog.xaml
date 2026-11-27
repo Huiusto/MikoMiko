@@ -11,6 +11,10 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <wv2:WebView2 x:Name="Web" Grid.Row="0" DefaultBackgroundColor="#FFFFFF" />
+        <Button x:Name="BtnClose" Grid.Row="0" Width="30" Height="30" Margin="0,8,8,0"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Panel.ZIndex="4"
+                Background="#22000000" Foreground="#40566B" BorderThickness="0"
+                FontSize="14" Content="✕" ToolTip="关闭" Click="Cancel_Click" />
         <Border x:Name="LoadingPanel" Grid.Row="0" Background="#FFFFFF">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24,0">
                 <TextBlock x:Name="TxtLoading" Text="正在向米游社申请极验验证…" FontSize="13"

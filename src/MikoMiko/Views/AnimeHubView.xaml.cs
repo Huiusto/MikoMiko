@@ -18,8 +18,8 @@ using VerticalAlignment = System.Windows.VerticalAlignment;
 namespace MikoMiko.Views;
 
 /// <summary>
-/// 追番 / 影视原生目录页：只展示用户指定的哔哩哔哩番剧与官方音乐会，
-/// 点击卡片后交给内置播放器解析直连流；播放失败时直接提示，不跳转到网页。
+/// 追番 / 影视原生目录页：只展示用户指定的五部崩坏3 动画，
+/// 点击卡片后在软件内解析樱花TV 的公开播放线路；无法取流时再回退到站点网页播放器。
 /// </summary>
 public partial class AnimeHubView : UserControl
 {
@@ -28,7 +28,8 @@ public partial class AnimeHubView : UserControl
         public required string Title;
         public required string Url;
         public required string Kind;
-        public string Note = "";
+        public required string Note;
+        public string Cover = "";
         public Border Card = null!;
         public Border CoverHost = null!;
         public TextBlock Meta = null!;
@@ -36,24 +37,11 @@ public partial class AnimeHubView : UserControl
 
     private static readonly Entry[] Catalog =
     {
-        new() { Title = "女武神的餐桌", Url = "https://www.bilibili.com/bangumi/media/md28221384", Kind = "番剧", Note = "崩坏3 · 美食日常" },
-        new() { Title = "女武神的餐桌 第二季", Url = "https://www.bilibili.com/bangumi/media/md28229117", Kind = "番剧", Note = "崩坏3 · 第二季" },
-        new() { Title = "人偶学园", Url = "https://www.bilibili.com/bangumi/media/md28234658", Kind = "番剧", Note = "崩坏3 · 学园日常" },
-        new() { Title = "黄金庭院：冬日里的新年愿望", Url = "https://www.bilibili.com/bangumi/media/md28351532", Kind = "番剧", Note = "崩坏3 · 冬日特别篇" },
-        new() { Title = "旅途危机！圣芙蕾雅号特别事件", Url = "https://www.bilibili.com/bangumi/media/md21176968", Kind = "番剧", Note = "崩坏3 · 特别动画" },
-        new() { Title = "《原神》长期项目启动·概念PV", Url = "https://www.bilibili.com/video/BV15B4y1n7dg/?spm_id_from=333.337.search-card.all.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "番剧", Note = "原神 · 概念 PV" },
-        new() { Title = "《崩坏：星穹铁道》原创动画·概念PV——「死于午后」", Url = "https://www.bilibili.com/video/BV1YXDfBUETP/?spm_id_from=333.788.recommend_more_video.0&trackid=web_related_0.router-related-2589621-cb5r7.1795614157921.427&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "番剧", Note = "星穹铁道 · 概念 PV" },
-
-        new() { Title = "崩坏3「林海绮律」", Url = "https://www.bilibili.com/bangumi/media/md20310734", Kind = "音乐会", Note = "崩坏3 · 官方音乐会" },
-        new() { Title = "崩坏3「纯真梦歌」", Url = "https://www.bilibili.com/bangumi/media/md28339264", Kind = "音乐会", Note = "崩坏3 · 官方音乐会" },
-        new() { Title = "崩坏3「星火流音」", Url = "https://www.bilibili.com/bangumi/media/md28235471", Kind = "音乐会", Note = "崩坏3 · 官方音乐会" },
-        new() { Title = "未定事件簿「心乐未名」", Url = "https://www.bilibili.com/video/BV1nE826rEJ4/?spm_id_from=333.337.search-card.all.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "音乐会", Note = "未定事件簿 · 官方音乐会" },
-        new() { Title = "原神「无际之旅的旋律」", Url = "https://www.bilibili.com/video/BV1E44y1t7Kn/?spm_id_from=333.1387.search.video_card.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "音乐会", Note = "原神 · 官方音乐会" },
-        new() { Title = "原神「映春华章」", Url = "https://www.bilibili.com/video/BV1TY411L7ZD/?spm_id_from=333.1387.search.video_card.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "音乐会", Note = "原神 · 新春音乐会" },
-        new() { Title = "原神交响音乐会2023", Url = "https://www.bilibili.com/video/BV1Rj411p7b1/?spm_id_from=333.1387.search.video_card.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "音乐会", Note = "原神 · 交响音乐会" },
-        new() { Title = "崩坏：星穹铁道「2024星铁LIVE」", Url = "https://www.bilibili.com/video/BV1ZH4y1V7AE/?spm_id_from=333.1387.search.video_card.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "音乐会", Note = "星穹铁道 · 官方 LIVE" },
-        new() { Title = "崩坏：星穹铁道「2025星铁LIVE」", Url = "https://www.bilibili.com/video/BV1aDGfziEGh/?spm_id_from=333.1387.search.video_card.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "音乐会", Note = "星穹铁道 · 官方 LIVE" },
-        new() { Title = "崩坏：星穹铁道「2026星铁奇妙夜」", Url = "https://www.bilibili.com/video/BV16p9UBgEhT/?spm_id_from=333.1387.search.video_card.click&vd_source=2a3f4b3e272a07a72077b9a851b308a6", Kind = "音乐会", Note = "星穹铁道 · 官方 LIVE" },
+        new() { Title = "女武神的餐桌 第一季", Url = "https://www.yhdmtv.cc/v/298947/1", Kind = "推荐", Note = "崩坏3 · 美食日常" },
+        new() { Title = "女武神的餐桌 第二季", Url = "https://www.yhdmtv.cc/v/298945/1", Kind = "推荐", Note = "崩坏3 · 第二季" },
+        new() { Title = "人偶学园", Url = "https://www.yhdmtv.cc/v/77911/1", Kind = "推荐", Note = "崩坏3 · 学园日常" },
+        new() { Title = "黄金庭院：冬日里的新年愿望", Url = "https://www.yhdmtv.cc/v/76871/1", Kind = "推荐", Note = "崩坏3 · 冬日特别篇", Cover = "pack://application:,,,/Assets/Anime/golden-courtyard.jpg" },
+        new() { Title = "旅途危机！圣芙蕾雅号特别事件", Url = "https://www.yhdmtv.cc/v/683596/1", Kind = "推荐", Note = "崩坏3 · 特别动画", Cover = "pack://application:,,,/Assets/Anime/travel-crisis.jpg" },
     };
 
     private static readonly HttpClient Http = CreateHttpClient();
@@ -62,10 +50,8 @@ public partial class AnimeHubView : UserControl
     private readonly AnimeFollowService? _follows;
     private readonly DispatcherTimer _toastTimer;
     private CancellationTokenSource? _cts;
-    private WrapPanel _bangumiPanel = null!;
-    private WrapPanel _concertPanel = null!;
-    private Border _bangumiSection = null!;
-    private Border _concertSection = null!;
+    private WrapPanel _recommendPanel = null!;
+    private Border _recommendSection = null!;
     private string _filter = "all";
     private string _query = "";
     private bool _followMode;
@@ -113,17 +99,14 @@ public partial class AnimeHubView : UserControl
 
     private void BuildSections()
     {
-        _bangumiSection = CreateSection("番剧", out _bangumiPanel);
-        _concertSection = CreateSection("音乐会", out _concertPanel);
-        Sections.Children.Add(_bangumiSection);
-        Sections.Children.Add(_concertSection);
+        _recommendSection = CreateSection("推荐", out _recommendPanel);
+        Sections.Children.Add(_recommendSection);
 
         foreach (var entry in Catalog)
         {
             var card = BuildCard(entry);
             entry.Card = card;
-            if (entry.Kind == "音乐会") _concertPanel.Children.Add(card);
-            else _bangumiPanel.Children.Add(card);
+            _recommendPanel.Children.Add(card);
         }
     }
 
@@ -141,7 +124,7 @@ public partial class AnimeHubView : UserControl
             Width = 4,
             Height = 22,
             CornerRadius = new CornerRadius(2),
-            Background = new SolidColorBrush(title == "番剧" ? Color.FromRgb(0x4B, 0x7B, 0xC8) : Color.FromRgb(0xB8, 0x8A, 0x3E)),
+            Background = new SolidColorBrush(Color.FromRgb(0x4B, 0x7B, 0xC8)),
             Margin = new Thickness(0, 0, 9, 0),
             VerticalAlignment = VerticalAlignment.Center,
         });
@@ -163,7 +146,7 @@ public partial class AnimeHubView : UserControl
 
     private Border BuildCard(Entry entry)
     {
-        var accent = entry.Kind == "音乐会" ? Color.FromRgb(0xB8, 0x8A, 0x3E) : Color.FromRgb(0x4B, 0x7B, 0xC8);
+        var accent = Color.FromRgb(0x4B, 0x7B, 0xC8);
         var card = new Border
         {
             Width = 302,
@@ -310,19 +293,32 @@ public partial class AnimeHubView : UserControl
             await gate.WaitAsync(ct);
             try
             {
-                var info = await _bilibili.GetMediaInfoAsync(entry.Url, entry.Title, ct);
+                string? cover;
+                string? meta = null;
+                if (!string.IsNullOrWhiteSpace(entry.Cover))
+                {
+                    cover = entry.Cover;
+                }
+                else if (entry.Url.Contains("yhdmtv", StringComparison.OrdinalIgnoreCase))
+                {
+                    var info = await GetYhdmtvInfoAsync(entry.Url, ct);
+                    cover = info.Cover;
+                    meta = info.Meta;
+                }
+                else
+                {
+                    var info = await _bilibili.GetMediaInfoAsync(entry.Url, entry.Title, ct);
+                    cover = info?.Cover;
+                    meta = info?.Meta;
+                }
                 if (ct.IsCancellationRequested) return;
-                var brush = info is null ? null : await CreateImageBrushAsync(info.Cover);
+                var brush = string.IsNullOrWhiteSpace(cover)
+                    ? null
+                    : await CreateImageBrushAsync(cover, "https://www.yhdmtv.cc/");
                 await Dispatcher.InvokeAsync(() =>
                 {
-                    if (info is not null)
-                    {
-                        if (!string.IsNullOrWhiteSpace(info.Meta)) entry.Meta.Text = info.Meta;
-                        if (brush is not null)
-                        {
-                            entry.CoverHost.Background = brush;
-                        }
-                    }
+                    if (!string.IsNullOrWhiteSpace(meta)) entry.Meta.Text = meta;
+                    if (brush is not null) entry.CoverHost.Background = brush;
                     TxtStatus.Text = "封面加载中…";
                 });
             }
@@ -341,21 +337,53 @@ public partial class AnimeHubView : UserControl
             TxtStatus.Text = "";
     }
 
-    private async Task<Brush?> CreateImageBrushAsync(string url)
+    private async Task<(string Cover, string Meta)> GetYhdmtvInfoAsync(string pageUrl, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, pageUrl);
+        request.Headers.Referrer = new Uri("https://www.yhdmtv.cc/");
+        using var response = await Http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode) return ("", "");
+        var html = await response.Content.ReadAsStringAsync(ct);
+
+        var posterMatch = System.Text.RegularExpressions.Regex.Match(html,
+            @"<div\s+class=""module-info-poster"">.*?data-original=""(?<url>https?://[^""]+)""",
+            System.Text.RegularExpressions.RegexOptions.Singleline |
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var cover = posterMatch.Success ? posterMatch.Groups["url"].Value : string.Empty;
+
+        var metaMatch = System.Text.RegularExpressions.Regex.Match(html,
+            @"<meta\s+name=""description""\s+content=""《[^》]+》(?<meta>[^。]+)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var meta = metaMatch.Success ? metaMatch.Groups["meta"].Value.Trim() : string.Empty;
+        return (cover, meta);
+    }
+
+    private async Task<Brush?> CreateImageBrushAsync(string url, string? referer = null)
     {
         if (string.IsNullOrWhiteSpace(url)) return null;
         try
         {
-            using var response = await Http.GetAsync(url);
-            if (!response.IsSuccessStatusCode) return null;
-            var bytes = await response.Content.ReadAsByteArrayAsync();
-            using var stream = new MemoryStream(bytes);
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 760;
-            image.StreamSource = stream;
-            image.EndInit();
+            BitmapImage image;
+            if (url.StartsWith("pack:", StringComparison.OrdinalIgnoreCase))
+            {
+                image = new BitmapImage(new Uri(url, UriKind.Absolute));
+            }
+            else
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                if (!string.IsNullOrWhiteSpace(referer))
+                    request.Headers.Referrer = new Uri(referer, UriKind.Absolute);
+                using var response = await Http.SendAsync(request);
+                if (!response.IsSuccessStatusCode) return null;
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                using var stream = new MemoryStream(bytes);
+                image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.DecodePixelWidth = 760;
+                image.StreamSource = stream;
+                image.EndInit();
+            }
             image.Freeze();
             var brush = new ImageBrush(image) { Stretch = Stretch.UniformToFill };
             brush.Freeze();
@@ -417,17 +445,11 @@ public partial class AnimeHubView : UserControl
 
     private void ApplyFilter(string key)
     {
-        _filter = key;
-        _bangumiSection.Visibility = key == "concert" ? Visibility.Collapsed : Visibility.Visible;
-        _concertSection.Visibility = key == "bangumi" ? Visibility.Collapsed : Visibility.Visible;
-        foreach (var button in new[] { BtnAll, BtnBangumi, BtnConcert })
-        {
-            var selected = (string)button.Tag == key;
-            button.Background = new SolidColorBrush(selected ? Color.FromRgb(0x4B, 0x7B, 0xC8) : Color.FromArgb(0xF2, 0xFF, 0xFF, 0xFF));
-            button.Foreground = selected ? Brushes.White : new SolidColorBrush(Color.FromRgb(0x24, 0x38, 0x4F));
-            button.FontWeight = selected ? FontWeights.SemiBold : FontWeights.SemiBold;
-            button.BorderBrush = new SolidColorBrush(selected ? Color.FromRgb(0x4B, 0x7B, 0xC8) : Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
-        }
+        _filter = "recommend";
+        _recommendSection.Visibility = Visibility.Visible;
+        BtnRecommend.Background = new SolidColorBrush(Color.FromRgb(0x4B, 0x7B, 0xC8));
+        BtnRecommend.Foreground = Brushes.White;
+        BtnRecommend.BorderBrush = new SolidColorBrush(Color.FromRgb(0x4B, 0x7B, 0xC8));
         ApplyCardVisibility();
         ContentScroll.ScrollToTop();
     }

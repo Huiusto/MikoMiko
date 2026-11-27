@@ -152,9 +152,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.53"), "v0.1.53", "MikoMiko 0.1.53",
-                    "· 修复每日任务极验弹窗点击「完成验证」后卡住\n· 修复视频全屏四边仍能看见桌面背景",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.53.exe", "");
+                    new Version("0.1.54"), "v0.1.54", "MikoMiko 0.1.54",
+                    "· 修复每日任务极验验证成功后不返回、签到不继续\n· 修复视频全屏右侧与底部仍露出桌面背景",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.54.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();
@@ -219,7 +219,7 @@ public partial class App : Application
         var path = args[2];
         Log(path, "start page=" + page);
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page == "Collection" ? 16 : page == "Video" ? 10 : page == "Anime" ? 6 : 2) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page == "Collection" ? 16 : page == "Video" ? 10 : page == "Anime" ? 11 : 2) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();

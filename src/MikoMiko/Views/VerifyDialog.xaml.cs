@@ -52,9 +52,15 @@ public partial class VerifyDialog : Window
     {
         if (_closing) return;
         _closing = true;
-        // 先隐藏再关闭，避免极验成功提示层盖住关闭动画、看起来像「卡住」。
+        // 先把结果交给任务页，再关闭窗口：即使 WebView2 在关闭时仍需等待，
+        // 签到流程也不会被窗口生命周期卡住。
+        _completion.TrySetResult((_validation, _challenge));
+        // 先隐藏再异步关闭，避免极验成功提示层盖住关闭动画、看起来像「卡住」。
         try { Hide(); } catch { }
-        Close();
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            try { Close(); } catch { }
+        }), System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -109,21 +115,8 @@ public partial class VerifyDialog : Window
 
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
-        string? type = null;
-        string? data = null;
-        try
-        {
-            var raw = e.WebMessageAsJson;
-            using var doc = JsonDocument.Parse(raw);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("type", out var t)) type = t.GetString();
-            if (root.TryGetProperty("data", out var d))
-                data = d.ValueKind == JsonValueKind.String ? d.GetString() : d.GetRawText();
-        }
-        catch
-        {
-            return;
-        }
+        var (type, data) = ParseWebMessage(e.WebMessageAsJson);
+        if (string.IsNullOrWhiteSpace(type)) return;
 
         switch (type)
         {
@@ -138,10 +131,48 @@ public partial class VerifyDialog : Window
             case "validate":
                 if (string.IsNullOrWhiteSpace(data)) break;
                 _validation = data;
-                // 拿到极验结果后立刻隐藏并关闭弹窗，后续校验与重试交回任务页。
+                // 极验 onSuccess 已触发：先把结果写回，再关窗。
+                // WebView2 的关闭回调有时会等待页面卸载，不能把签到继续的逻辑依赖在 Closed 上。
+                _completion.TrySetResult((_validation, _challenge));
                 Dispatcher.BeginInvoke(new Action(CloseDialog), System.Windows.Threading.DispatcherPriority.Background);
                 break;
         }
+    }
+
+    /// <summary>
+    /// 兼容两种 WebView2 消息：宿主以 JSON 对象 postMessage，或以 JSON 字符串 postMessage。
+    /// 后者经 WebMessageAsJson 取到的是带引号的 JSON 字符串，必须再解析一层。
+    /// </summary>
+    private static (string? Type, string? Data) ParseWebMessage(string raw)
+    {
+        for (var depth = 0; depth < 2; depth++)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return (null, null);
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.String)
+                {
+                    raw = root.GetString() ?? "";
+                    continue;
+                }
+                if (root.ValueKind != JsonValueKind.Object) return (null, null);
+
+                string? type = null;
+                string? data = null;
+                if (root.TryGetProperty("type", out var t) && t.ValueKind == JsonValueKind.String)
+                    type = t.GetString();
+                if (root.TryGetProperty("data", out var d))
+                    data = d.ValueKind == JsonValueKind.String ? d.GetString() : d.GetRawText();
+                return (type, data);
+            }
+            catch
+            {
+                return (null, null);
+            }
+        }
+        return (null, null);
     }
 
     private string BuildHtml(SignService.GeetestChallenge create)

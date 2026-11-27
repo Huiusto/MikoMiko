@@ -54,7 +54,8 @@
 
   function post(type, payload) {
     const body = Object.assign({ type: type }, payload || {});
-    if (window.chrome && chrome.webview) chrome.webview.postMessage(JSON.stringify(body));
+    // 直接投递对象，WebView2 会以 JSON 对象送达；宿主同时兼容字符串包裹的旧格式。
+    if (window.chrome && chrome.webview) chrome.webview.postMessage(body);
   }
 
   function showError(message) {
