@@ -1,6 +1,7 @@
 <UserControl x:Class="MikoMiko.Views.GachaView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:MikoMiko.Controls"
              FontFamily="Microsoft YaHei UI" ClipToBounds="True"
              Background="{DynamicResource Brush.WindowBg}">
     <UserControl.Resources>
@@ -210,7 +211,7 @@
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
                         </Button.Template>
-                        <TextBlock Text="千星奇域颂愿" FontSize="10.5" />
+                        <TextBlock x:Name="TxtBeyondLabel" Text="千星奇域颂愿" FontSize="10.5" />
                     </Button>
                 </StackPanel>
                 <TextBlock x:Name="TxtSubtitle" Text="本地库 0 条 · MikoNest 数据" FontSize="10.5"
@@ -299,9 +300,10 @@
                 </StackPanel>
             </Grid>
             <ScrollViewer x:Name="PoolScroll" Grid.Row="1" Margin="0,8,0,0"
-                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <WrapPanel x:Name="PoolGrid" HorizontalAlignment="Stretch" VerticalAlignment="Top"
-                           Margin="18,0,18,0" />
+                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="PoolGrid" Orientation="Horizontal"
+                           HorizontalAlignment="Left" VerticalAlignment="Top"
+                           Margin="18,0,18,6" />
             </ScrollViewer>
         </Grid>
 
@@ -355,5 +357,13 @@
                 Visibility="Collapsed" Panel.ZIndex="50" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
             <TextBlock x:Name="TxtToastText" Text="" FontSize="11.5" Foreground="{DynamicResource Brush.TextPrimary}" />
         </Border>
+
+        <!-- 更新记录时的居中加载动画，GIF 自带透明背景 -->
+        <Grid x:Name="LoadingOverlay" Grid.RowSpan="3" Background="Transparent"
+              Visibility="Collapsed" Panel.ZIndex="60">
+            <controls:AnimatedGif x:Name="GachaLoadingGif" GifPath="/Assets/Setup/gacha-loading.gif"
+                                  Width="230" Stretch="Uniform"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
     </Grid>
 </UserControl>

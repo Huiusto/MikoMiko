@@ -112,15 +112,6 @@
                             <TextBlock Text="{Binding AccountUid}" FontSize="12" Margin="0,4,0,0"
                                        Foreground="{DynamicResource Brush.TextTertiary}" />
                         </StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <Button Content="{Binding AccountActionText}"
-                                    Style="{StaticResource GhostButton}" Height="32" Padding="14,0"
-                                    Command="{Binding AccountActionCommand}" />
-                            <Button Content="{Binding [Mine.Logout], Source={x:Static loc:Loc.Instance}}"
-                                    Style="{StaticResource LinkButton}" Margin="14,0,0,0"
-                                    Visibility="{Binding IsLoggedIn, Converter={StaticResource BoolToVis}}"
-                                    Command="{Binding LogoutCommand}" />
-                        </StackPanel>
                     </Grid>
                 </Border>
 

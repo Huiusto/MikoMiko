@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -10,7 +10,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
-    <Version>0.1.56</Version>
+    <Version>0.1.57</Version>
     <Product>MikoMiko</Product>
     <AssemblyTitle>MikoMiko</AssemblyTitle>
     <Company>Huiusto</Company>

@@ -174,6 +174,7 @@ public partial class GachaView : UserControl
         BtnBeyond.Foreground = new SolidColorBrush(_beyond
             ? Color.FromRgb(0xFF, 0xFF, 0xFF)
             : Color.FromRgb(0x2A, 0x78, 0xA8));
+        TxtBeyondLabel.Text = _beyond ? "返回祈愿记录" : "千星奇域颂愿";
     }
 
     private void RefreshUids()
@@ -267,36 +268,33 @@ public partial class GachaView : UserControl
     }
 
     /// <summary>
-    /// 0.1.56：记录卡按可视宽度自动分栏并随窗口实时重排。
-    /// 宽屏时三到四列铺满，窄屏自动降为两列/一列；记录区改为纵向滚动，
-    /// 不再固定 262px 列宽把内容挤出屏幕。
+    /// 0.1.57：所有抽卡记录卡固定排成一行。宽窗口下按可视宽度均分铺满，
+    /// 窄窗口下保持最小可读卡宽并改为横向滚动，不再折行。
     /// </summary>
     private void ResizePoolColumns()
     {
         if (_poolCount <= 0 || _poolCards.Count != _poolCount) return;
-        var available = PoolScroll.ViewportWidth - 36 - 3; // WrapPanel 左右各 18，并留 3px 防取整换行
+        var available = PoolScroll.ViewportWidth - 36; // StackPanel 左右各 18
         if (double.IsNaN(available) || available <= 0)
-            available = Math.Max(0, ActualWidth - 39);
+            available = Math.Max(0, ActualWidth - 38);
         if (double.IsNaN(available) || available <= 0) return;
 
         const double gap = 14;
-        const double minCard = 268;
-        var columns = Math.Min(_poolCount,
-            Math.Clamp((int)Math.Floor((available + gap) / (minCard + gap)), 1, 4));
-        var cardWidth = Math.Max(240, (available - (columns - 1) * gap) / columns);
-        var rows = (int)Math.Ceiling(_poolCount / (double)columns);
+        const double minReadable = 232;
+        var fitWidth = (available - (_poolCount - 1) * gap) / _poolCount;
+        var cardWidth = fitWidth >= minReadable ? fitWidth : 268;
+        var contentWidth = _poolCount * cardWidth + (_poolCount - 1) * gap;
         var viewportHeight = PoolScroll.ViewportHeight;
-        var cardHeight = rows <= 1
-            ? Math.Max(390, viewportHeight - 6)
-            : 470;
+        var cardHeight = Math.Max(390, viewportHeight - 8);
 
-        foreach (var card in _poolCards)
+        for (var i = 0; i < _poolCards.Count; i++)
         {
+            var card = _poolCards[i];
             card.Width = cardWidth;
             card.Height = cardHeight;
-            card.Margin = new Thickness(0, 0, gap, gap);
+            card.Margin = new Thickness(0, 0, i == _poolCards.Count - 1 ? 0 : gap, 0);
         }
-        PoolGrid.Width = available;
+        PoolGrid.Width = Math.Max(available, contentWidth);
     }
 
     private void BuildSummary(List<(PoolDef Def, PoolStat Stat)> stats, int totalPulls, int topPulls)
@@ -1001,6 +999,7 @@ public partial class GachaView : UserControl
 
         _updating = true;
         BtnUpdate.IsEnabled = false;
+        LoadingOverlay.Visibility = Visibility.Visible;
         TxtStatus.Text = $"正在读取 {gameLabel} 抽卡记录…";
         try
         {
@@ -1059,6 +1058,7 @@ public partial class GachaView : UserControl
         {
             _updating = false;
             BtnUpdate.IsEnabled = true;
+            LoadingOverlay.Visibility = Visibility.Collapsed;
         }
     }
 
