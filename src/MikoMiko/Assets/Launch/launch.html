@@ -172,18 +172,14 @@
   .ic-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
   .ic-state { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.86); }
   .ic-state .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,.28);
-                    border-top-color: #ffd166; animation: spin 1s linear infinite; }
-  .install-card.paused .ic-state .spin { animation: none; border-color: rgba(255,209,102,.55); }
+                    border-top-color: #4EA4DD; animation: spin 1s linear infinite; }
+  .install-card.paused .ic-state .spin { animation: none; border-color: rgba(78,164,221,.55); }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .ic-percent { font-size: 14px; font-weight: 700; color: #ffd166; letter-spacing: .2px; }
+  .ic-percent { font-size: 14px; font-weight: 700; color: #4EA4DD; letter-spacing: .2px; }
   .ic-eta { margin-top: 5px; font-size: 11.5px; color: rgba(255,255,255,.46); text-align: right; }
-  .ic-sep { height: 1px; background: rgba(255,255,255,.09); margin: 12px 0 10px; }
-  .ic-row { display: grid; grid-template-columns: 46px 1fr; gap: 10px; font-size: 12.5px;
-            line-height: 1.75; color: rgba(255,255,255,.62); }
-  .ic-row b { font-weight: 500; color: rgba(255,255,255,.88); }
-  .ic-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,.10); overflow: hidden; margin-top: 8px; }
+  .ic-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,.10); overflow: hidden; margin-top: 12px; }
   .ic-bar i { display: block; height: 100%; width: 0; border-radius: 4px;
-              background: linear-gradient(90deg, #ffcb57, #ffe6a8); transition: width .3s linear; }
+              background: linear-gradient(90deg, #3F92C8, #4EA4DD); transition: width .3s linear; }
   .pre-btn {
     width: 50px; height: 50px; padding: 0; flex: none; border-radius: 13px; display: none;
     align-items: center; justify-content: center; position: relative;
@@ -224,6 +220,8 @@
                           background: rgba(255,255,255,.94); box-shadow: 0 0 6px rgba(0,0,0,.25); }
 
   .locate { font-size: 11.5px; padding: 5px 14px; }
+  .locate-row { display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+  .locate-tip { font-size: 11.5px; color: rgba(255,255,255,.82); text-shadow: 0 1px 3px rgba(0,0,0,.55); }
 
   /* 游戏设置弹窗 */
   .modal {
@@ -348,9 +346,6 @@
               <div class="ic-percent" id="icPercent">0.00%</div>
             </div>
             <div class="ic-eta" id="icEta">剩余时间：计算中</div>
-            <div class="ic-sep"></div>
-            <div class="ic-row"><span>下载</span><b id="icDownload">0 B / 0 B</b></div>
-            <div class="ic-row"><span>安装</span><b id="icInstall">0 B / 0 B</b></div>
             <div class="ic-bar"><i id="icBar"></i></div>
           </div>
         </div>
@@ -358,7 +353,10 @@
           <span class="bars"><i></i><i></i><i></i></span>
         </button>
       </div>
-      <button class="btn ghost locate" id="btnLocate">定位游戏</button>
+      <div class="locate-row">
+        <span class="locate-tip">已安装？立即定位→ </span>
+        <button class="btn ghost locate" id="btnLocate">定位游戏</button>
+      </div>
       <div class="hint" id="hintText"></div>
     </div>
   </div>
@@ -647,7 +645,7 @@
         label.textContent = `${inst.paused ? '继续安装' : '暂停安装'} ${(Number(inst.percent) || 0).toFixed(2)}%`;
         btn.disabled = false;
       }
-      btn.title = `${inst.stage || ''} ${inst.done || ''} / ${inst.total || ''}`;
+      btn.title = '';
     } else if (g.running) {
       label.textContent = '游戏启动中';
       btn.disabled = true;
@@ -704,10 +702,6 @@
     const left = Math.max(0, (inst.downloadTotalBytes || 0) - (inst.downloadDoneBytes || 0));
     const speed = Number(inst.speedBytes) || 0;
     $('icEta').textContent = inst.paused ? '已暂停，等待继续' : formatEta(speed > 0 ? left / speed : 0);
-    $('icDownload').textContent = `${inst.downloadDone || inst.done || '0 B'} / ${inst.downloadTotal || inst.total || '0 B'}`;
-    $('icInstall').textContent = inst.installTotalBytes
-      ? `${inst.installDone || '0 B'} / ${inst.installTotal}`
-      : '等待下载完成';
     $('icBar').style.width = pct + '%';
   }
 

@@ -152,9 +152,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.49"), "v0.1.49", "MikoMiko 0.1.49",
+                    new Version("0.1.50"), "v0.1.50", "MikoMiko 0.1.50",
                     "· 安装时可自选安装位置，升级默认沿用原目录\n· 「追番/影视」排版重做，播放失败直接在软件内提示\n· 每日任务验证码直接在软件内载入极验滑块\n· 切换账号浮层支持一键添加账号，并显示头像与米游社 UID\n· 卸载前自动关闭软件，避免文件占用",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.49.exe", "");
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.50.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();
@@ -219,7 +219,7 @@ public partial class App : Application
         var path = args[2];
         Log(path, "start page=" + page);
 
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page == "Video" ? 10 : page == "Anime" ? 6 : 2) };
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page == "Collection" ? 16 : page == "Video" ? 10 : page == "Anime" ? 6 : 2) };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
@@ -290,6 +290,15 @@ public partial class App : Application
                         };
                         moreDelay.Start();
                     }
+                }
+                if (page == "Collection")
+                {
+                    Shell.OpenCollection(new MikoMiko.Models.UserCollectionItem
+                    {
+                        Id = "5032",
+                        Title = "原神·角色攻略合集",
+                        PostCount = 156,
+                    });
                 }
                 if (page == "Posts" && Shell.HomeTabs.Count > 1)
                 {

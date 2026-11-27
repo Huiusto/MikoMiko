@@ -255,7 +255,7 @@
                                 Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
                                 HorizontalAlignment="Left" Margin="0,16,0,0"
                                 Command="{Binding ClearCacheCommand}" />
-                        <TextBlock Text="运行期间每 5 分钟自动清理一次过期缓存文件。" Style="{StaticResource RowHint}"
+                        <TextBlock Text="运行期间每1小时自动清理一次过期缓存文件。" Style="{StaticResource RowHint}"
                                    Margin="0,10,0,0" />
 
                         <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,16,0,14" />
@@ -281,7 +281,7 @@
                                   Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.CheckUpdateOnStartup}" />
                         <TextBlock Text="{Binding [S.AppDesc], Source={x:Static loc:Loc.Instance}}"
                                    FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   TextWrapping="Wrap" Margin="0,8,0,0" MaxWidth="620" HorizontalAlignment="Left" />
+                                   TextWrapping="Wrap" Margin="0,8,0,0" HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </Border>
 
@@ -317,9 +317,9 @@
                 <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SectionCard}"
                         Margin="0,0,0,14" Tag="AppInfo">
                     <StackPanel>
-                        <TextBlock Text="{Binding [S.AppInfo], Source={x:Static loc:Loc.Instance}}"
+                        <TextBlock Text="应用信息与关于"
                                    Style="{StaticResource SectionTitle}" />
-                        <TextBlock Text="以下是本应用的版本与数据存储信息。"
+                        <TextBlock Text="版本、数据目录与项目说明集中在这里。"
                                    FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
                                    Margin="0,0,0,16" />
 
@@ -352,7 +352,7 @@
 
                         <TextBlock Text="应用的所有数据（设置、账号登录态、视频缓存、图片缓存等）都保存在此文件夹。更改数据目录后需重启 MikoMiko 生效，原有数据不会自动迁移。"
                                    FontSize="11.8" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left" Margin="0,14,0,0" />
+                                   TextWrapping="Wrap" HorizontalAlignment="Stretch" Margin="0,14,0,0" />
 
                         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
                             <Button Content="打开数据目录" Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
@@ -360,15 +360,8 @@
                             <Button Content="更改数据目录" Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
                                     Margin="10,0,0,0" Command="{Binding ChangeDataDirectoryCommand}" />
                         </StackPanel>
-                    </StackPanel>
-                </Border>
 
-                <!-- 关于 -->
-                <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource SectionCard}"
-                        Margin="0,0,0,14" Tag="About">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [S.About], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource SectionTitle}" />
+                        <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,20,0,16" />
 
                         <StackPanel Orientation="Horizontal">
                             <Image Source="pack://application:,,,/Assets/icon.png" Width="64" Height="64" />
@@ -381,7 +374,7 @@
 
                         <TextBlock Text="{Binding [About.Desc], Source={x:Static loc:Loc.Instance}}"
                                    FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   TextWrapping="Wrap" Margin="0,14,0,0" MaxWidth="620" HorizontalAlignment="Left" />
+                                   TextWrapping="Wrap" Margin="0,14,0,0" HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </Border>
 
@@ -394,7 +387,7 @@
                                    Style="{StaticResource SectionTitle}" />
                         <TextBlock Text="{Binding [Disclaimer.Desc], Source={x:Static loc:Loc.Instance}}"
                                    FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   TextWrapping="Wrap" LineHeight="20" MaxWidth="620" HorizontalAlignment="Left" />
+                                   TextWrapping="Wrap" LineHeight="20" HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </Border>
 
@@ -410,8 +403,8 @@
                                            Foreground="{DynamicResource Brush.Accent}" />
                             </Border>
                         </Grid>
-                        <TextBlock TextWrapping="Wrap" LineHeight="20" FontSize="12.5" MaxWidth="760"
-                                   HorizontalAlignment="Left" Foreground="{DynamicResource Brush.TextSecondary}"
+                        <TextBlock TextWrapping="Wrap" LineHeight="20" FontSize="12.5"
+                                   HorizontalAlignment="Stretch" Foreground="{DynamicResource Brush.TextSecondary}"
                                    Text="MikoMiko 是一个完全开源的米游社第三方桌面客户端，基于 .NET 8 与 WPF 构建。所有源码均公开在 GitHub，欢迎阅读、学习、提交问题与参与改进。" />
 
                         <Border Background="{DynamicResource Brush.ControlBg}" CornerRadius="9" Padding="14,12"

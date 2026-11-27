@@ -134,7 +134,7 @@ public partial class FlutterAnimeView : UserControl
         };
         var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(28) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 MikoMiko/0.1.49");
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 MikoMiko/0.1.50");
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "zh-CN,zh;q=0.9");
         return client;
     }

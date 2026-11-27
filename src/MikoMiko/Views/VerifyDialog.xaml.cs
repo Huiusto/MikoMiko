@@ -16,6 +16,7 @@ public partial class VerifyDialog : Window
     private readonly HoyoAccount _account;
     private readonly string? _aigis;
     private bool _initialized;
+    private bool _submitting;
     private string? _challenge;
 
     public VerifyDialog(HoyoAccount account, string? aigis)
@@ -49,6 +50,7 @@ public partial class VerifyDialog : Window
 
     private async Task ReloadChallengeAsync()
     {
+        StatusPill.Visibility = Visibility.Collapsed;
         LoadingPanel.Visibility = Visibility.Visible;
         TxtLoading.Text = "正在向米游社申请极验验证…";
         try
@@ -111,19 +113,50 @@ public partial class VerifyDialog : Window
                 break;
 
             case "validate":
-                if (string.IsNullOrWhiteSpace(data)) break;
-                TxtLoading.Text = "正在提交验证结果…";
-                LoadingPanel.Visibility = Visibility.Visible;
-                var (challenge, error) = await SignService.VerifyCaptchaAsync(_account.Cookie, data);
-                if (!string.IsNullOrWhiteSpace(challenge))
+                if (string.IsNullOrWhiteSpace(data) || _submitting) break;
+                _submitting = true;
+                // 0.1.50：成功后不再用整页白色 Loading 覆盖极验，避免「验证成功」画面定格。
+                TxtStatus.Text = "验证成功，正在完成验证…";
+                StatusPill.Visibility = Visibility.Visible;
+                try
                 {
-                    _challenge = challenge;
-                    DialogResult = true;
-                    break;
+                    var verifyTask = SignService.VerifyCaptchaAsync(_account.Cookie, data);
+                    var completed = await Task.WhenAny(verifyTask, Task.Delay(TimeSpan.FromSeconds(20)));
+                    if (completed != verifyTask)
+                    {
+                        TxtStatus.Text = "验证结果提交超时，请按 Esc 关闭后重试";
+                        await Task.Delay(1200);
+                        _submitting = false;
+                        await ReloadChallengeAsync();
+                        break;
+                    }
+
+                    var (challenge, error) = await verifyTask;
+                    if (!string.IsNullOrWhiteSpace(challenge))
+                    {
+                        TxtStatus.Text = "验证通过，正在返回任务页…";
+                        _challenge = challenge;
+                        DialogResult = true;
+                        break;
+                    }
+
+                    // 验证未通过时短暂显示原因，再刷新一张新的验证码。
+                    TxtStatus.Text = error ?? "验证未通过，正在刷新验证码…";
+                    StatusPill.Visibility = Visibility.Collapsed;
+                    _submitting = false;
+                    await ReloadChallengeAsync();
                 }
-                TxtLoading.Text = error ?? "验证未通过，请重试";
-                LoadingPanel.Visibility = Visibility.Visible;
-                await ReloadChallengeAsync();
+                catch (Exception ex)
+                {
+                    TxtStatus.Text = "验证结果提交失败：" + ex.Message;
+                    await Task.Delay(1200);
+                    _submitting = false;
+                    await ReloadChallengeAsync();
+                }
+                finally
+                {
+                    _submitting = false;
+                }
                 break;
         }
     }

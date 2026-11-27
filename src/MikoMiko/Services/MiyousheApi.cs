@@ -217,17 +217,26 @@ public sealed class MiyousheApi
     /// <summary>分区小图标：按 GameId 优先、游戏名兜底；未提供图标的分区返回空串。</summary>
     private static string ForumIconPath(int gameId, string name)
     {
-        var file = gameId switch
+        // 0.1.50：板块选择使用九枚官方游戏图标，按分区名精确匹配，避免不同游戏共用同一张图。
+        var file = name switch
         {
-            2 => "ic_genshin",
-            1 => "ic_honkai3",
-            6 => "ic_starrail",
-            8 => "ic_zzz",
-            _ => name.Contains("原神") ? "ic_genshin"
-                : name.Contains("崩坏3") || name.Contains("崩坏三") ? "ic_honkai3"
-                : name.Contains("星穹") || name.Contains("星铁") ? "ic_starrail"
-                : name.Contains("绝区零") ? "ic_zzz"
-                : "",
+            var n when n.Contains("大别野") || n.Contains("大别墅") => "ic_section_dabieye",
+            var n when n.Contains("崩坏学园2") || n.Contains("崩坏学园二") => "ic_section_ggz",
+            var n when n.Contains("崩坏3") || n.Contains("崩坏三") => "ic_section_honkai3",
+            var n when n.Contains("未定事件簿") => "ic_section_tot",
+            var n when n.Contains("原神") => "ic_section_genshin",
+            var n when n.Contains("星穹") || n.Contains("星铁") => "ic_section_starrail",
+            var n when n.Contains("绝区零") => "ic_section_zzz",
+            var n when n.Contains("星布谷地") => "ic_section_starbud",
+            var n when n.Contains("因缘精灵") => "ic_section_yinyuan",
+            _ => gameId switch
+            {
+                2 => "ic_section_genshin",
+                1 => "ic_section_honkai3",
+                6 => "ic_section_starrail",
+                8 => "ic_section_zzz",
+                _ => "",
+            },
         };
         return string.IsNullOrEmpty(file) ? "" : $"pack://application:,,,/Assets/Games/{file}.png";
     }

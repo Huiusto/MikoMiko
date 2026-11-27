@@ -5,7 +5,7 @@
              Background="{DynamicResource Brush.WindowBg}">
     <UserControl.Resources>
         <Style x:Key="GachaCombo" TargetType="ComboBox">
-            <Setter Property="Height" Value="36" />
+            <Setter Property="Height" Value="34" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
             <Setter Property="Background" Value="{DynamicResource Brush.ControlBg}" />
@@ -16,9 +16,9 @@
         </Style>
 
         <Style x:Key="GachaButton" TargetType="Button">
-            <Setter Property="Height" Value="36" />
-            <Setter Property="Padding" Value="14,0" />
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="FontSize" Value="11.5" />
             <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
             <Setter Property="Background" Value="{DynamicResource Brush.ControlBg}" />
             <Setter Property="BorderBrush" Value="{DynamicResource Brush.ControlBorder}" />
@@ -53,59 +53,40 @@
         </Style>
 
         <Style x:Key="GachaIconButton" TargetType="Button" BasedOn="{StaticResource GachaButton}">
-            <Setter Property="Width" Value="36" />
+            <Setter Property="Width" Value="34" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="FontSize" Value="14" />
         </Style>
 
-        <Style x:Key="GachaSideItem" TargetType="Button">
-            <Setter Property="Height" Value="38" />
-            <Setter Property="Margin" Value="0,0,8,0" />
-            <Setter Property="Padding" Value="12,0" />
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="FontSize" Value="11.5" />
-            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
-            <Setter Property="Background" Value="{DynamicResource Brush.ControlBg}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource Brush.ControlBorder}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="B" Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="7" Padding="{TemplateBinding Padding}">
-                            <TextBlock Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
-                                       FontSize="{TemplateBinding FontSize}" VerticalAlignment="Center"
-                                       HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Brush.CardHover}" />
-                                <Setter TargetName="B" Property="BorderBrush" Value="{DynamicResource Brush.Accent}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
+        <Style x:Key="GachaSideItem" TargetType="Button" BasedOn="{StaticResource GachaButton}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="0,0,7,0" />
+            <Setter Property="Padding" Value="10,0" />
+        </Style>
+
+        <Style x:Key="GachaToggle" TargetType="Button" BasedOn="{StaticResource GachaButton}">
+            <Setter Property="MinWidth" Value="82" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="ToolLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="9.5" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextTertiary}" />
+            <Setter Property="Margin" Value="1,0,0,4" />
         </Style>
     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="64" />
-            <RowDefinition Height="300" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="34" />
         </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="246" />
-            <ColumnDefinition Width="348" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
 
         <!-- 顶栏 -->
-        <Grid Grid.Row="0" Grid.ColumnSpan="3" Background="{DynamicResource Brush.NavBg}" Margin="0,0,0,1">
+        <Grid Grid.Row="0" Background="{DynamicResource Brush.NavBg}" Margin="0,0,0,1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -140,134 +121,99 @@
                            Foreground="{DynamicResource Brush.TextSecondary}" Margin="12,3,0,0" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
-                <Button x:Name="BtnMore" Content="⋯" Style="{StaticResource GachaIconButton}" Width="34"
+                <Button x:Name="BtnMore" Content="⋯" Style="{StaticResource GachaIconButton}"
                         Click="BtnMore_Click" ToolTip="更多操作" />
-                <Button x:Name="BtnSettings" Content="⚙" Style="{StaticResource GachaIconButton}" Width="34"
+                <Button x:Name="BtnSettings" Content="⚙" Style="{StaticResource GachaIconButton}"
                         Margin="6,0,0,0" Click="BtnSettings_Click" ToolTip="设置" />
             </StackPanel>
         </Grid>
 
-        <!-- 上方左：账号、更新、当前记录与快捷操作 -->
-        <Border Grid.Row="1" Grid.Column="0" Background="{DynamicResource Brush.Surface}"
-                BorderBrush="{DynamicResource Brush.BorderSoft}" BorderThickness="0,0,1,0" Padding="16,14">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <Border Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
-                        BorderThickness="1" CornerRadius="10" Padding="12,9">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="10" />
-                            <ColumnDefinition Width="0.82*" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="游戏" FontSize="10" Foreground="{DynamicResource Brush.TextTertiary}" />
-                            <ComboBox x:Name="ComboGame" Margin="0,5,0,0" Style="{StaticResource GachaCombo}"
-                                      SelectionChanged="ComboGame_SelectionChanged" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Text="UID" FontSize="10" Foreground="{DynamicResource Brush.TextTertiary}" />
-                            <ComboBox x:Name="ComboUid" Margin="0,5,0,0" Style="{StaticResource GachaCombo}"
-                                      SelectionChanged="ComboUid_SelectionChanged" />
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <Grid Grid.Row="1" Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Button x:Name="BtnUpdate" Content="更新记录" Height="38" Width="104"
-                            Style="{StaticResource GachaPrimaryButton}" Click="BtnUpdate_Click" />
-                    <Border Grid.Column="1" Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
-                            BorderThickness="1" CornerRadius="9" Padding="10,5" Margin="10,0,0,0">
-                        <StackPanel>
-                            <TextBlock Text="当前记录" FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}" />
-                            <TextBlock x:Name="TxtSidebarStats" Text="0 条" FontSize="14" FontWeight="SemiBold"
-                                       Foreground="{DynamicResource Brush.TextPrimary}" Margin="0,2,0,0" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
-
-                <StackPanel Grid.Row="2" Margin="0,10,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="快捷操作" FontSize="10" Foreground="{DynamicResource Brush.TextTertiary}"
-                                   VerticalAlignment="Center" Margin="2,0,0,0" />
-                        <TextBlock x:Name="TxtUid" Text="UID —" FontSize="10" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   VerticalAlignment="Center" Margin="10,0,0,0" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
-                        <Button Content="导出 CSV" Style="{StaticResource GachaSideItem}" Click="ExportCsv_Click" />
-                        <Button Content="打开记录目录" Style="{StaticResource GachaSideItem}" Click="OpenDataDir_Click" />
-                    </StackPanel>
+        <!-- 右上角：游戏 / UID / 更新与概览、分析开关 -->
+        <Border Grid.Row="1" HorizontalAlignment="Right" Margin="18,12,18,0"
+                Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderSoft}"
+                BorderThickness="1" CornerRadius="12" Padding="12,9">
+            <WrapPanel HorizontalAlignment="Right" VerticalAlignment="Center">
+                <StackPanel Width="126" Margin="0,0,10,0">
+                    <TextBlock Text="游戏" Style="{StaticResource ToolLabel}" />
+                    <ComboBox x:Name="ComboGame" Style="{StaticResource GachaCombo}"
+                              SelectionChanged="ComboGame_SelectionChanged" />
                 </StackPanel>
-
-                <TextBlock Grid.Row="4" x:Name="TxtAccount" Text="未登录米游社" FontSize="10"
-                           Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" />
-            </Grid>
+                <StackPanel Width="136" Margin="0,0,10,0">
+                    <TextBlock Text="UID" Style="{StaticResource ToolLabel}" />
+                    <ComboBox x:Name="ComboUid" Style="{StaticResource GachaCombo}"
+                              SelectionChanged="ComboUid_SelectionChanged" />
+                </StackPanel>
+                <StackPanel Width="72" Margin="0,0,10,0">
+                    <TextBlock Text="当前记录" Style="{StaticResource ToolLabel}" />
+                    <Border Height="34" Background="{DynamicResource Brush.ControlBg}"
+                            BorderBrush="{DynamicResource Brush.ControlBorder}" BorderThickness="1" CornerRadius="8">
+                        <TextBlock x:Name="TxtSidebarStats" Text="0 条" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.TextPrimary}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,0" VerticalAlignment="Bottom">
+                    <Button x:Name="BtnUpdate" Content="更新记录" Width="88"
+                            Style="{StaticResource GachaPrimaryButton}" Click="BtnUpdate_Click" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="0,0,8,0">
+                    <Button Content="导出 CSV" Style="{StaticResource GachaSideItem}" Click="ExportCsv_Click" />
+                    <Button Content="记录目录" Style="{StaticResource GachaSideItem}" Margin="0" Click="OpenDataDir_Click" />
+                </StackPanel>
+                <Border Width="1" Height="34" Background="{DynamicResource Brush.BorderSoft}"
+                        Margin="4,0,9,0" VerticalAlignment="Bottom" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button x:Name="BtnOverview" Content="记录概览 ▸" Style="{StaticResource GachaToggle}"
+                            Click="BtnOverview_Click" />
+                    <Button x:Name="BtnAnalysis" Content="出货分析 ▸" Style="{StaticResource GachaToggle}"
+                            Margin="7,0,0,0" Click="BtnAnalysis_Click" />
+                </StackPanel>
+            </WrapPanel>
         </Border>
 
-        <!-- 上方中：记录概览 -->
-        <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource Brush.WindowBg}"
-                BorderBrush="{DynamicResource Brush.BorderSoft}" BorderThickness="0,0,1,0" Padding="18,14">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <TextBlock Text="记录概览" FontSize="14" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Brush.TextPrimary}" />
-                <TextBlock Grid.Row="1" x:Name="TxtSummarySub" Text="选择 UID 后开始统计" FontSize="10"
-                           Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,4,0,0" TextWrapping="Wrap" />
-
-                <Border Grid.Row="2" Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
-                        BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,12,0,0">
-                    <StackPanel x:Name="SummaryPanel" />
+        <!-- 展开后的概览 / 分析，默认全部收起 -->
+        <Grid Grid.Row="2" Margin="18,10,18,0" HorizontalAlignment="Right">
+            <StackPanel Orientation="Horizontal">
+                <Border x:Name="OverviewCard" Width="404" Visibility="Collapsed"
+                        Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderSoft}"
+                        BorderThickness="1" CornerRadius="12" Padding="16,13">
+                    <StackPanel>
+                        <Grid>
+                            <TextBlock Text="记录概览" FontSize="13.5" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Brush.TextPrimary}" />
+                            <TextBlock x:Name="TxtSummarySub" Text="选择 UID 后开始统计" FontSize="9.5"
+                                       Foreground="{DynamicResource Brush.TextSecondary}"
+                                       HorizontalAlignment="Right" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" Margin="12,0,0,0" />
+                        </Grid>
+                        <StackPanel x:Name="SummaryPanel" Margin="0,8,0,0" />
+                        <TextBlock Text="结尾百分比为对应稀有度出货率；金色为最高稀有度，紫色为次高档。"
+                                   FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0" />
+                    </StackPanel>
                 </Border>
-
-                <TextBlock Grid.Row="3" Text="结尾的百分比为对应稀有度出货率；金色为最高稀有度，紫色为次高档。"
-                           FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}" TextWrapping="Wrap"
-                           Margin="2,10,0,0" VerticalAlignment="Bottom" />
-            </Grid>
-        </Border>
-
-        <!-- 上方右：出货分析 -->
-        <Border Grid.Row="1" Grid.Column="2" Background="{DynamicResource Brush.Surface}" Padding="18,14">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <TextBlock Text="出货分析" FontSize="14" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Brush.TextPrimary}" />
-                <Border Grid.Row="1" Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
-                        BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,12,0,0">
-                    <StackPanel x:Name="ChartPanel" />
+                <Border x:Name="AnalysisCard" Width="404" Visibility="Collapsed" Margin="10,0,0,0"
+                        Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderSoft}"
+                        BorderThickness="1" CornerRadius="12" Padding="16,13">
+                    <StackPanel>
+                        <TextBlock Text="出货分析" FontSize="13.5" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Brush.TextPrimary}" />
+                        <StackPanel x:Name="ChartPanel" Margin="0,8,0,0" />
+                        <TextBlock Text="金色：5★ / 紫色：4★ / 橙色 UP；数字为距上次同档位的抽数。"
+                                   FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                                   TextWrapping="Wrap" Margin="0,8,0,0" />
+                    </StackPanel>
                 </Border>
-                <TextBlock Grid.Row="2" Text="金色：5★ / 紫色：4★ / 橙色 UP 标记；数字为距上次同档位的抽数。"
-                           FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}" TextWrapping="Wrap"
-                           Margin="2,10,0,0" VerticalAlignment="Bottom" />
-            </Grid>
-        </Border>
+            </StackPanel>
+        </Grid>
 
-        <!-- 下方：整排卡池抽卡记录 -->
-        <Grid Grid.Row="2" Grid.ColumnSpan="3" Background="{DynamicResource Brush.WindowBg}">
+        <!-- 下方：整排卡池抽卡记录，随窗口宽高自由调整 -->
+        <Grid Grid.Row="3" Background="{DynamicResource Brush.WindowBg}" Margin="0,8,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <Grid Margin="18,2,18,0">
+            <Grid Margin="18,4,18,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -278,7 +224,7 @@
                     <TextBlock Text="抽卡记录" FontSize="13" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.TextPrimary}" VerticalAlignment="Center" />
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="横向滑动查看更多卡池 →" FontSize="9.5"
+                <TextBlock x:Name="TxtUid" Grid.Column="1" Text="UID —" FontSize="9.5"
                            Foreground="{DynamicResource Brush.TextTertiary}" VerticalAlignment="Center" />
             </Grid>
             <ScrollViewer x:Name="PoolScroll" Grid.Row="1" Margin="0,8,0,0"
@@ -288,17 +234,23 @@
         </Grid>
 
         <!-- 底部状态 -->
-        <Border Grid.Row="3" Grid.ColumnSpan="3" Background="{DynamicResource Brush.NavBg}"
+        <Border Grid.Row="4" Background="{DynamicResource Brush.NavBg}"
                 BorderBrush="{DynamicResource Brush.BorderSoft}" BorderThickness="0,1,0,0">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="22,0,0,0">
-                <Ellipse Width="6" Height="6" Fill="{DynamicResource Brush.Accent}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                <TextBlock x:Name="TxtStatus" Text="本地库为空 · 等待同步抽卡记录" FontSize="10"
-                           Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
-            </StackPanel>
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="22,0,0,0">
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource Brush.Accent}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock x:Name="TxtStatus" Text="本地库为空 · 等待同步抽卡记录" FontSize="10"
+                               Foreground="{DynamicResource Brush.TextSecondary}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="TxtAccount" Text="未登录米游社" FontSize="9.5"
+                           Foreground="{DynamicResource Brush.TextTertiary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,22,0"
+                           TextTrimming="CharacterEllipsis" MaxWidth="420" />
+            </Grid>
         </Border>
 
         <!-- 设置浮层 -->
-        <Border x:Name="PanelSettings" Grid.Row="0" Grid.RowSpan="4" Grid.ColumnSpan="3" Width="390"
+        <Border x:Name="PanelSettings" Grid.Row="0" Grid.RowSpan="5" Width="390"
                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,58,16,0"
                 Visibility="Collapsed" Panel.ZIndex="40"
                 Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"
@@ -326,7 +278,7 @@
             </StackPanel>
         </Border>
 
-        <Border x:Name="TxtToast" Grid.Row="2" Background="{DynamicResource Brush.Card}" CornerRadius="8" Padding="16,8"
+        <Border x:Name="TxtToast" Grid.Row="3" Background="{DynamicResource Brush.Card}" CornerRadius="8" Padding="16,8"
                 HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,18"
                 Visibility="Collapsed" Panel.ZIndex="50" BorderBrush="{DynamicResource Brush.Border}" BorderThickness="1">
             <TextBlock x:Name="TxtToastText" Text="" FontSize="11.5" Foreground="{DynamicResource Brush.TextPrimary}" />

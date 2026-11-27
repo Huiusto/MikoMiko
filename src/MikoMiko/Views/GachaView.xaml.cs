@@ -114,12 +114,14 @@ public partial class GachaView : UserControl
     private bool _suppressGame;
     private bool _suppressUid;
     private DispatcherTimer? _toastTimer;
+    private int _poolCount;
 
     public GachaView()
     {
         InitializeComponent();
         ComboGame.ItemsSource = Games;
         ComboGame.SelectedIndex = 0;
+        PoolScroll.SizeChanged += (_, _) => ResizePoolColumns();
         Loaded += (_, _) => ReloadData();
     }
 
@@ -262,8 +264,9 @@ public partial class GachaView : UserControl
 
         PoolGrid.Children.Clear();
         PoolGrid.ColumnDefinitions.Clear();
+        _poolCount = stats.Count;
         for (var i = 0; i < stats.Count; i++)
-            PoolGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(PoolColumnWidth(stats.Count)) });
+            PoolGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(262) });
 
         for (var i = 0; i < stats.Count; i++)
         {
@@ -271,6 +274,20 @@ public partial class GachaView : UserControl
             Grid.SetColumn(card, i);
             PoolGrid.Children.Add(card);
         }
+        ResizePoolColumns();
+    }
+
+    /// <summary>0.1.50：记录列宽按可视区域均分，窗口变宽/变窄时实时重排。</summary>
+    private void ResizePoolColumns()
+    {
+        if (_poolCount <= 0 || PoolGrid.ColumnDefinitions.Count != _poolCount) return;
+        var available = PoolScroll.ViewportWidth;
+        if (double.IsNaN(available) || available <= 0)
+            available = Math.Max(0, ActualWidth - 36);
+        if (double.IsNaN(available) || available <= 0) return;
+        var column = Math.Max(252, (available - 36) / _poolCount - 12);
+        foreach (var definition in PoolGrid.ColumnDefinitions)
+            definition.Width = new GridLength(column);
     }
 
     private void BuildSummary(List<(PoolDef Def, PoolStat Stat)> stats, int totalPulls, int topPulls)
@@ -434,9 +451,6 @@ public partial class GachaView : UserControl
         }
         return grid;
     }
-
-    /// <summary>与 MikoNest 抽卡页一致：每列固定 262，横向滚动。</summary>
-    private static double PoolColumnWidth(int count) => 262;
 
     private int TopRank => _game is "genshin" or "starrail" ? 5 : 4;
 
@@ -1041,6 +1055,22 @@ public partial class GachaView : UserControl
         menu.Items.Add(copy);
         menu.Items.Add(open);
         menu.IsOpen = true;
+    }
+
+    private void BtnOverview_Click(object sender, RoutedEventArgs e)
+    {
+        OverviewCard.Visibility = OverviewCard.Visibility == Visibility.Visible
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        BtnOverview.Content = OverviewCard.Visibility == Visibility.Visible ? "记录概览 ▾" : "记录概览 ▸";
+    }
+
+    private void BtnAnalysis_Click(object sender, RoutedEventArgs e)
+    {
+        AnalysisCard.Visibility = AnalysisCard.Visibility == Visibility.Visible
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+        BtnAnalysis.Content = AnalysisCard.Visibility == Visibility.Visible ? "出货分析 ▾" : "出货分析 ▸";
     }
 
     private void BtnSettings_Click(object sender, RoutedEventArgs e)

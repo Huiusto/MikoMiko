@@ -615,7 +615,7 @@ public partial class LaunchView : UserControl
         }
         if (_runningGames.Contains(_selectedKey)) return "游戏运行中，退出游戏后按钮会自动恢复。";
         var dir = MikoNestBridge.GetGameDir(_selectedKey);
-        if (dir == null) return "未找到本地游戏，点「获取游戏」可直接在 MikoMiko 内安装；安装后也能点「定位游戏」选择已有目录。";
+        if (dir == null) return "未找到本地游戏，点「获取游戏」即可立即安装。";
         if (MikoNestBridge.FindGameExe(_selectedKey) == null)
             return "已找到游戏目录，但没有找到主程序：" + dir + "；点「定位游戏」重新选择包含游戏程序的文件夹。";
         return "已定位：" + dir;

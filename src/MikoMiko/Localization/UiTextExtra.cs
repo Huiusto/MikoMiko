@@ -263,7 +263,7 @@ internal static class UiTextExtra
         ["全部游戏 ▾"] = "All games ▾",
         ["当前游戏：原神"] = "Current game: Genshin Impact",
         ["当前游戏："] = "Current game: ",
-        ["未找到本地游戏，点「获取游戏」可直接在 MikoMiko 内安装；安装后也能点「定位游戏」选择已有目录。"] = "No local game found. Tap \"Get game\" to install inside MikoMiko, or \"Locate game\" to choose an existing folder.",
+        ["未找到本地游戏，点「获取游戏」即可立即安装。"] = "No local game found. Tap \"Get game\" to install right away.",
         ["获取游戏"] = "Get game",
         ["游戏设置"] = "Game settings",
         ["定位游戏"] = "Locate game",

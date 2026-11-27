@@ -1,0 +1,105 @@
+<UserControl x:Class="MikoMiko.Views.CollectionReaderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="Microsoft YaHei UI" Background="{DynamicResource Brush.WindowBg}">
+    <UserControl.Resources>
+        <Style x:Key="CollectionBack" TargetType="Button">
+            <Setter Property="Width" Value="32" /><Setter Property="Height" Value="32" />
+            <Setter Property="Cursor" Value="Hand" /><Setter Property="FontSize" Value="17" />
+            <Setter Property="Foreground" Value="{DynamicResource Brush.TextPrimary}" />
+            <Setter Property="Background" Value="{DynamicResource Brush.ControlBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brush.ControlBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="B" CornerRadius="8" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="B" Property="Background" Value="{DynamicResource Brush.CardHover}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="64" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="34" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{DynamicResource Brush.NavBg}"
+                BorderBrush="{DynamicResource Brush.BorderSoft}" BorderThickness="0,0,0,1">
+            <Grid Margin="18,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Content="‹" Style="{StaticResource CollectionBack}" VerticalAlignment="Center"
+                        Click="Back_Click" ToolTip="返回我的" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBlock x:Name="TxtTitle" Text="合集" FontSize="17" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.TextPrimary}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="TxtSub" Text="正在读取合集内容…" FontSize="10.5"
+                               Foreground="{DynamicResource Brush.TextSecondary}" Margin="0,3,0,0" />
+                </StackPanel>
+                <Button Grid.Column="2" Content="刷新" Height="30" Padding="13,0" Cursor="Hand"
+                        Background="{DynamicResource Brush.ControlBg}"
+                        BorderBrush="{DynamicResource Brush.ControlBorder}" BorderThickness="1"
+                        Foreground="{DynamicResource Brush.TextPrimary}" FontSize="11"
+                        Click="Refresh_Click" VerticalAlignment="Center">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="B" CornerRadius="7" Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="B" Property="Background" Value="{DynamicResource Brush.CardHover}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <ScrollViewer x:Name="ListScroll" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" Padding="0,14,0,16">
+                <StackPanel x:Name="List" Margin="22,0,22,0" HorizontalAlignment="Stretch" />
+            </ScrollViewer>
+            <StackPanel x:Name="LoadingPanel" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="正在载入合集，请稍候…" FontSize="12"
+                           Foreground="{DynamicResource Brush.TextSecondary}" />
+            </StackPanel>
+            <StackPanel x:Name="EmptyPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                <TextBlock Text="这个合集里还没有可阅读的帖子。" FontSize="13"
+                           Foreground="{DynamicResource Brush.TextSecondary}" HorizontalAlignment="Center" />
+                <Button Content="重新加载" Margin="0,12,0,0" Height="32" Padding="16,0"
+                        Cursor="Hand" Click="Refresh_Click"
+                        Background="{DynamicResource Brush.ControlBg}"
+                        BorderBrush="{DynamicResource Brush.ControlBorder}" BorderThickness="1"
+                        Foreground="{DynamicResource Brush.TextPrimary}" />
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="2" Background="{DynamicResource Brush.NavBg}"
+                BorderBrush="{DynamicResource Brush.BorderSoft}" BorderThickness="0,1,0,0">
+            <TextBlock Text="合集内容已在 MikoMiko 内直接阅读，点击任意条目进入帖子阅读器。"
+                       FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                       VerticalAlignment="Center" Margin="22,0,0,0" />
+        </Border>
+    </Grid>
+</UserControl>

@@ -2,7 +2,7 @@ using System.IO;
 
 namespace MikoMiko.Services;
 
-/// <summary>缓存自动清理：每 5 分钟清掉 5 分钟以前写入的缓存文件，避免缓存无限增长。</summary>
+/// <summary>缓存自动清理：运行期间每 1 小时清理一次超过 24 小时的过期缓存文件。</summary>
 public static class CacheJanitor
 {
     private static Timer? _timer;
@@ -10,7 +10,7 @@ public static class CacheJanitor
     public static void Start()
     {
         if (_timer is not null) return;
-        _timer = new Timer(_ => Cleanup(), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+        _timer = new Timer(_ => Cleanup(), null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
     }
 
     public static void Cleanup()
@@ -19,7 +19,7 @@ public static class CacheJanitor
         {
             var dir = SettingsService.CacheDirectory;
             if (!Directory.Exists(dir)) return;
-            var cutoff = DateTime.Now.AddMinutes(-5);
+            var cutoff = DateTime.Now.AddHours(-24);
             foreach (var file in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
             {
                 try

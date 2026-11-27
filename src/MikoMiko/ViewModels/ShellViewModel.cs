@@ -60,7 +60,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), new AnimeStreamService(),
             _animeFollows, ShowAnimePlayer);
         _moment = new MomentViewModel(content, OpenMoment, OpenUserProfile);
-        _mine = new MineViewModel(content, _settings, OpenItem, OpenLink);
+        _mine = new MineViewModel(content, _settings, OpenItem, OpenCollection);
         _settingsVm = new SettingsViewModel(settingsService, content);
         _upload = new UploadViewModel(OpenUploadUrl);
         _upload.CloseRequested = CloseUpload;
@@ -108,6 +108,10 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty] private Views.PostReaderView? _readerView;
     [ObservableProperty] private bool _isReaderOpen;
     [ObservableProperty] private Views.VideoView? _videoPage;
+
+    /// <summary>软件内合集阅读器（合集页不跳网页）。</summary>
+    [ObservableProperty] private Views.CollectionReaderView? _collectionReaderView;
+    [ObservableProperty] private bool _isCollectionReaderOpen;
 
     /// <summary>其他用户的「我的」主页覆盖面（不新开窗口）。</summary>
     [ObservableProperty] private Views.UserProfileView? _profileView;
@@ -586,6 +590,29 @@ public sealed partial class ShellViewModel : ObservableObject
             DurationText = moment.DurationText,
             Images = moment.Images.ToList(),
         });
+    }
+
+    /// <summary>从「我的合集」进入软件内合集阅读器，点击作品继续用帖子阅读器打开。</summary>
+    public void OpenCollection(UserCollectionItem collection)
+    {
+        if (collection is null || string.IsNullOrWhiteSpace(collection.Id)) return;
+        VideoPage?.PausePlayback();
+        WebHubPage?.PauseMedia();
+        CloseCollectionReader();
+        CloseReader();
+        CloseBrowser();
+        CloseProfile();
+        var view = new Views.CollectionReaderView(collection, OpenItem, CloseCollectionReader);
+        CollectionReaderView = view;
+        IsCollectionReaderOpen = true;
+        _ = view.LoadAsync();
+    }
+
+    public void CloseCollectionReader()
+    {
+        if (CollectionReaderView is null) return;
+        CollectionReaderView = null;
+        IsCollectionReaderOpen = false;
     }
 
     /// <summary>正文链接统一入口：米游社帖子在阅读器内打开，其他网页用软件内浏览器。</summary>

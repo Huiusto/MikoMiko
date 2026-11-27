@@ -211,6 +211,12 @@
                             Focusable="False"
                             Visibility="{Binding IsAnimePageOpen, Converter={StaticResource BoolToVis}}" />
 
+            <!-- ==================== 合集阅读器（软件内打开，点击作品进入帖子阅读器） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding CollectionReaderView}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False"
+                            Visibility="{Binding IsCollectionReaderOpen, Converter={StaticResource BoolToVis}}" />
+
             <!-- ==================== 帖子阅读器（软件内打开，覆盖内容区） ==================== -->
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding ReaderView}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"

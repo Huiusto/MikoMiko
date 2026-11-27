@@ -36,8 +36,7 @@ public sealed partial class SettingsViewModel : ObservableObject
             new("Cache", Loc.Instance["S.Cache"]),
             new("Common", Loc.Instance["S.Common"]),
             new("Maintain", Loc.Instance["S.Maintain"]),
-            new("AppInfo", Loc.Instance["S.AppInfo"]),
-            new("About", Loc.Instance["S.About"]),
+            new("AppInfo", "应用信息与关于"),
             new("Disclaimer", Loc.Instance["S.Disclaimer"]),
             new("OpenSource", Loc.Instance["S.OpenSource"]),
         };
