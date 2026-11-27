@@ -208,6 +208,8 @@ public partial class GachaView : UserControl
         _suppressUid = false;
     }
 
+    private Brush Theme(string key) => TryFindResource(key) as Brush ?? Brushes.Transparent;
+
     private void Render()
     {
         var poolDefs = PoolDefs[_game];
@@ -297,13 +299,13 @@ public partial class GachaView : UserControl
         {
             Margin = new Thickness(0, 10, 0, 0),
             Padding = new Thickness(0, 9, 0, 0),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x27, 0x33, 0x41)),
+            BorderBrush = Theme("Brush.Border"),
             BorderThickness = new Thickness(0, 1, 0, 0),
             Child = new TextBlock
             {
                 Text = $"共 {totalPulls:N0} 抽",
                 FontSize = 10,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x78, 0x89, 0x9B)),
+                Foreground = Theme("Brush.TextTertiary"),
             },
         };
         SummaryPanel.Children.Add(totalLine);
@@ -321,7 +323,7 @@ public partial class GachaView : UserControl
         {
             Text = label,
             FontSize = 11,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x9C, 0xAD, 0xBD)),
+            Foreground = Theme("Brush.TextSecondary"),
             VerticalAlignment = VerticalAlignment.Center,
         };
         grid.Children.Add(text);
@@ -338,7 +340,7 @@ public partial class GachaView : UserControl
         {
             Text = hint,
             FontSize = 9,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x72, 0x84, 0x96)),
+            Foreground = Theme("Brush.TextTertiary"),
             VerticalAlignment = VerticalAlignment.Bottom,
             Margin = new Thickness(5, 0, 0, 2),
         });
@@ -377,7 +379,7 @@ public partial class GachaView : UserControl
         {
             Text = "分段条宽 = 该区间出货次数；悬停查看具体数量。",
             FontSize = 9,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x77, 0x88)),
+            Foreground = Theme("Brush.TextTertiary"),
             Margin = new Thickness(0, 9, 0, 0),
             TextWrapping = TextWrapping.Wrap,
         });
@@ -520,15 +522,16 @@ public partial class GachaView : UserControl
         {
             Margin = new Thickness(0, 0, 12, 0),
             CornerRadius = new CornerRadius(14),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x27, 0x34, 0x42)),
+            BorderBrush = Theme("Brush.Border"),
             BorderThickness = new Thickness(1),
-            Background = new SolidColorBrush(Color.FromRgb(0x11, 0x18, 0x21)),
+            Background = Theme("Brush.Card"),
             Padding = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Top,
         };
 
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         // 顶部 accent 线 + 淡彩 wash（仿 MikoNest 卡池卡）
         var topLine = new Border
@@ -559,8 +562,8 @@ public partial class GachaView : UserControl
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        Grid.SetRow(body, 1);
+        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        Grid.SetRow(body, 0);
         root.Children.Add(body);
 
         // 标题 + 总抽数
@@ -572,7 +575,7 @@ public partial class GachaView : UserControl
             Text = stat.Name,
             FontSize = 15,
             FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xEC, 0xF3, 0xF9)),
+            Foreground = Theme("Brush.TextPrimary"),
             VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis,
         };
@@ -582,7 +585,7 @@ public partial class GachaView : UserControl
         {
             Text = stat.Total.ToString(),
             FontSize = 15,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xA8, 0xB8, 0xC8)),
+            Foreground = Theme("Brush.TextSecondary"),
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(8, 0, 0, 0),
         };
@@ -598,7 +601,7 @@ public partial class GachaView : UserControl
         {
             Text = period,
             FontSize = 10,
-            Foreground = new SolidColorBrush(Color.FromRgb(0x75, 0x87, 0x99)),
+            Foreground = Theme("Brush.TextTertiary"),
             Margin = new Thickness(0, 5, 0, 0),
         };
         Grid.SetRow(periodText, 1);
@@ -626,16 +629,16 @@ public partial class GachaView : UserControl
         segmented.Children.Add(new Border
         {
             CornerRadius = new CornerRadius(7),
-            Background = new SolidColorBrush(Color.FromRgb(0x0D, 0x14, 0x1D)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x27, 0x34, 0x42)),
+            Background = Theme("Brush.ControlBg"),
+            BorderBrush = Theme("Brush.ControlBorder"),
             BorderThickness = new Thickness(1),
         });
         var topBtn = new Button
         {
             Content = topLabel,
-            Background = topSelected ? new SolidColorBrush(Color.FromRgb(0x1B, 0x27, 0x34)) : Brushes.Transparent,
+            Background = topSelected ? Theme("Brush.AccentSoft") : Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Foreground = topSelected ? new SolidColorBrush(topColor) : (Brush)new SolidColorBrush(Color.FromRgb(0x6D, 0x7E, 0x90)),
+            Foreground = topSelected ? new SolidColorBrush(topColor) : Theme("Brush.TextTertiary"),
             FontWeight = topSelected ? FontWeights.SemiBold : FontWeights.Normal,
             FontSize = 11,
             Cursor = Cursors.Hand,
@@ -653,9 +656,9 @@ public partial class GachaView : UserControl
         var secondBtn = new Button
         {
             Content = secondLabel,
-            Background = !topSelected ? new SolidColorBrush(Color.FromRgb(0x1B, 0x27, 0x34)) : Brushes.Transparent,
+            Background = !topSelected ? Theme("Brush.AccentSoft") : Brushes.Transparent,
             BorderThickness = new Thickness(0),
-            Foreground = !topSelected ? new SolidColorBrush(secondColor) : new SolidColorBrush(Color.FromRgb(0x6D, 0x7E, 0x90)),
+            Foreground = !topSelected ? new SolidColorBrush(secondColor) : Theme("Brush.TextTertiary"),
             FontWeight = !topSelected ? FontWeights.SemiBold : FontWeights.Normal,
             FontSize = 11,
             Cursor = Cursors.Hand,
@@ -688,7 +691,7 @@ public partial class GachaView : UserControl
             {
                 Text = "暂无记录",
                 FontSize = 11.5,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x66, 0x77, 0x88)),
+                Foreground = Theme("Brush.TextTertiary"),
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 Margin = new Thickness(0, 30, 0, 0),
             });
@@ -764,7 +767,7 @@ public partial class GachaView : UserControl
         {
             Text = row.Name,
             FontSize = 12,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xDF, 0xE9, 0xF2)),
+            Foreground = Theme("Brush.TextPrimary"),
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
         };

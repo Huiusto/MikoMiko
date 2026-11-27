@@ -81,7 +81,7 @@ public partial class UpdateWindow : Window
             return;
         }
 
-        StatusText.Text = "下载完成，正在启动安装程序…";
+        StatusText.Text = "下载完成，正在静默安装并重启…";
         if (UpdateService.RunInstaller(path))
         {
             Application.Current.Shutdown();

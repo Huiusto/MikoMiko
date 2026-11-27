@@ -6,29 +6,28 @@
 <style>
   * { box-sizing: border-box; }
   html, body {
-    margin: 0; min-height: 100%; overflow-x: hidden; overflow-y: auto;
+    margin: 0; width: 100%; height: 100%; overflow: hidden;
     font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
-    background: linear-gradient(160deg, #f7fbff 0%, #edf6ff 55%, #f9fcff 100%);
+    background: #ffffff;
     color: #40566b;
   }
   .wrap {
-    min-height: 100%; display: flex; align-items: flex-start; justify-content: center;
-    padding: 14px 10px 24px;
+    width: 100%; height: 100%; display: flex; align-items: stretch; justify-content: center;
+    padding: 0;
   }
   .card {
-    width: 100%; max-width: 520px; min-height: 300px;
+    width: 100%; height: 100%;
     background: #ffffff;
-    border: 1px solid #dbe9f6;
-    border-radius: 16px;
-    box-shadow: 0 10px 28px rgba(54, 102, 150, .10);
-    padding: 18px 16px 20px;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
     text-align: center;
+    display: flex; align-items: center; justify-content: center;
   }
-  .title { font-size: 15px; font-weight: 600; color: #2d3e50; }
-  .sub { margin-top: 6px; font-size: 11px; color: #8a9bac; line-height: 1.7; }
-  .stage { margin-top: 18px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+  .stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
   #geetest { width: 100%; }
   .loading { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .sub { font-size: 11px; color: #8a9bac; line-height: 1.7; }
   .spinner {
     width: 30px; height: 30px; border-radius: 50%;
     border: 3px solid #dbeaf9; border-top-color: #4b9cef;
@@ -41,8 +40,6 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <div class="title">请完成如下极验测试</div>
-    <div class="sub">验证码已在软件内载入，完成后会自动继续任务</div>
     <div class="stage">
       <div id="loading" class="loading">
         <div class="spinner"></div>
@@ -110,8 +107,8 @@
         initGeetest4({
           captchaId: DATA.gt,
           riskType: DATA.riskType || 'slide',
-          product: 'popup',
-          nextWidth: '420px',
+          product: 'float',
+          nextWidth: '500px',
           lang: 'zho',
           userInfo: JSON.stringify({ session_id: DATA.sessionId || '' }),
           https: true,

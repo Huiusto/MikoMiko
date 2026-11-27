@@ -24,6 +24,10 @@ public partial class VerifyDialog : Window
         _account = account;
         _aigis = aigis;
         TxtAccount.Text = $"账号 {account.DisplayName} 触发了米游社风险验证，验证码已直接在软件内载入";
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape) DialogResult = false;
+        };
         Loaded += OnLoaded;
     }
 

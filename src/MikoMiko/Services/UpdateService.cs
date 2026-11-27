@@ -113,7 +113,17 @@ public static class UpdateService
     {
         try
         {
-            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            // 静默安装到当前运行目录，安装完成后由 NSIS 重新启动新版本。
+            // /D= 必须是最后一个参数，且不能加引号（NSIS 会读取原始命令行）。
+            var target = AppInfo.InstallDirectory.TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                Arguments = $"/S /D={target}",
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(path) ?? string.Empty,
+            });
             return true;
         }
         catch

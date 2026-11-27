@@ -19,14 +19,17 @@ public sealed partial class MineViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly MiHoYoLoginService _login = new();
     private readonly Action<FeedItem>? _openPost;
+    private readonly Action<string>? _openUrl;
     private DispatcherTimer? _pollTimer;
     private string _ticket = string.Empty;
 
-    public MineViewModel(ContentService content, AppSettings settings, Action<FeedItem>? openPost = null)
+    public MineViewModel(ContentService content, AppSettings settings, Action<FeedItem>? openPost = null,
+        Action<string>? openUrl = null)
     {
         _content = content;
         _settings = settings;
         _openPost = openPost;
+        _openUrl = openUrl;
         Profile = BuildGuestProfile();
         MineTabs = new ObservableCollection<ChoiceOption>
         {
@@ -898,6 +901,13 @@ public sealed partial class MineViewModel : ObservableObject
         OnPropertyChanged(nameof(HasNoMyPosts));
         OnPropertyChanged(nameof(HasNoReplies));
         OnPropertyChanged(nameof(HasNoCollections));
+    }
+
+    /// <summary>打开合集详情：合集页属于普通网页，交给软件内浏览器处理。</summary>
+    public void OpenCollection(UserCollectionItem? item)
+    {
+        if (item is null || string.IsNullOrWhiteSpace(item.Id)) return;
+        _openUrl?.Invoke($"https://www.miyoushe.com/ys/collection/{item.Id}");
     }
 
     private static UserProfile BuildGuestProfile() => new()

@@ -6,7 +6,7 @@ SetCompressor /SOLID lzma
 !include "FileFunc.nsh"
 
 !define APP_NAME "MikoMiko"
-!define APP_VERSION "0.1.48"
+!define APP_VERSION "0.1.49"
 !define APP_EXE "MikoMiko.exe"
 !define APP_PUBLISHER "MikoMiko Contributors"
 !define APP_URL "https://github.com/Huiusto/MikoMiko"
@@ -18,7 +18,7 @@ InstallDir "$LOCALAPPDATA\Programs\MikoMiko"
 InstallDirRegKey HKCU "Software\MikoMiko" "InstallDir"
 RequestExecutionLevel user
 
-VIProductVersion "0.1.48.0"
+VIProductVersion "0.1.49.0"
 VIAddVersionKey /LANG=2052 "ProductName" "${APP_NAME}"
 VIAddVersionKey /LANG=2052 "CompanyName" "${APP_PUBLISHER}"
 VIAddVersionKey /LANG=2052 "FileDescription" "${APP_NAME} 安装程序"
@@ -107,6 +107,10 @@ Section "MikoMiko 主程序" SecMain
 
   ; 安装阶段就把启动页壁纸和页面资源放到用户目录，并预热官方壁纸缓存。
   ExecWait '"$INSTDIR\${APP_EXE}" --prepare-launch'
+
+  ; 应用内更新使用 /S 静默安装：没有完成页，安装后直接拉起新版本。
+  IfSilent 0 +1
+  Exec '"$INSTDIR\${APP_EXE}"'
 SectionEnd
 
 Section "Uninstall"
@@ -126,6 +130,7 @@ Section "Uninstall"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\MikoMiko"
   DeleteRegKey HKCU "Software\MikoMiko"
 SectionEnd
+
 
 
 

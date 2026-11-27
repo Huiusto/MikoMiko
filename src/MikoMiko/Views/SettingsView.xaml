@@ -136,9 +136,11 @@
                 <Grid x:Name="SectionsPanel">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -147,7 +149,7 @@
                     </Grid.RowDefinitions>
 
                 <!-- 常规设置 -->
-                <Border Grid.Row="0" Grid.ColumnSpan="2" Style="{StaticResource SectionCard}" Margin="0,14,0,14" Tag="General">
+                <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource SectionCard}" Margin="0,14,0,14" Tag="General">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.General], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -234,7 +236,7 @@
 
                 <!-- 缓存管理 -->
                 <Border Grid.Row="1" Grid.Column="0" MinHeight="180"
-                        Style="{StaticResource SectionCard}" Margin="0,0,7,14" Tag="Cache">
+                        Style="{StaticResource SectionCard}" Margin="0,0,0,14" Tag="Cache">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Cache], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -270,8 +272,8 @@
                 </Border>
 
                 <!-- 通用设置 -->
-                <Border Grid.Row="2" Grid.Column="1" MinHeight="180"
-                        Style="{StaticResource SectionCard}" Margin="7,0,0,14" Tag="Common">
+                <Border Grid.Row="3" Grid.Column="0" MinHeight="180"
+                        Style="{StaticResource SectionCard}" Margin="0,0,0,14" Tag="Common">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Common], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -284,8 +286,8 @@
                 </Border>
 
                 <!-- 应用维护 -->
-                <Border Grid.Row="2" Grid.Column="0" MinHeight="180"
-                        Style="{StaticResource SectionCard}" Margin="0,0,7,14" Tag="Maintain">
+                <Border Grid.Row="4" Grid.Column="0" MinHeight="180"
+                        Style="{StaticResource SectionCard}" Margin="0,0,0,14" Tag="Maintain">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Maintain], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -312,8 +314,8 @@
                 </Border>
 
                 <!-- 应用信息 -->
-                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource SectionCard}"
-                        Margin="7,0,0,14" Tag="AppInfo">
+                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SectionCard}"
+                        Margin="0,0,0,14" Tag="AppInfo">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.AppInfo], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -362,8 +364,8 @@
                 </Border>
 
                 <!-- 关于 -->
-                <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource SectionCard}"
-                        Margin="0,0,7,14" Tag="About">
+                <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource SectionCard}"
+                        Margin="0,0,0,14" Tag="About">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.About], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -385,8 +387,8 @@
 
 
                 <!-- 免责说明 -->
-                <Border Grid.Row="3" Grid.Column="1" Style="{StaticResource SectionCard}"
-                        Margin="7,0,0,14" Tag="Disclaimer">
+                <Border Grid.Row="6" Grid.Column="0" Style="{StaticResource SectionCard}"
+                        Margin="0,0,0,14" Tag="Disclaimer">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Disclaimer], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
@@ -397,7 +399,7 @@
                 </Border>
 
                 <!-- 开源说明 -->
-                <Border Grid.Row="4" Grid.ColumnSpan="2" Style="{StaticResource SectionCard}"
+                <Border Grid.Row="7" Grid.Column="0" Style="{StaticResource SectionCard}"
                         Margin="0,0,0,14" Tag="OpenSource">
                     <StackPanel>
                         <Grid Margin="0,0,0,8">

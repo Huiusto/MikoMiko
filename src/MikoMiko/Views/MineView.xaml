@@ -584,7 +584,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{DynamicResource Brush.Surface}" CornerRadius="10" Margin="0,0,12,12"
-                                        ClipToBounds="True">
+                                        ClipToBounds="True" Cursor="Hand" MouseLeftButtonUp="Collection_Click">
                                     <StackPanel>
                                         <Grid Height="108">
                                             <Image controls:AsyncImage.Url="{Binding Cover}" Stretch="UniformToFill" />

@@ -278,7 +278,9 @@
     transition: background .16s ease, border-color .16s ease, transform .12s ease;
   }
   .gs-btn:hover { background: #f6f8fb; border-color: #b8c1cb; transform: translateY(-1px); }
+  .gs-btn.on { background: #eef7fe; border-color: #4ea4dd; color: #2f86c9; }
   .gs-btn.danger { color: #e5484d; }
+  .gs-toggles { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
   .gs-btn.danger:hover { background: #fff5f5; border-color: #f0b4b6; }
   .gs-btn svg { width: 17px; height: 17px; flex: none; }
   .dialog-foot { display: flex; justify-content: flex-end; padding: 20px 34px 26px; }
@@ -374,6 +376,10 @@
       <div class="kv"><div class="key">安装目录</div><div class="val" id="gsDir">未定位</div></div>
       <div class="kv"><div class="key">所在磁盘可用空间</div><div class="val" id="gsFree">—</div></div>
       <div class="divider"></div>
+      <div class="gs-toggles">
+        <button class="gs-btn" id="gsReserve">预约游戏卡片：显示</button>
+        <button class="gs-btn" id="gsMhyy">米哈云游按钮：显示</button>
+      </div>
       <div class="gs-actions">
         <button class="gs-btn" id="gsOpenDir">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.2c0-1 .8-1.8 1.8-1.8h4l2 2.2h7.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8H5.3c-1 0-1.8-.8-1.8-1.8Z"/><path d="M3.8 10.4h16.4"/></svg>
@@ -713,6 +719,27 @@
     $('gsExe').textContent = info.exe || '—';
     $('gsDir').textContent = info.dir || '未定位';
     $('gsFree').textContent = info.free || '—';
+    const showReserve = state.showReserve !== false;
+    const showMhyy = state.showMhyy !== false;
+    $('gsReserve').textContent = `预约游戏卡片：${showReserve ? '显示' : '不显示'}`;
+    $('gsMhyy').textContent = `米哈云游按钮：${showMhyy ? '显示' : '不显示'}`;
+    $('gsReserve').classList.toggle('on', showReserve);
+    $('gsMhyy').classList.toggle('on', showMhyy);
+  }
+
+  function applyUiFlags() {
+    if (!state) return;
+    const reserve = $('reserveGroup');
+    const mhyy = $('btnMhyy');
+    if (reserve) reserve.style.display = state.showReserve === false ? 'none' : '';
+    if (mhyy) mhyy.style.display = state.showMhyy === false ? 'none' : '';
+  }
+
+  function setUiFlag(name, value) {
+    state[name] = value;
+    applyUiFlags();
+    updateSettingsView();
+    send({ type: 'uiFlag', name, value: value ? 1 : 0 });
   }
 
   function openSettings() {
@@ -728,6 +755,7 @@
     renderGames();
     renderMainButton();
     renderDots();
+    applyUiFlags();
     applyBackground();
     updateSettingsView();
     $('saving').classList.toggle('on', !!state.preparing);
@@ -813,6 +841,8 @@
   $('gsOpenDir').onclick = () => send({ type: 'openDir' });
   $('gsRelocate').onclick = () => send({ type: 'locate' });
   $('gsUninstall').onclick = () => send({ type: 'uninstall' });
+  $('gsReserve').onclick = () => setUiFlag('showReserve', !(state.showReserve !== false));
+  $('gsMhyy').onclick = () => setUiFlag('showMhyy', !(state.showMhyy !== false));
 
   $('btnSaveBg').onclick = () => send({ type: 'saveBg' });
   $('btnPause').onclick = () => send({ type: 'pauseToggle' });

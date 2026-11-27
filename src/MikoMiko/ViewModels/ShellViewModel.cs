@@ -60,7 +60,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _anime = new AnimeViewModel(new AnimeModuleService(), new AnimeCatalogService(), new AnimeStreamService(),
             _animeFollows, ShowAnimePlayer);
         _moment = new MomentViewModel(content, OpenMoment, OpenUserProfile);
-        _mine = new MineViewModel(content, _settings, OpenItem);
+        _mine = new MineViewModel(content, _settings, OpenItem, OpenLink);
         _settingsVm = new SettingsViewModel(settingsService, content);
         _upload = new UploadViewModel(OpenUploadUrl);
         _upload.CloseRequested = CloseUpload;

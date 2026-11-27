@@ -48,6 +48,8 @@ public partial class LaunchView : UserControl
     private int _bgIndex;
     private bool _paused;
     private bool _preparing;
+    private bool _showReserve = true;
+    private bool _showMhyy = true;
     private bool _webReady;
     private readonly HashSet<string> _runningGames = new();
     private List<string> _gameOrder = new();
@@ -111,6 +113,9 @@ public partial class LaunchView : UserControl
     {
         MikoNestBridge.Reload();
         _gameOrder = LauncherBackgroundService.LoadGameOrder();
+        var settings = App.SettingsService.Current;
+        _showReserve = settings.ShowReserve;
+        _showMhyy = settings.ShowMhyy;
         if (_webReady)
         {
             PushState();
@@ -353,6 +358,8 @@ public partial class LaunchView : UserControl
             officialIndex = _bgIndex,
             paused = _paused,
             preparing = _preparing,
+            showReserve = _showReserve,
+            showMhyy = _showMhyy,
             accent = "#4EA4DD",
             hint = BuildHint(),
             customBackground = false,
@@ -703,6 +710,21 @@ public partial class LaunchView : UserControl
                     _paused = !_paused;
                     PushPatch(new { paused = _paused });
                     break;
+
+                case "uiFlag":
+                {
+                    var name = ReadString(e.WebMessageAsJson, "name");
+                    var value = ReadNumber(e.WebMessageAsJson, "value") != 0;
+                    if (name == "showReserve") _showReserve = value;
+                    else if (name == "showMhyy") _showMhyy = value;
+                    else break;
+
+                    var settings = App.SettingsService.Current;
+                    settings.ShowReserve = _showReserve;
+                    settings.ShowMhyy = _showMhyy;
+                    PushPatch(new { showReserve = _showReserve, showMhyy = _showMhyy });
+                    break;
+                }
 
                 case "saveBg":
                     SaveCurrentBackground();

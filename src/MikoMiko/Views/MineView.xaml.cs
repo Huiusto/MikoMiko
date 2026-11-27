@@ -27,6 +27,12 @@ public partial class MineView : UserControl
         DataContext = viewModel;
     }
 
+    private void Collection_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: UserCollectionItem item })
+            _vm.OpenCollection(item);
+    }
+
     private void SwitchAccount_Click(object sender, RoutedEventArgs e)
     {
         _accountPopup?.SetCurrentValue(Popup.IsOpenProperty, false);

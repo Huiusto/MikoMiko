@@ -114,7 +114,7 @@
                     <StackPanel Grid.Row="4" Margin="0,14,0,0">
                         <Grid>
                             <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="#7C95AB" />
-                            <TextBlock Text="下载完成后会自动打开安装程序" FontSize="11" Foreground="#A4B6C7"
+                            <TextBlock Text="自动安装到当前目录并重启软件" FontSize="11" Foreground="#A4B6C7"
                                        HorizontalAlignment="Right" />
                         </Grid>
                         <ProgressBar x:Name="DownloadProgress" Height="8" Minimum="0" Maximum="1" Value="0"
