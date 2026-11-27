@@ -8,54 +8,66 @@ using System.Windows;
 namespace MikoMiko.Views;
 
 /// <summary>
-/// 每日任务 1034 验证弹窗：参考 TeyvatGuide 实用脚本页的极验流程，
-/// 在软件内直接创建极验验证并显示滑块，验证成功后拿到 challenge 交给签到接口重试。
+/// 每日任务 1034 验证弹窗：创建极验验证后只显示官方验证器本体，
+/// 验证成功拿到 challenge 交给签到接口重试。
 /// </summary>
 public partial class VerifyDialog : Window
 {
+    public sealed record VerifyResult(string? Validation, string? Challenge, string? Error);
+
     private readonly HoyoAccount _account;
     private readonly string? _aigis;
+    private readonly SignService.GeetestChallenge _create;
     private bool _initialized;
     private string? _validation;
     private string? _challenge;
     private bool _closing;
-    private readonly TaskCompletionSource<(string? Validation, string? Challenge)> _completion =
+    private readonly TaskCompletionSource<VerifyResult> _completion =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public VerifyDialog(HoyoAccount account, string? aigis)
+    private VerifyDialog(HoyoAccount account, string? aigis, SignService.GeetestChallenge create)
     {
         InitializeComponent();
         _account = account;
         _aigis = aigis;
-        TxtAccount.Text = $"账号 {account.DisplayName} 触发了米游社风险验证，验证码已直接在软件内载入";
+        _create = create;
+        _challenge = create.Challenge;
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == System.Windows.Input.Key.Escape) CloseDialog();
         };
-        Closed += (_, _) => _completion.TrySetResult((_validation, _challenge));
+        Closed += (_, _) => _completion.TrySetResult(new VerifyResult(_validation, _challenge, null));
         Loaded += OnLoaded;
     }
 
-    /// <summary>返回极验 getValidate() 的原始 JSON 与创建时的 challenge，由调用方在弹窗关闭后提交。</summary>
-    public static Task<(string? Validation, string? Challenge)> ShowAsync(Window? owner, HoyoAccount account, string? aigis = null)
+    /// <summary>
+    /// 先在后台申请极验，再显示窗口；窗口初始透明，验证器渲染完成后才显示，
+    /// 避免先弹出白底加载框。返回 getValidate() 原始 JSON 与 challenge。
+    /// </summary>
+    public static async Task<VerifyResult> ShowAsync(Window? owner, HoyoAccount account, string? aigis = null)
     {
+        var (create, error) = await SignService.CreateVerificationAsync(account.Cookie);
+        if (create is null)
+            return new VerifyResult(null, null, error ?? "申请验证码失败");
+
         owner ??= Application.Current?.MainWindow;
-        var dialog = new VerifyDialog(account, aigis);
+        var dialog = new VerifyDialog(account, aigis, create)
+        {
+            // WebView2 在完全透明的窗口里会暂停渲染，极验 onReady 可能永远不触发；
+            // 用极低透明度保持合成器工作，验证器排好版后再完全显示。
+            Opacity = 1,
+        };
         if (owner is not null && owner.IsVisible) dialog.Owner = owner;
-        // 不使用模态 ShowDialog：WebView2 在模态窗口内关闭时偶发卡住消息循环，
-        // 改为 Show + TaskCompletionSource，关闭后立即把结果交回任务页。
+        // 不使用模态 ShowDialog：WebView2 在模态窗口内关闭时偶发卡住消息循环。
         dialog.Show();
-        return dialog._completion.Task;
+        return await dialog._completion.Task;
     }
 
     private void CloseDialog()
     {
         if (_closing) return;
         _closing = true;
-        // 先把结果交给任务页，再关闭窗口：即使 WebView2 在关闭时仍需等待，
-        // 签到流程也不会被窗口生命周期卡住。
-        _completion.TrySetResult((_validation, _challenge));
-        // 先隐藏再异步关闭，避免极验成功提示层盖住关闭动画、看起来像「卡住」。
+        _completion.TrySetResult(new VerifyResult(_validation, _challenge, null));
         try { Hide(); } catch { }
         Dispatcher.BeginInvoke(new Action(() =>
         {
@@ -67,30 +79,13 @@ public partial class VerifyDialog : Window
     {
         if (_initialized) return;
         _initialized = true;
-        await ReloadChallengeAsync();
+        await LoadCaptchaAsync();
     }
 
-    private void Header_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private async Task LoadCaptchaAsync()
     {
-        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) DragMove();
-    }
-
-    private void Close_Click(object sender, RoutedEventArgs e) => CloseDialog();
-
-    private async Task ReloadChallengeAsync()
-    {
-        LoadingPanel.Visibility = Visibility.Visible;
-        TxtLoading.Text = "正在向米游社申请极验验证…";
         try
         {
-            var (create, error) = await SignService.CreateVerificationAsync(_account.Cookie);
-            if (create is null)
-            {
-                TxtLoading.Text = "申请验证码失败：" + (error ?? "未知错误");
-                return;
-            }
-            _challenge = create.Challenge;
-
             var dataDir = Path.Combine(SettingsService.CacheDirectory, "webview-verify");
             Directory.CreateDirectory(dataDir);
             if (Web.CoreWebView2 is null)
@@ -98,18 +93,22 @@ public partial class VerifyDialog : Window
                 var environment = await CoreWebView2Environment.CreateAsync(null, dataDir);
                 await Web.EnsureCoreWebView2Async(environment);
                 var core = Web.CoreWebView2;
-                if (core is null) throw new InvalidOperationException("WebView2 初始化失败");
+                if (core is null)
+                {
+                    _completion.TrySetResult(new VerifyResult(null, null, "WebView2 初始化失败"));
+                    CloseDialog();
+                    return;
+                }
                 core.WebMessageReceived += OnWebMessageReceived;
                 core.NewWindowRequested += (_, args) => args.Handled = true;
             }
 
-            var html = BuildHtml(create);
-            LoadingPanel.Visibility = Visibility.Collapsed;
-            Web.NavigateToString(html);
+            Web.NavigateToString(BuildHtml(_create));
         }
         catch (Exception ex)
         {
-            TxtLoading.Text = "验证码初始化失败：" + ex.Message;
+            _completion.TrySetResult(new VerifyResult(null, null, "验证码初始化失败：" + ex.Message));
+            CloseDialog();
         }
     }
 
@@ -121,7 +120,16 @@ public partial class VerifyDialog : Window
         switch (type)
         {
             case "ready":
-                LoadingPanel.Visibility = Visibility.Collapsed;
+                // 验证器已经排好版，再把整个窗口显示出来。
+                Opacity = 1;
+                break;
+
+            case "error":
+                Opacity = 1;
+                break;
+
+            case "size":
+                ApplyCaptchaSize(data);
                 break;
 
             case "close":
@@ -131,17 +139,40 @@ public partial class VerifyDialog : Window
             case "validate":
                 if (string.IsNullOrWhiteSpace(data)) break;
                 _validation = data;
-                // 极验 onSuccess 已触发：先把结果写回，再关窗。
-                // WebView2 的关闭回调有时会等待页面卸载，不能把签到继续的逻辑依赖在 Closed 上。
-                _completion.TrySetResult((_validation, _challenge));
+                _completion.TrySetResult(new VerifyResult(_validation, _challenge, null));
                 Dispatcher.BeginInvoke(new Action(CloseDialog), System.Windows.Threading.DispatcherPriority.Background);
                 break;
         }
     }
 
+    private void ApplyCaptchaSize(string? data)
+    {
+        if (string.IsNullOrWhiteSpace(data)) return;
+        try
+        {
+            using var doc = JsonDocument.Parse(data);
+            var root = doc.RootElement;
+            var w = root.TryGetProperty("width", out var wr) ? wr.GetDouble() : 0;
+            var h = root.TryGetProperty("height", out var hr) ? hr.GetDouble() : 0;
+            if (w < 260 || h < 260 || w > 720 || h > 900) return;
+            Width = w + 2;
+            Height = h + 2;
+            if (Owner is { IsVisible: true } owner)
+            {
+                Left = owner.Left + (owner.ActualWidth - Width) / 2;
+                Top = owner.Top + (owner.ActualHeight - Height) / 2;
+            }
+            else
+            {
+                Left = (SystemParameters.WorkArea.Width - Width) / 2 + SystemParameters.WorkArea.Left;
+                Top = (SystemParameters.WorkArea.Height - Height) / 2 + SystemParameters.WorkArea.Top;
+            }
+        }
+        catch { }
+    }
+
     /// <summary>
     /// 兼容两种 WebView2 消息：宿主以 JSON 对象 postMessage，或以 JSON 字符串 postMessage。
-    /// 后者经 WebMessageAsJson 取到的是带引号的 JSON 字符串，必须再解析一层。
     /// </summary>
     private static (string? Type, string? Data) ParseWebMessage(string raw)
     {
@@ -182,7 +213,7 @@ public partial class VerifyDialog : Window
         {
             gt = create.Gt,
             challenge = create.Challenge,
-            riskType = create.RiskType ?? "slide",
+            riskType = string.IsNullOrWhiteSpace(create.RiskType) ? "slide" : create.RiskType,
             useV4 = create.UseV4,
             sessionId,
         });
@@ -220,7 +251,7 @@ public partial class VerifyDialog : Window
         }
         catch
         {
-            // aigis 不是 JSON 时忽略，v4 用空 session_id 也能继续。
+            // aigis 不是 JSON 时忽略。
         }
         return "";
     }

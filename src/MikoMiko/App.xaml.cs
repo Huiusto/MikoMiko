@@ -95,7 +95,8 @@ public partial class App : Application
         MainWindow = window;
 
         // 正常启动时先展示萌系启动画面；截图模式直接进主窗口，避免挡住验收页面。
-        var showSplash = !e.Args.Contains("--shot") && !e.Args.Contains("--update-preview");
+        var showSplash = !e.Args.Contains("--shot") && !e.Args.Contains("--update-preview")
+            && !e.Args.Contains("--captcha-preview");
         Views.SplashWindow? splash = null;
         if (showSplash)
         {
@@ -152,14 +153,36 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.54"), "v0.1.54", "MikoMiko 0.1.54",
-                    "· 修复每日任务极验验证成功后不返回、签到不继续\n· 修复视频全屏右侧与底部仍露出桌面背景",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.54.exe", "");
+                    new Version("0.1.55"), "v0.1.55", "MikoMiko 0.1.55",
+                    "· 每日任务验证器只弹出极验面板本体\n· 修复完成验证后米游社打卡仍失败",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.55.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();
         }
         TryCapture(e.Args);
+
+        // 设计验收：只打开每日任务验证器本体，便于核对尺寸与样式。
+        if (e.Args.Contains("--captcha-preview"))
+        {
+            var verifyTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+            verifyTimer.Tick += async (_, _) =>
+            {
+                verifyTimer.Stop();
+                var account = HoyoAccountService.Active;
+                Log(Path.Combine(Path.GetTempPath(), "miko-shot"), "captcha-preview active=" + (account?.Uid ?? "null"));
+                if (account is null)
+                {
+                    MessageBox.Show("没有可用账号");
+                    return;
+                }
+                var result = await Views.VerifyDialog.ShowAsync(MainWindow, account);
+                Log(Path.Combine(Path.GetTempPath(), "miko-shot"), "captcha-preview result=" + (result.Error ?? "ok"));
+                if (!string.IsNullOrWhiteSpace(result.Error))
+                    MessageBox.Show(result.Error);
+            };
+            verifyTimer.Start();
+        }
 #endif
     }
 

@@ -268,7 +268,7 @@ public static class SignService
 
     /// <summary>单角色签到（luna sign，X6 类型 2 DS）</summary>
     public static async Task<ActionResult> SignRoleAsync(string cookie, GameCheckin game, SignRole role,
-        string? challenge = null, string? validate = null)
+        string? challenge = null)
     {
         var log = new List<LogLine>();
         if (!game.CheckinEnabled || string.IsNullOrEmpty(game.ActId))
@@ -292,7 +292,6 @@ public static class SignService
             clientType: 2, ua: PcUa, referer: "https://webstatic.mihoyo.com");
         headers["x-rpc-signgame"] = game.Host;
         if (!string.IsNullOrWhiteSpace(challenge)) headers["x-rpc-challenge"] = challenge;
-        if (!string.IsNullOrWhiteSpace(validate)) headers["x-rpc-validate"] = validate;
 
         var api = await MiHoYoHttp.SendWithHeadersAsync("POST", $"{LunaApi}/{game.Host}/sign", body, headers);
         var label = $"{game.Name}-{RegionLabel(role)}-{role.Uid}";
@@ -403,19 +402,18 @@ public static class SignService
     public sealed record GeetestChallenge(string Gt, string? Challenge, string? RiskType, bool UseV4);
 
     /// <summary>
-    /// 创建极验验证（对齐 TeyvatGuide `miscReq.create`，bbs-api misc/api/createVerification）。
-    /// 使用 CookieToken V2 的 X4 签名，返回 gt / challenge / risk_type。
+    /// 创建极验验证（对齐 TeyvatGuide `miscReq.create` 的 App 凭据链路）：
+    /// stoken / stuid / mid 的 K2 类型 1 签名，client_type 2。
     /// </summary>
     public static async Task<(GeetestChallenge? Data, string? Error)> CreateVerificationAsync(string cookie)
     {
-        var ck = SubCookie(cookie, "cookie_token", "account_id");
-        if (string.IsNullOrEmpty(CookieValue(ck, "cookie_token")))
-            return (null, "账号缺少 cookie_token，无法发起极验验证");
+        var ck = SubCookie(cookie, "stoken", "stuid", "mid");
+        if (string.IsNullOrEmpty(CookieValue(ck, "stoken")))
+            return (null, "账号缺少 stoken，无法发起极验验证");
 
         var query = "is_high=true";
-        var headers = BuildHeader(ck, "GET", query, MiHoYoHttp.X4Salt, isSign: true);
-        // 极验接口走 CookieToken V2 时不带客户端类型，与网页登录态保持一致。
-        headers.Remove("x-rpc-client_type");
+        var headers = BuildHeader(ck, "GET", query, MiHoYoHttp.K2Salt,
+            isSign: true, clientType: 2, ua: PcUa, referer: "https://webstatic.mihoyo.com");
         var api = await MiHoYoHttp.SendWithHeadersAsync(
             "GET", $"{BbsApi}/misc/api/createVerification?{query}", null, headers);
         if (api.Retcode != 0 || api.Data is not { } data)
@@ -424,97 +422,29 @@ public static class SignService
         var gt = data.GetProp("gt");
         if (string.IsNullOrWhiteSpace(gt)) return (null, "极验返回数据缺少 gt");
         var challenge = data.TryGetProperty("challenge", out var c) ? c.GetString() : null;
-        var risk = data.TryGetProperty("risk_type", out var r) ? r.ToString() : null;
+        var risk = data.TryGetProperty("risk_type", out var r) ? r.GetString() : null;
         var useV4 = data.TryGetProperty("use_v4", out var v) &&
                     (v.ValueKind == JsonValueKind.True || (v.ValueKind == JsonValueKind.Number && AsInt(v) == 1));
         return (new GeetestChallenge(gt, challenge, risk, useV4 || string.IsNullOrWhiteSpace(challenge)), null);
     }
 
     /// <summary>
-    /// 将极验 SDK 的 getValidate() 结果整理成 verifyVerification 需要的字段。
-    /// V3 返回 geetest_challenge / geetest_validate / geetest_seccode；V4 返回
-    /// lot_number / captcha_output / pass_token / gen_time，需要附上创建时的 challenge 并补齐 seccode。
+    /// 提交极验 SDK `getValidate()` 的原始对象，换取签到用的 `x-rpc-challenge`。
+    /// 对齐 TeyvatGuide `miscReq.verify`：body 原样透传，K2 类型 2 签名（body 参与 DS），client_type 2。
+    /// V4 的 lot_number / captcha_output / pass_token / gen_time 不可改写成 V3 字段。
     /// </summary>
-    private static string BuildVerifyBody(string validateJson, string? challenge)
+    public static async Task<(string? Challenge, string? Error)> VerifyCaptchaAsync(
+        string cookie, string validateJson)
     {
-        try
-        {
-            using var doc = JsonDocument.Parse(validateJson);
-            var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return validateJson;
+        var ck = SubCookie(cookie, "stoken", "stuid", "mid");
+        if (string.IsNullOrEmpty(CookieValue(ck, "stoken")))
+            return (null, "账号缺少 stoken，无法校验极验结果");
 
-            var v3Challenge = root.TryGetProperty("geetest_challenge", out var c) ? c.GetString() : null;
-            var v3Validate = root.TryGetProperty("geetest_validate", out var v) ? v.GetString() : null;
-            var v3Seccode = root.TryGetProperty("geetest_seccode", out var s) ? s.GetString() : null;
-            if (!string.IsNullOrWhiteSpace(v3Validate))
-            {
-                v3Challenge ??= challenge;
-                v3Seccode ??= v3Validate + "|jordan";
-                return JsonSerializer.Serialize(new
-                {
-                    geetest_challenge = v3Challenge ?? "",
-                    geetest_validate = v3Validate,
-                    geetest_seccode = v3Seccode,
-                });
-            }
+        var body = validateJson?.Trim() ?? "";
+        if (body.Length == 0) return (null, "极验结果为空");
 
-            var lot = root.TryGetProperty("lot_number", out var l) ? l.GetString() : null;
-            var output = root.TryGetProperty("captcha_output", out var o) ? o.GetString() : null;
-            var pass = root.TryGetProperty("pass_token", out var p) ? p.GetString() : null;
-            var gen = root.TryGetProperty("gen_time", out var g) ? g.GetString() : null;
-            if (!string.IsNullOrWhiteSpace(lot))
-            {
-                return JsonSerializer.Serialize(new
-                {
-                    geetest_challenge = challenge ?? "",
-                    geetest_validate = lot,
-                    geetest_seccode = (pass ?? lot) + "|jordan",
-                    lot_number = lot,
-                    captcha_output = output ?? "",
-                    pass_token = pass ?? "",
-                    gen_time = gen ?? "",
-                });
-            }
-        }
-        catch
-        {
-            // 非 JSON 时原样提交，交给服务端返回具体错误。
-        }
-        return validateJson;
-    }
-
-    /// <summary>从极验 getValidate() 结果中取出签到接口需要的 x-rpc-validate 值。</summary>
-    public static string? ExtractValidate(string validateJson)
-    {
-        try
-        {
-            using var doc = JsonDocument.Parse(validateJson);
-            var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return null;
-            if (root.TryGetProperty("geetest_validate", out var v) && v.ValueKind == JsonValueKind.String)
-                return v.GetString();
-            if (root.TryGetProperty("lot_number", out var l) && l.ValueKind == JsonValueKind.String)
-                return l.GetString();
-        }
-        catch
-        {
-            // 无法解析时不附加 x-rpc-validate，仍可交给服务端返回明确错误。
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// 提交极验结果，换取 `x-rpc-challenge` 值（对齐 TeyvatGuide `miscReq.verify`）。
-    /// </summary>
-    public static async Task<(string? Challenge, string? Error)> VerifyCaptchaAsync(string cookie, string validateJson, string? challenge = null)
-    {
-        var ck = SubCookie(cookie, "cookie_token", "account_id");
-        var body = BuildVerifyBody(validateJson, challenge);
-        // 对齐 sign-task / TeyvatGuide：verifyVerification 使用 X4 类型 1 签名，
-        // 并把 geetest_challenge / geetest_validate / geetest_seccode 三个字段分开提交，
-        // 不能直接原样透传 SDK 的 getValidate() JSON。
-        var headers = BuildHeader(ck, "POST", body, MiHoYoHttp.X4Salt, isSign: true);
-        headers.Remove("x-rpc-client_type");
+        var headers = BuildHeader(ck, "POST", body, MiHoYoHttp.K2Salt,
+            isSign: false, clientType: 2, ua: PcUa, referer: "https://webstatic.mihoyo.com");
         var api = await MiHoYoHttp.SendWithHeadersAsync(
             "POST", $"{BbsApi}/misc/api/verifyVerification", body, headers);
         if (api.Retcode != 0 || api.Data is not { } data)
@@ -528,7 +458,7 @@ public static class SignService
 
     /// <summary>米游社社区打卡（apihub/app/api/signIn，X6 类型 2 DS + 移动端 UA）</summary>
     public static async Task<ActionResult> BbsCheckInAsync(string cookie, int gid = DefaultGid,
-        string? challenge = null, string? validate = null)
+        string? challenge = null)
     {
         var log = new List<LogLine>();
         if (!HasStoken(cookie))
@@ -541,7 +471,6 @@ public static class SignService
         var headers = BuildHeader(ck, "POST", body, MiHoYoHttp.X6Salt, isSign: false,
             clientType: 2, ua: MobileUa, referer: "https://app.mihoyo.com");
         if (!string.IsNullOrWhiteSpace(challenge)) headers["x-rpc-challenge"] = challenge;
-        if (!string.IsNullOrWhiteSpace(validate)) headers["x-rpc-validate"] = validate;
         var api = await MiHoYoHttp.SendWithHeadersAsync("POST", $"{BbsApi}/apihub/app/api/signIn", body, headers);
 
         if (api.Retcode == 0)

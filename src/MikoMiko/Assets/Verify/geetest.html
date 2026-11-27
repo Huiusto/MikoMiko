@@ -26,7 +26,7 @@
   }
   .stage { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
   #geetest { width: 100%; }
-  .loading { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .loading { display: none; flex-direction: column; align-items: center; gap: 12px; }
   .sub { font-size: 11px; color: #8a9bac; line-height: 1.7; }
   .spinner {
     width: 30px; height: 30px; border-radius: 50%;
@@ -60,14 +60,45 @@
 
   function showError(message) {
     const loading = document.getElementById('loading');
+    loading.style.display = 'flex';
     loading.className = 'error';
     loading.innerHTML = message || '验证码加载失败，请取消后重试';
+    post('error', { message: message || '验证码加载失败' });
   }
 
   function showStage() {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('geetest').style.display = 'block';
     post('ready');
+  }
+
+  // 直接展开验证面板，避免先出现「点击按钮进行验证」的触发器。
+  function openCaptcha(captchaObj) {
+    try {
+      const radar = document.querySelector('#geetest .geetest_radar_btn');
+      if (radar) {
+        radar.click();
+      } else if (typeof captchaObj.verify === 'function') captchaObj.verify();
+      else if (typeof captchaObj.showCaptcha === 'function') captchaObj.showCaptcha();
+      else if (typeof captchaObj.show === 'function') captchaObj.show();
+    } catch (e) { }
+    [300, 700, 1200].forEach(ms => setTimeout(reportSize, ms));
+  }
+
+  // 把验证面板自身的 CSS 尺寸回报宿主，窗口只保留面板大小。
+  function reportSize() {
+    let best = null;
+    ['.geetest_fullpage_click_box', '.geetest_panel_box', '.geetest_captcha', '.geetest_holder']
+      .forEach(sel => {
+        const el = document.querySelector(sel);
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        if (r.width < 240 || r.height < 240) return;
+        if (!best || r.width * r.height > best.width * best.height)
+          best = { width: r.width, height: r.height };
+      });
+    if (best)
+      post('size', { data: JSON.stringify({ width: Math.ceil(best.width), height: Math.ceil(best.height) }) });
   }
 
   function finish(captchaObj, done) {
@@ -117,8 +148,8 @@
           const host = document.getElementById('geetest');
           host.innerHTML = '';
           captchaObj.appendTo('#geetest');
-          captchaObj.onReady(showStage);
-          setTimeout(showStage, 450);
+          captchaObj.onReady(() => { showStage(); openCaptcha(captchaObj); });
+          setTimeout(() => { showStage(); openCaptcha(captchaObj); }, 450);
           captchaObj.onSuccess(() => finish(captchaObj, done));
           captchaObj.onClose(() => { if (!done.value) post('close'); });
         });
@@ -141,8 +172,8 @@
           const host = document.getElementById('geetest');
           host.innerHTML = '';
           captchaObj.appendTo('#geetest');
-          captchaObj.onReady(showStage);
-          setTimeout(showStage, 450);
+          captchaObj.onReady(() => { showStage(); openCaptcha(captchaObj); });
+          setTimeout(() => { showStage(); openCaptcha(captchaObj); }, 450);
           captchaObj.onSuccess(() => finish(captchaObj, done));
           captchaObj.onClose(() => { if (!done.value) post('close'); });
         });
