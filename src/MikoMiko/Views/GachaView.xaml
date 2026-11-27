@@ -177,18 +177,17 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="64" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="34" />
         </Grid.RowDefinitions>
 
-        <!-- 顶栏 -->
+        <!-- 顶栏：标题在左，游戏 / UID / 设置 / 数据工具全部收进同一排右侧 -->
         <Grid Grid.Row="0" Background="{DynamicResource Brush.NavBg}" Margin="0,0,0,1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel VerticalAlignment="Center" Margin="22,0,0,0">
+            <StackPanel VerticalAlignment="Center" Margin="22,0,8,0">
                 <StackPanel Orientation="Horizontal">
                     <Border Width="3" Height="20" CornerRadius="1.5" Background="{DynamicResource Brush.Accent}"
                             VerticalAlignment="Center" Margin="0,0,9,0" />
@@ -215,40 +214,38 @@
                     </Button>
                 </StackPanel>
                 <TextBlock x:Name="TxtSubtitle" Text="本地库 0 条 · MikoNest 数据" FontSize="10.5"
-                           Foreground="{DynamicResource Brush.TextSecondary}" Margin="12,3,0,0" />
+                           Foreground="{DynamicResource Brush.TextSecondary}" Margin="12,3,0,0"
+                           TextTrimming="CharacterEllipsis" />
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,0">
-                <Button x:Name="BtnMore" Content="⋯" Style="{StaticResource GachaIconButton}"
-                        Click="BtnMore_Click" ToolTip="更多操作" />
-            </StackPanel>
+
+            <Border Grid.Column="1" Margin="8,0,18,0" VerticalAlignment="Center"
+                    Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderSoft}"
+                    BorderThickness="1" CornerRadius="12" Padding="10,7">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Image x:Name="ImgGameIcon" Width="20" Height="20" Margin="2,0,7,0"
+                           VerticalAlignment="Center" Stretch="UniformToFill" />
+                    <ComboBox x:Name="ComboGame" Tag="游戏" Width="132" Margin="0,0,8,0"
+                              Style="{StaticResource GachaCombo}" SelectionChanged="ComboGame_SelectionChanged" />
+                    <ComboBox x:Name="ComboUid" Tag="UID" Width="158" Margin="0,0,8,0"
+                              Style="{StaticResource GachaCombo}" SelectionChanged="ComboUid_SelectionChanged" />
+                    <Button x:Name="BtnUpdate" Content="更新记录" Width="80" Margin="0,0,8,0"
+                            Style="{StaticResource GachaPrimaryButton}" Click="BtnUpdate_Click" />
+                    <Button x:Name="BtnSettings" Content="记录设置" Width="78" Margin="0,0,8,0"
+                            Style="{StaticResource GachaButton}" Click="BtnSettings_Click" />
+                    <Button Content="导出 CSV" Style="{StaticResource GachaSideItem}" Click="ExportCsv_Click" />
+                    <Button Content="记录目录" Style="{StaticResource GachaSideItem}" Click="OpenDataDir_Click" />
+                    <Border Width="1" Height="36" Background="{DynamicResource Brush.BorderSoft}"
+                            Margin="2,0,9,0" VerticalAlignment="Center" />
+                    <Button x:Name="BtnOverview" Content="记录概览 ▸" Style="{StaticResource GachaToggle}"
+                            Click="BtnOverview_Click" />
+                    <Button x:Name="BtnAnalysis" Content="出货分析 ▸" Style="{StaticResource GachaToggle}"
+                            Margin="7,0,0,0" Click="BtnAnalysis_Click" />
+                </StackPanel>
+            </Border>
         </Grid>
 
-        <!-- 右上角单排工具区：游戏 / UID / 更新 / 记录设置 / 数据工具 / 概览分析 -->
-        <Border Grid.Row="1" HorizontalAlignment="Right" Margin="18,10,18,0"
-                Background="{DynamicResource Brush.Surface}" BorderBrush="{DynamicResource Brush.BorderSoft}"
-                BorderThickness="1" CornerRadius="12" Padding="10,8">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <ComboBox x:Name="ComboGame" Tag="游戏" Width="142" Margin="0,0,8,0"
-                          Style="{StaticResource GachaCombo}" SelectionChanged="ComboGame_SelectionChanged" />
-                <ComboBox x:Name="ComboUid" Tag="UID" Width="170" Margin="0,0,8,0"
-                          Style="{StaticResource GachaCombo}" SelectionChanged="ComboUid_SelectionChanged" />
-                <Button x:Name="BtnUpdate" Content="更新记录" Width="84" Margin="0,0,8,0"
-                        Style="{StaticResource GachaPrimaryButton}" Click="BtnUpdate_Click" />
-                <Button x:Name="BtnSettings" Content="记录设置" Width="80" Margin="0,0,8,0"
-                        Style="{StaticResource GachaButton}" Click="BtnSettings_Click" />
-                <Button Content="导出 CSV" Style="{StaticResource GachaSideItem}" Click="ExportCsv_Click" />
-                <Button Content="记录目录" Style="{StaticResource GachaSideItem}" Click="OpenDataDir_Click" />
-                <Border Width="1" Height="36" Background="{DynamicResource Brush.BorderSoft}"
-                        Margin="2,0,9,0" VerticalAlignment="Center" />
-                <Button x:Name="BtnOverview" Content="记录概览 ▸" Style="{StaticResource GachaToggle}"
-                        Click="BtnOverview_Click" />
-                <Button x:Name="BtnAnalysis" Content="出货分析 ▸" Style="{StaticResource GachaToggle}"
-                        Margin="7,0,0,0" Click="BtnAnalysis_Click" />
-            </StackPanel>
-        </Border>
-
         <!-- 展开后的概览 / 分析：浮在记录区上方，不再把下方记录整体挤下去 -->
-        <Grid Grid.Row="2" Margin="18,44,18,0" Panel.ZIndex="30"
+        <Grid Grid.Row="1" Margin="18,56,18,0" Panel.ZIndex="30"
               HorizontalAlignment="Right" VerticalAlignment="Top">
             <StackPanel Orientation="Horizontal">
                 <Border x:Name="OverviewCard" Width="404" Visibility="Collapsed"
@@ -285,7 +282,7 @@
         </Grid>
 
         <!-- 下方：固定页面高度，只有每个卡池内部记录列表滚动 -->
-        <Grid Grid.Row="2" Background="{DynamicResource Brush.WindowBg}" Margin="0,8,0,0">
+        <Grid Grid.Row="1" Background="{DynamicResource Brush.WindowBg}" Margin="0,6,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -309,7 +306,7 @@
         </Grid>
 
         <!-- 底部状态 -->
-        <Border Grid.Row="3" Background="{DynamicResource Brush.NavBg}"
+        <Border Grid.Row="2" Background="{DynamicResource Brush.NavBg}"
                 BorderBrush="{DynamicResource Brush.BorderSoft}" BorderThickness="0,1,0,0">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="22,0,0,0">
@@ -325,7 +322,7 @@
         </Border>
 
         <!-- 设置浮层 -->
-        <Border x:Name="PanelSettings" Grid.Row="0" Grid.RowSpan="4" Width="390"
+        <Border x:Name="PanelSettings" Grid.Row="0" Grid.RowSpan="3" Width="390"
                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,58,16,0"
                 Visibility="Collapsed" Panel.ZIndex="40"
                 Background="{DynamicResource Brush.Card}" BorderBrush="{DynamicResource Brush.Border}"

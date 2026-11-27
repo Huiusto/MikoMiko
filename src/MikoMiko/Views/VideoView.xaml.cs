@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 
 namespace MikoMiko.Views;
@@ -38,6 +39,8 @@ public partial class VideoView : UserControl
     private bool _commentLightboxPanning;
     private Point _commentLightboxLastPoint;
     private Window? _hostWindow;
+    private DispatcherTimer? _chromeTimer;
+    private bool _chromeVisible = true;
 
     public VideoView(VideoViewModel viewModel, AppSettings settings)
     {
@@ -48,6 +51,9 @@ public partial class VideoView : UserControl
 
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         _positionTimer.Tick += (_, _) => UpdatePosition();
+
+        _chromeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.6) };
+        _chromeTimer.Tick += (_, _) => HideChrome();
 
         ApplyPlayerSettings();
         _vm.PropertyChanged += OnViewModelChanged;
@@ -61,10 +67,12 @@ public partial class VideoView : UserControl
             _positionTimer.Start();
             _hostWindow = Window.GetWindow(this);
             if (_hostWindow is not null) _hostWindow.PreviewKeyDown += OnHostPreviewKeyDown;
+            ShowChrome();
         };
         Unloaded += (_, _) =>
         {
             PausePlayback();
+            _chromeTimer?.Stop();
             Media.Source = null;
             if (_hostWindow is not null) _hostWindow.PreviewKeyDown -= OnHostPreviewKeyDown;
             _hostWindow = null;
@@ -91,6 +99,11 @@ public partial class VideoView : UserControl
 
         switch (key)
         {
+            case Key.Space:
+                TogglePlay();
+                ShowChrome();
+                e.Handled = true;
+                break;
             case Key.Q:
                 _vm.LikeCommand.Execute(null);
                 e.Handled = true;
@@ -181,6 +194,49 @@ public partial class VideoView : UserControl
         }
     }
 
+    private void PlayerCard_MouseMove(object sender, System.Windows.Input.MouseEventArgs e) => ShowChrome();
+
+    private void PlayerCard_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_vm.IsPlaying) HideChrome();
+    }
+
+    private void ShowChrome()
+    {
+        _chromeVisible = true;
+        SetChromeOpacity(1, true);
+        PlayerCard.Cursor = System.Windows.Input.Cursors.Arrow;
+        _chromeTimer?.Stop();
+        if (_vm.IsPlaying) _chromeTimer?.Start();
+    }
+
+    private void HideChrome()
+    {
+        _chromeTimer?.Stop();
+        if (!_vm.IsPlaying || _vm.IsCommentsOpen || _vm.IsQualityOpen || _vm.IsSpeedOpen)
+        {
+            ShowChrome();
+            return;
+        }
+        if (!_chromeVisible) return;
+        _chromeVisible = false;
+        SetChromeOpacity(0, false);
+        PlayerCard.Cursor = System.Windows.Input.Cursors.None;
+    }
+
+    private void SetChromeOpacity(double opacity, bool hitTest)
+    {
+        foreach (var element in new UIElement[] { InfoPanel, ActionBar, ProgressTrack, ControlBar, ReturnCoverButton })
+        {
+            element.IsHitTestVisible = hitTest;
+            var fade = new DoubleAnimation(opacity, TimeSpan.FromMilliseconds(150))
+            {
+                FillBehavior = FillBehavior.HoldEnd,
+            };
+            element.BeginAnimation(UIElement.OpacityProperty, fade);
+        }
+    }
+
     /// <summary>点击评论区以外的任意位置直接关闭评论区。</summary>
     private void CommentBackdrop_Click(object sender, MouseButtonEventArgs e)
     {
@@ -200,6 +256,7 @@ public partial class VideoView : UserControl
         if (FindAncestor<ScrollViewer>(e.OriginalSource as DependencyObject) is not null) return;
         if (FindAncestor<System.Windows.Controls.ItemsControl>(e.OriginalSource as DependencyObject) is not null) return;
         if (FindAncestor<System.Windows.Controls.Primitives.Selector>(e.OriginalSource as DependencyObject) is not null) return;
+        ShowChrome();
         TogglePlay();
     }
 
@@ -276,6 +333,10 @@ public partial class VideoView : UserControl
                     Media.Volume = 0;
                 }
                 UpdatePlayIcon();
+                ShowChrome();
+                break;
+            case nameof(VideoViewModel.IsCommentsOpen):
+                if (_vm.IsCommentsOpen) ShowChrome();
                 break;
             case nameof(VideoViewModel.IsMuted):
                 Media.IsMuted = _vm.IsMuted;

@@ -134,6 +134,13 @@ public partial class MainWindow : Window
 
     // ---------------------------------------------------------------- 页头交互
 
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!_shell.IsCollectionReaderOpen) return;
+        if (CollectionHost.IsMouseOver) return;
+        _shell.CloseCollectionReader();
+    }
+
     private void Header_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ClickCount == 2)

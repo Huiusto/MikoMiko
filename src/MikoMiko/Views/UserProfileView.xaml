@@ -355,7 +355,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock Text="TA 还没有公开合集" FontSize="13" Foreground="{DynamicResource Brush.TextTertiary}"
+                    <TextBlock Text="TA还没有合集" FontSize="13" Foreground="{DynamicResource Brush.TextTertiary}"
                                HorizontalAlignment="Center" Margin="0,34,0,0"
                                Visibility="{Binding HasCollections, Converter={StaticResource InverseBoolToVis}}" />
                 </StackPanel>

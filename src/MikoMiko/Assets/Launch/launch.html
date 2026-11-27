@@ -206,7 +206,13 @@
     border-color: rgba(255,255,255,.24);
     box-shadow: 0 14px 36px rgba(0,0,0,.38), 0 6px 20px var(--accent-soft),
                 0 0 0 1px rgba(255,255,255,.16) inset;
+    position: relative; overflow: hidden;
   }
+  .main-btn .main-fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+    background: rgba(255,255,255,.22); transition: width .22s ease; pointer-events: none;
+  }
+  .main-btn .main-label { position: relative; z-index: 1; display: inline-block; }
   .main-btn:hover { transform: translateY(-2px);
     box-shadow: 0 18px 44px rgba(0,0,0,.44), 0 8px 26px var(--accent-glow),
                 0 0 0 1px rgba(255,255,255,.20) inset; }
@@ -338,6 +344,7 @@
       <div class="card" data-url="https://planet.mihoyo.com/home"><b>星布谷地</b><span>未上线 · 预约</span></div>
       <div class="card" data-url="https://nodusfall.mihoyo.com/home"><b>源初之结</b><span>未上线 · 预约</span></div>
       <div class="card" data-url="https://yyjl.mihoyo.com/"><b>因缘精灵</b><span>未上线 · 预约</span></div>
+      <div class="card" data-url="https://varsapura.city/"><b>雨之城</b><span>第三方 · 预约</span></div>
     </div>
     <div class="actions">
       <div class="main-row">
@@ -346,7 +353,7 @@
           <span class="dot"></span>
         </button>
         <div class="main-wrap">
-          <button class="btn accent main-btn" id="btnMain"><span id="mainText">开始游戏</span></button>
+          <button class="btn accent main-btn" id="btnMain"><span class="main-fill" id="mainFill"></span><span class="main-label" id="mainText">开始游戏</span></button>
           <div class="install-card" id="installCard" aria-hidden="true">
             <div class="ic-head">
               <div class="ic-percent" id="icPercent">0.00%</div>
@@ -660,13 +667,17 @@
     const g = state.games.find(x => x.key === state.selected) || {};
     const btn = $('btnMain');
     const label = $('mainText');
+    const fill = $('mainFill');
     const inst = state.install;
+    fill.style.width = '0%';
     if (inst && inst.active) {
+      const pct = Math.max(0, Math.min(100, Number(inst.percent) || 0));
+      fill.style.width = pct.toFixed(2) + '%';
       if (inst.cancelling) {
         label.textContent = '正在取消安装…';
         btn.disabled = true;
       } else {
-        label.textContent = inst.paused ? '继续安装' : '暂停安装';
+        label.textContent = `${inst.paused ? '已暂停' : '安装中'} ${pct.toFixed(2)}%`;
         btn.disabled = false;
       }
       btn.title = '';

@@ -23,7 +23,7 @@ namespace MikoMiko.Views;
 /// <summary>抽卡记录：按固定卡池列展示数量、平均、出货率、保底与最近记录。</summary>
 public partial class GachaView : UserControl
 {
-    private sealed record GameChoice(string Key, string Name)
+    private sealed record GameChoice(string Key, string Name, string Icon)
     {
         public override string ToString() => Name;
     }
@@ -61,10 +61,10 @@ public partial class GachaView : UserControl
 
     private static readonly GameChoice[] Games =
     {
-        new("genshin", "原神"),
-        new("starrail", "星穹铁道"),
-        new("zzz", "绝区零"),
-        new("bh3", "崩坏3"),
+        new("genshin", "原神", "pack://application:,,,/Assets/Launch/icons/icon_genshin.png"),
+        new("starrail", "星穹铁道", "pack://application:,,,/Assets/Launch/icons/icon_starrail.png"),
+        new("zzz", "绝区零", "pack://application:,,,/Assets/Launch/icons/icon_zzz.png"),
+        new("bh3", "崩坏3", "pack://application:,,,/Assets/Launch/icons/icon_bh3.png"),
     };
 
     private static readonly Dictionary<string, PoolDef[]> PoolDefs = new()
@@ -121,6 +121,7 @@ public partial class GachaView : UserControl
         InitializeComponent();
         ComboGame.ItemsSource = Games;
         ComboGame.SelectedIndex = 0;
+        UpdateGameIcon(Games[0]);
         PoolScroll.SizeChanged += (_, _) => ResizePoolColumns();
         Loaded += (_, _) => ReloadData();
     }
@@ -937,10 +938,23 @@ public partial class GachaView : UserControl
         if (_suppressGame || ComboGame.SelectedItem is not GameChoice choice) return;
         _beyond = false;
         _game = choice.Key;
+        UpdateGameIcon(choice);
         _uid = "";
         UpdateBeyondBadge();
         RefreshUids();
         Render();
+    }
+
+    private void UpdateGameIcon(GameChoice choice)
+    {
+        try
+        {
+            ImgGameIcon.Source = new System.Windows.Media.Imaging.BitmapImage(new Uri(choice.Icon));
+        }
+        catch
+        {
+            ImgGameIcon.Source = null;
+        }
     }
 
     private void ComboUid_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -1041,22 +1055,6 @@ public partial class GachaView : UserControl
             _updating = false;
             BtnUpdate.IsEnabled = true;
         }
-    }
-
-    private void BtnMore_Click(object sender, RoutedEventArgs e)
-    {
-        var menu = new ContextMenu
-        {
-            PlacementTarget = BtnMore,
-            Placement = PlacementMode.Bottom,
-        };
-        var copy = new MenuItem { Header = "复制当前统计摘要" };
-        copy.Click += (_, _) => CopySummary();
-        var open = new MenuItem { Header = "打开抽卡记录目录" };
-        open.Click += (_, _) => OpenDataDir();
-        menu.Items.Add(copy);
-        menu.Items.Add(open);
-        menu.IsOpen = true;
     }
 
     private void BtnOverview_Click(object sender, RoutedEventArgs e)

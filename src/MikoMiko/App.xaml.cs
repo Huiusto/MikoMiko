@@ -152,9 +152,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.51"), "v0.1.51", "MikoMiko 0.1.51",
-                    "· 启动页下载不再显示「正在写入」等文件信息，只在下载按钮悬浮卡中查看下载/安装进度\n· 修复视频最大化后四周白边\n· 抽卡页将游戏、UID 与记录设置收进右上角一排，概览/分析改为顶部浮层\n· 抽卡记录只能滚动单个卡池内部，页面不再整体滚动\n· 每日任务验证码改为取到结果立即关窗再校验，点击验证不再卡住\n· 设置页合并通用设置与应用维护，应用信息卡改为关于在上、信息在下",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.51.exe", "");
+                    new Version("0.1.52"), "v0.1.52", "MikoMiko 0.1.52",
+                    "· 首页板块排序「最新发布」改为「最新」，启动页安装主按钮显示实时进度\n· 米哈云游与预约游戏补齐跳转链接\n· 视频页支持鼠标控制显隐，空格键暂停/继续\n· 每日任务验证码弹窗精简为极验面板，验证完成自动关闭并修复打卡失败\n· 抽卡页去掉右上角三点菜单，记录区上移并新增游戏图标\n· 我的合集点击外部自动关闭，他人主页显示「TA还没有合集」\n· 缓存管理下载位置移到右侧\n· 启动时自动检查更新并弹出更新提示",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.52.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();

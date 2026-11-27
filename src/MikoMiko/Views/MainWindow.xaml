@@ -13,6 +13,7 @@
         Background="{DynamicResource Brush.WindowBg}"
         UseLayoutRounding="True" SnapsToDevicePixels="True"
         TextOptions.TextFormattingMode="Display"
+        PreviewMouseDown="Window_PreviewMouseDown"
         FontFamily="{DynamicResource Font.Ui}">
 
     <WindowChrome.WindowChrome>
@@ -212,7 +213,7 @@
                             Visibility="{Binding IsAnimePageOpen, Converter={StaticResource BoolToVis}}" />
 
             <!-- ==================== 合集阅读器（软件内打开，点击作品进入帖子阅读器） ==================== -->
-            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding CollectionReaderView}"
+            <ContentControl x:Name="CollectionHost" Grid.Row="1" Grid.Column="1" Content="{Binding CollectionReaderView}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                             Focusable="False"
                             Visibility="{Binding IsCollectionReaderOpen, Converter={StaticResource BoolToVis}}" />

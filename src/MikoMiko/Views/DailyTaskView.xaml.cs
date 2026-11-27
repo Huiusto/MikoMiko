@@ -589,15 +589,15 @@ public partial class DailyTaskView : UserControl
         if (result.Retcode != 1034) return result;
 
         AppendLog(new SignLogEntry { Text = $"{game.Name} 触发验证码，正在软件内直接载入极验", Level = "WARN" });
-        var validation = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
-        if (string.IsNullOrWhiteSpace(validation))
+        var verify = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
+        if (string.IsNullOrWhiteSpace(verify.Validation))
         {
             AppendLog(new SignLogEntry { Text = "已取消安全验证，本次签到未完成", Level = "WARN" });
             return result;
         }
 
         AppendLog(new SignLogEntry { Text = "验证完成，正在校验验证结果…", Level = "INFO" });
-        var (challenge, verifyError) = await SignService.VerifyCaptchaAsync(account.Cookie, validation);
+        var (challenge, verifyError) = await SignService.VerifyCaptchaAsync(account.Cookie, verify.Validation, verify.Challenge);
         if (string.IsNullOrWhiteSpace(challenge))
         {
             AppendLog(new SignLogEntry { Text = "安全验证未通过：" + (verifyError ?? "请稍后重试"), Level = "ERROR" });
@@ -605,7 +605,8 @@ public partial class DailyTaskView : UserControl
         }
 
         AppendLog(new SignLogEntry { Text = "验证通过，正在重试签到…", Level = "INFO" });
-        return await SignService.SignRoleAsync(account.Cookie, game, role, challenge);
+        return await SignService.SignRoleAsync(account.Cookie, game, role, challenge,
+            SignService.ExtractValidate(verify.Validation));
     }
 
     private async Task<SignService.ActionResult> BbsCheckInWithVerifyAsync(HoyoAccount account, string cookie)
@@ -615,13 +616,13 @@ public partial class DailyTaskView : UserControl
 
         AppendLog(new SignLogEntry { Text = "米游社打卡触发验证码，正在软件内直接载入极验", Level = "WARN" });
         var validation = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
-        if (string.IsNullOrWhiteSpace(validation))
+        if (string.IsNullOrWhiteSpace(validation.Validation))
         {
             AppendLog(new SignLogEntry { Text = "已取消安全验证，本次打卡未完成", Level = "WARN" });
             return result;
         }
 
-        var (challenge, verifyError) = await SignService.VerifyCaptchaAsync(account.Cookie, validation);
+        var (challenge, verifyError) = await SignService.VerifyCaptchaAsync(account.Cookie, validation.Validation, validation.Challenge);
         if (string.IsNullOrWhiteSpace(challenge))
         {
             AppendLog(new SignLogEntry { Text = "安全验证未通过：" + (verifyError ?? "请稍后重试"), Level = "ERROR" });
@@ -629,7 +630,8 @@ public partial class DailyTaskView : UserControl
         }
 
         AppendLog(new SignLogEntry { Text = "验证完成，正在重试米游社打卡…", Level = "INFO" });
-        return await SignService.BbsCheckInAsync(cookie, challenge: challenge);
+        return await SignService.BbsCheckInAsync(cookie, challenge: challenge,
+            validate: SignService.ExtractValidate(validation.Validation));
     }
 
     private async Task SignOneAsync(RoleRow row)

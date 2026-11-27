@@ -17,6 +17,7 @@ public partial class VerifyDialog : Window
     private readonly string? _aigis;
     private bool _initialized;
     private string? _validation;
+    private string? _challenge;
 
     public VerifyDialog(HoyoAccount account, string? aigis)
     {
@@ -31,14 +32,14 @@ public partial class VerifyDialog : Window
         Loaded += OnLoaded;
     }
 
-    /// <summary>返回极验 getValidate() 的原始 JSON，由调用方在弹窗关闭后提交，避免窗口内长时间等待接口。</summary>
-    public static Task<string?> ShowAsync(Window? owner, HoyoAccount account, string? aigis = null)
+    /// <summary>返回极验 getValidate() 的原始 JSON 与创建时的 challenge，由调用方在弹窗关闭后提交。</summary>
+    public static Task<(string? Validation, string? Challenge)> ShowAsync(Window? owner, HoyoAccount account, string? aigis = null)
     {
         owner ??= Application.Current?.MainWindow;
         var dialog = new VerifyDialog(account, aigis);
         if (owner is not null && owner.IsVisible) dialog.Owner = owner;
         dialog.ShowDialog();
-        return Task.FromResult(dialog._validation);
+        return Task.FromResult((dialog._validation, dialog._challenge));
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -67,6 +68,7 @@ public partial class VerifyDialog : Window
                 TxtLoading.Text = "申请验证码失败：" + (error ?? "未知错误");
                 return;
             }
+            _challenge = create.Challenge;
 
             var dataDir = Path.Combine(SettingsService.CacheDirectory, "webview-verify");
             Directory.CreateDirectory(dataDir);

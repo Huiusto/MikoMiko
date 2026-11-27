@@ -36,7 +36,7 @@ public sealed partial class HomeViewModel : ObservableObject
         {
             new("1", "默认"),
             new("3", "热门"),
-            new("2", "最新发布"),
+            new("2", "最新"),
         };
         SortOptions[0].IsSelected = true;
         SelectedSort = SortOptions[0];

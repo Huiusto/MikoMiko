@@ -54,7 +54,7 @@ public static class GameUpdateService
         {
             using var req = new HttpRequestMessage(HttpMethod.Get,
                 $"{PackageApi}?launcher_id={LauncherId}&language=zh-cn");
-            req.Headers.TryAddWithoutValidation("User-Agent", "MikoMiko/0.1.51");
+            req.Headers.TryAddWithoutValidation("User-Agent", "MikoMiko/0.1.52");
             using var resp = await Http.SendAsync(req).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return _preVersions;
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync().ConfigureAwait(false));

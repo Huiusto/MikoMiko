@@ -15,7 +15,8 @@
     <!-- 整幅播放器，像抖音一样上下滑动直接切下一个视频 -->
     <Grid Background="{DynamicResource Brush.PlayerBg}" MouseWheel="PlayerCard_MouseWheel">
         <Border x:Name="PlayerCard" CornerRadius="0" ClipToBounds="True"
-                Background="{DynamicResource Brush.PlayerBg}" MouseLeftButtonUp="PlayerCard_Click">
+                Background="{DynamicResource Brush.PlayerBg}" MouseLeftButtonUp="PlayerCard_Click"
+                MouseMove="PlayerCard_MouseMove" MouseLeave="PlayerCard_MouseLeave">
             <Grid>
                 <MediaElement x:Name="Media" LoadedBehavior="Manual" UnloadedBehavior="Manual"
                               ScrubbingEnabled="True" Stretch="Uniform" Volume="0.6" />
@@ -68,7 +69,7 @@
                 </Grid>
 
                 <!-- 播放时常驻的信息层：左下 UP 信息 + 标题 -->
-                <StackPanel VerticalAlignment="Bottom" Margin="24,0,0,70" HorizontalAlignment="Left">
+                <StackPanel x:Name="InfoPanel" VerticalAlignment="Bottom" Margin="24,0,0,70" HorizontalAlignment="Left">
                     <StackPanel Orientation="Horizontal">
                         <Button Style="{StaticResource LinkButton}" Padding="0" Command="{Binding OpenAuthorCommand}" Cursor="Hand">
                             <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
@@ -127,7 +128,7 @@
                 </StackPanel>
 
                 <!-- 播放时常驻的操作列（米游社原生：点赞 / 收藏 / 分享） -->
-                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,22,72">
+                <StackPanel x:Name="ActionBar" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,22,72">
                     <StackPanel HorizontalAlignment="Center" Margin="0,0,0,14">
                         <Button Command="{Binding LikeCommand}" Style="{StaticResource CircleActionButton}" Width="36" Height="36">
                             <Path Data="M8 15 C8 15 1 10.5 1 5.6 C1 2.8 3.9 1.2 5.9 2.6 L8 4.6 L10.1 2.6 C12.1 1.2 15 2.8 15 5.6 C15 10.5 8 15 8 15 Z"
@@ -253,7 +254,7 @@
                 </Grid>
 
                 <!-- 底部控制栏 -->
-                <Border VerticalAlignment="Bottom" Height="54" Background="#D9000000">
+                <Border x:Name="ControlBar" VerticalAlignment="Bottom" Height="54" Background="#D9000000">
                     <Grid Margin="12,0,14,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
