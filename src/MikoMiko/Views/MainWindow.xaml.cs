@@ -1,3 +1,4 @@
+using MikoMiko.Localization;
 using MikoMiko.Models;
 using MikoMiko.Services;
 using MikoMiko.ViewModels;
@@ -8,6 +9,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 
 namespace MikoMiko.Views;
@@ -40,6 +42,44 @@ public partial class MainWindow : Window
             UpdateMaximizeVisual();
             if (WindowState == WindowState.Minimized) _shell.PauseAllPlayback();
         };
+
+        // 页面切换 / 阅读器 / 浏览器 / 弹窗等新内容挂到视觉树后再补一次翻译，
+        // 解决启动即非中文、或切换语言后新打开页面仍显示硬编码中文的问题。
+        _shell.PropertyChanged += OnShellPropertyChanged;
+        ContentRendered += (_, _) => TranslateNow();
+        // 页面数据、列表虚拟化、异步加载都会在导航之后继续往视觉树里加内容，
+        // 用 LayoutUpdated 节流补翻，兜住这些晚到的文本。
+        LayoutUpdated += (_, _) => TranslateNowThrottled();
+    }
+
+    private void OnShellPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is "CurrentView" or "IsReaderOpen" or "IsBrowserOpen" or "IsWebHubOpen"
+            or "IsUploadOpen" or "IsProfileOpen" or "IsAnimePageOpen")
+            TranslateNow();
+    }
+
+    private void TranslateNow()
+    {
+        if (Loc.Instance.Language == "zh-CN") return;
+        Dispatcher.BeginInvoke(new Action(() => Loc.Instance.TranslateTree(this)));
+    }
+
+    private DateTime _lastTranslate;
+    private bool _translateQueued;
+
+    private void TranslateNowThrottled()
+    {
+        if (_translateQueued || Loc.Instance.Language == "zh-CN") return;
+        var now = DateTime.UtcNow;
+        if ((now - _lastTranslate).TotalMilliseconds < 350) return;
+        _lastTranslate = now;
+        _translateQueued = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _translateQueued = false;
+            Loc.Instance.TranslateTree(this);
+        }), DispatcherPriority.Background);
     }
 
     // ---------------------------------------------------------------- 窗口尺寸

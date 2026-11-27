@@ -23,6 +23,9 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // 所有按钮统一接入果冻动效（按压缩放、松开弹性回弹）。
+        Interaction.ButtonJelly.Install();
+
         // 安装程序在复制完文件后调用：提前铺好启动页壁纸与页面资源，首次打开不再等下载。
         if (e.Args.Contains("--prepare-launch"))
         {
@@ -104,6 +107,11 @@ public partial class App : Application
             window.Show();
             _ = Shell.InitializeAsync();
             splash?.Close();
+
+            // 启动语言不是简体中文时，窗口视觉树此时才完整生成，
+            // 需要补一次全树翻译，避免设置页等硬编码文案仍显示中文。
+            if (Loc.Instance.Language != "zh-CN")
+                Dispatcher.BeginInvoke(new Action(() => Loc.Instance.TranslateTree(window)));
         }
 
         if (showSplash)
@@ -148,9 +156,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.46"), "v0.1.46", "MikoMiko 0.1.46",
+                    new Version("0.1.47"), "v0.1.47", "MikoMiko 0.1.47",
                     "· 安装时可自选安装位置，升级默认沿用原目录\n· 「追番/影视」排版重做，播放失败直接在软件内提示\n· 每日任务验证码直接在软件内载入极验滑块\n· 切换账号浮层支持一键添加账号，并显示头像与米游社 UID\n· 卸载前自动关闭软件，避免文件占用",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.46.exe", "");
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.47.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();

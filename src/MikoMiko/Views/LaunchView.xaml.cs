@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
+using MikoMiko.Localization;
 using MikoMiko.Services;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 
@@ -374,6 +375,8 @@ public partial class LaunchView : UserControl
             customBackground = false,
             gameInfo,
             install = InstallStateFor(_selectedKey),
+            lang = Loc.Instance.Language,
+            texts = Services.LaunchWebTexts.BuildMap(),
         };
 
         _ = Web.CoreWebView2.ExecuteScriptAsync(

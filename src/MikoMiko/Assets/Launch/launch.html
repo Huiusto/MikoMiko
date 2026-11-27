@@ -414,9 +414,72 @@
 
 <script>
   let state = null;
+  let webLang = 'zh-CN';
+  let webTexts = {};
+  const textOriginals = new WeakMap();
+  const attrOriginals = new WeakMap();
+  const hasCjk = /[\u3400-\u9fff]/;
+  const s2tPairs = '启啟 动動 页頁 游遊 戏戲 当當 获獲 设設 预預 约約 线線 开開 载載 资資 余餘 时時 间間 计計 装裝 录錄 盘盤 显顯 钮鈕 纸紙 关關 闭閉 暂暫 继繼 续續 态態 选選 择擇 调調 顺順 运運 击擊 云雲 没沒 无無 为為 这這 个個 与與 于於 发發 后後 里裡 还還 进進 实實 现現 软軟 体體 网網 络絡 数數 图圖 视視 频頻 标標 题題 签簽 删刪 储儲 点點 内內'.split(' ').map(pair => [pair[0], pair[1]]);
+  const s2t = Object.fromEntries(s2tPairs);
   const $ = id => document.getElementById(id);
   const bgImage = $('bgImage'), bgVideo = $('bgVideo');
   const preloadedImages = [];
+
+  // 启动页所有静态/动态中文都由 C# 按当前语言生成对照表后注入；
+  // 这里对文本节点和常见属性做替换，切回中文时恢复原文。
+  function translateSource(source) {
+    if (!source || webLang === 'zh-CN' || !hasCjk.test(source)) return source;
+    let text = source;
+    const keys = Object.keys(webTexts).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (text.indexOf(key) >= 0) text = text.split(key).join(webTexts[key]);
+    }
+    if (webLang === 'en-US') text = text.replace(/第\s*(\d+)\s*张/g, 'No. $1');
+    if (webLang === 'zh-TW') text = text.replace(/[\u3400-\u9fff]/g, ch => s2t[ch] || ch);
+    return text;
+  }
+
+  function translateTextNode(node) {
+    const raw = node.nodeValue;
+    if (!raw || !raw.trim()) return;
+    if (!textOriginals.has(node)) textOriginals.set(node, raw);
+    const source = textOriginals.get(node);
+    const out = translateSource(source);
+    if (out !== raw) node.nodeValue = out;
+  }
+
+  function translateAttrs(el) {
+    ['title', 'aria-label', 'placeholder'].forEach(name => {
+      if (!el.hasAttribute(name)) return;
+      let store = attrOriginals.get(el);
+      if (!store) { store = {}; attrOriginals.set(el, store); }
+      if (!(name in store)) store[name] = el.getAttribute(name);
+      const out = translateSource(store[name]);
+      if (out !== el.getAttribute(name)) el.setAttribute(name, out);
+    });
+  }
+
+  function translateDom(root) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const tag = node.parentElement && node.parentElement.tagName;
+        return tag === 'SCRIPT' || tag === 'STYLE' ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    while (walker.nextNode()) translateTextNode(walker.currentNode);
+    root.querySelectorAll('[title],[aria-label],[placeholder]').forEach(translateAttrs);
+  }
+
+  function applyLanguage() {
+    if (!state) return;
+    webLang = state.lang || 'zh-CN';
+    webTexts = state.texts || {};
+    document.documentElement.lang = webLang === 'zh-CN' ? 'zh-CN' : webLang;
+    document.title = translateSource('MikoMiko 启动页');
+    translateDom(document.body);
+  }
+
 
   function preloadBackgrounds() {
     if (!state) return;
@@ -445,7 +508,7 @@
 
   function toast(text) {
     const t = $('toast');
-    t.textContent = text;
+    t.textContent = translateSource(text);
     t.classList.add('on');
     clearTimeout(t._timer);
     t._timer = setTimeout(() => t.classList.remove('on'), 2600);
@@ -724,6 +787,7 @@
     applyUiFlags();
     updateSettingsView();
     $('saving').classList.toggle('on', !!state.preparing);
+    applyLanguage();
   }
 
   // 页面被切回前台时，WebView2 可能保留黑色视频帧或未重绘的合成层，强制重建背景。

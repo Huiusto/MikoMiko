@@ -142,6 +142,8 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private string PickSearchPlaceholder()
     {
+        // 非简体中文时不做中文随机占位轮播，避免英文/日文界面里跳出中文搜索词。
+        if (Loc.Instance.Language != "zh-CN") return Loc.Instance["Header.Search"];
         var index = Random.Shared.Next(SearchPlaceholders.Length);
         if (SearchPlaceholders[index] == SearchPlaceholder)
             index = (index + 1) % SearchPlaceholders.Length;
@@ -754,6 +756,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private void RefreshLocalization()
     {
         Brand = Loc.Instance["Header.Brand"];
+        SearchPlaceholder = PickSearchPlaceholder();
         foreach (var item in Navigation.Concat(FooterNavigation)) item.RefreshTitle();
         foreach (var tab in HomeTabs) tab.RefreshTitle();
     }
