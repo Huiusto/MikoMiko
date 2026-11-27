@@ -113,6 +113,12 @@
     post('validate', { data: validate });
   }
 
+  // v3 的 onSuccess 会先于面板最终结果落库，TeyvatGuide 也是在 onClose 之后才取
+  // getValidate()。这里延后一点再取，避免提交到半成品 validate 导致打卡仍 1034。
+  function finishSoon(captchaObj, done, delay) {
+    setTimeout(() => finish(captchaObj, done), delay || 300);
+  }
+
   function loadScript(src, readyCheck, onReady, onFail) {
     if (readyCheck()) { onReady(); return; }
     const script = document.createElement('script');
@@ -150,8 +156,8 @@
           captchaObj.appendTo('#geetest');
           captchaObj.onReady(() => { showStage(); openCaptcha(captchaObj); });
           setTimeout(() => { showStage(); openCaptcha(captchaObj); }, 450);
-          captchaObj.onSuccess(() => finish(captchaObj, done));
-          captchaObj.onClose(() => { if (!done.value) post('close'); });
+          captchaObj.onSuccess(() => finishSoon(captchaObj, done, 300));
+          captchaObj.onClose(() => finish(captchaObj, done));
         });
       },
       showError);
@@ -174,8 +180,8 @@
           captchaObj.appendTo('#geetest');
           captchaObj.onReady(() => { showStage(); openCaptcha(captchaObj); });
           setTimeout(() => { showStage(); openCaptcha(captchaObj); }, 450);
-          captchaObj.onSuccess(() => finish(captchaObj, done));
-          captchaObj.onClose(() => { if (!done.value) post('close'); });
+          captchaObj.onSuccess(() => finishSoon(captchaObj, done, 300));
+          captchaObj.onClose(() => finish(captchaObj, done));
         });
       },
       showError);

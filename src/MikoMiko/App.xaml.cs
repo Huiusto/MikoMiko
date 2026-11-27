@@ -153,9 +153,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.55"), "v0.1.55", "MikoMiko 0.1.55",
+                    new Version("0.1.56"), "v0.1.56", "MikoMiko 0.1.56",
                     "· 每日任务验证器只弹出极验面板本体\n· 修复完成验证后米游社打卡仍失败",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.55.exe", "");
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.56.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();

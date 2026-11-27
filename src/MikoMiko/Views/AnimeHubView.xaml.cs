@@ -42,6 +42,8 @@ public partial class AnimeHubView : UserControl
         new() { Title = "人偶学园", Url = "https://www.yhdmtv.cc/v/77911/1", Kind = "推荐", Note = "崩坏3 · 学园日常" },
         new() { Title = "黄金庭院：冬日里的新年愿望", Url = "https://www.yhdmtv.cc/v/76871/1", Kind = "推荐", Note = "崩坏3 · 冬日特别篇", Cover = "pack://application:,,,/Assets/Anime/golden-courtyard.jpg" },
         new() { Title = "旅途危机！圣芙蕾雅号特别事件", Url = "https://www.yhdmtv.cc/v/683596/1", Kind = "推荐", Note = "崩坏3 · 特别动画", Cover = "pack://application:,,,/Assets/Anime/travel-crisis.jpg" },
+        new() { Title = "《原神》长期项目启动·概念PV", Url = "https://www.bilibili.com/video/BV15B4y1n7dg", Kind = "PV", Note = "原神 · 官方概念 PV", Cover = "pack://application:,,,/Assets/Anime/genshin-concept-pv.jpg" },
+        new() { Title = "《崩坏：星穹铁道》原创动画•概念PV——「死于午后」", Url = "https://www.bilibili.com/video/BV1YXDfBUETP", Kind = "PV", Note = "星穹铁道 · 原创动画概念 PV", Cover = "pack://application:,,,/Assets/Anime/starrail-concept-pv.jpg" },
     };
 
     private static readonly HttpClient Http = CreateHttpClient();

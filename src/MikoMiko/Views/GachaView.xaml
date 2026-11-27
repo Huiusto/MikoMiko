@@ -299,9 +299,9 @@
                 </StackPanel>
             </Grid>
             <ScrollViewer x:Name="PoolScroll" Grid.Row="1" Margin="0,8,0,0"
-                          HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                <Grid x:Name="PoolGrid" HorizontalAlignment="Left" VerticalAlignment="Stretch"
-                      Margin="18,0,18,0" />
+                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <WrapPanel x:Name="PoolGrid" HorizontalAlignment="Stretch" VerticalAlignment="Top"
+                           Margin="18,0,18,0" />
             </ScrollViewer>
         </Grid>
 

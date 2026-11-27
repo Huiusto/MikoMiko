@@ -340,6 +340,11 @@ public sealed partial class ShellViewModel : ObservableObject
     private async void OpenAnimeCatalogInApp(string url, string title)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
+        if (url.Contains("bilibili.com", StringComparison.OrdinalIgnoreCase))
+        {
+            OpenBilibiliInApp(url, title);
+            return;
+        }
         AnimePage?.ShowToast($"正在缓冲《{title}》…");
         AnimePlayback? playback = null;
         try

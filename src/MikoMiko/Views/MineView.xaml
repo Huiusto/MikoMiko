@@ -191,7 +191,7 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <!-- 右上角：圆润刷新 / 退出 -->
+                            <!-- 右上角：圆润刷新；退出登录已收进切换账号菜单 -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                                         Margin="0,18,18,0">
                                 <Button Height="32" Padding="16,0" Cursor="Hand" Command="{Binding RefreshCommand}">
@@ -210,23 +210,6 @@
                                         </ControlTemplate>
                                     </Button.Template>
                                     <TextBlock Text="刷新资料" Foreground="White" FontSize="12" />
-                                </Button>
-                                <Button Height="32" Padding="16,0" Margin="8,0,0,0" Cursor="Hand" Command="{Binding UnbindCommand}">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="{x:Type Button}">
-                                            <Border x:Name="Bd" CornerRadius="16" Background="#30FFFFFF"
-                                                    BorderBrush="#55FFFFFF" BorderThickness="1"
-                                                    Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background" Value="#52FFFFFF" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                    <TextBlock Text="退出登录" Foreground="White" FontSize="12" />
                                 </Button>
                             </StackPanel>
 

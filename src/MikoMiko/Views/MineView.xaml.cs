@@ -233,9 +233,14 @@ public partial class MineView : UserControl
         grid.Children.Add(avatar);
         grid.Children.Add(text);
 
+        var right = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
         if (active)
         {
-            var badge = new Border
+            right.Children.Add(new Border
             {
                 Background = new SolidColorBrush(Color.FromRgb(0xE8, 0xF5, 0xFF)),
                 CornerRadius = new CornerRadius(9),
@@ -247,10 +252,64 @@ public partial class MineView : UserControl
                     FontSize = 10,
                     Foreground = new SolidColorBrush(Color.FromRgb(0x2F, 0x86, 0xC9)),
                 },
-            };
-            Grid.SetColumn(badge, 2);
-            grid.Children.Add(badge);
+            });
         }
+
+        // 每个账号行右侧的删除图标：删掉该账号，不再需要到账号页单独退出。
+        var delete = new System.Windows.Controls.Button
+        {
+            Width = 28,
+            Height = 28,
+            Margin = new Thickness(6, 0, 0, 0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            Cursor = Cursors.Hand,
+            ToolTip = "删除该账号",
+            Focusable = false,
+        };
+        var deleteBorder = new Border
+        {
+            CornerRadius = new CornerRadius(8),
+            Background = Brushes.Transparent,
+            Child = new TextBlock
+            {
+                Text = "🗑",
+                FontSize = 13,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xA7, 0x64, 0x64)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            },
+        };
+        delete.Template = new ControlTemplate(typeof(System.Windows.Controls.Button))
+        {
+            VisualTree = new FrameworkElementFactory(typeof(ContentPresenter)),
+        };
+        delete.Content = deleteBorder;
+        deleteBorder.MouseEnter += (_, _) =>
+            deleteBorder.Background = new SolidColorBrush(Color.FromRgb(0xFD, 0xEE, 0xEE));
+        deleteBorder.MouseLeave += (_, _) => deleteBorder.Background = Brushes.Transparent;
+        delete.PreviewMouseLeftButtonUp += async (_, e) =>
+        {
+            e.Handled = true;
+            var confirm = MessageBox.Show(
+                Window.GetWindow(this),
+                $"确定删除账号「{(string.IsNullOrWhiteSpace(account.Nickname) ? account.Uid : account.Nickname)}」吗？\n删除后需要重新登录才能恢复该账号。",
+                "删除账号", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.OK) return;
+
+            _accountPopup?.SetCurrentValue(Popup.IsOpenProperty, false);
+            await _vm.RemoveAccountAsync(account);
+            HoyoAccountService.Reload();
+            if (HoyoAccountService.All.Count > 0)
+            {
+                _accountPopup = BuildAccountPopup();
+                _accountPopup.IsOpen = true;
+            }
+        };
+        // 当前标记与删除按钮并排放在最右侧。
+        right.Children.Add(delete);
+        Grid.SetColumn(right, 2);
+        grid.Children.Add(right);
 
         var row = new Border
         {

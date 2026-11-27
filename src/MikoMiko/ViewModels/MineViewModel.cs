@@ -376,6 +376,19 @@ public sealed partial class MineViewModel : ObservableObject
         await LoadAsync();
     }
 
+    /// <summary>删除指定账号；若删的是当前账号，自动切到剩下的第一个，全部删除后回到未登录态。</summary>
+    public async Task RemoveAccountAsync(HoyoAccount account)
+    {
+        HoyoAccountService.Remove(account.Id);
+        var next = HoyoAccountService.Active;
+        if (next is not null)
+        {
+            await SwitchAccountAsync(next);
+            return;
+        }
+        Unbind();
+    }
+
     // ---------------------------------------------------------------- 内嵌扫码登录
 
     [RelayCommand]

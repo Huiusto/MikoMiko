@@ -115,6 +115,7 @@ public partial class GachaView : UserControl
     private bool _suppressUid;
     private DispatcherTimer? _toastTimer;
     private int _poolCount;
+    private readonly List<Border> _poolCards = new();
 
     public GachaView()
     {
@@ -187,17 +188,8 @@ public partial class GachaView : UserControl
             choices.Add(new UidChoice(group.Key, group.Key, group.Count()));
         }
 
-        if (gameRecords.Count == 0)
-        {
-            foreach (var account in HoyoAccountService.All.Where(a => !string.IsNullOrWhiteSpace(a.Uid)))
-            {
-                if (choices.Any(c => c.Uid == account.Uid)) continue;
-                choices.Add(new UidChoice(account.Uid, $"{account.Uid} · 未同步", 0));
-            }
-        }
-
         if (choices.Count == 0)
-            choices.Add(new UidChoice("", "无账号", 0));
+            choices.Add(new UidChoice("", "暂无UID", 0));
 
         _suppressUid = true;
         ComboUid.ItemsSource = choices;
@@ -235,11 +227,11 @@ public partial class GachaView : UserControl
         var activeAccount = HoyoAccountService.Active;
         TxtAccount.Text = activeAccount is null
             ? "未登录米游社 · 仅能读取游戏缓存"
-            : $"米游社：{activeAccount.Nickname}（{activeAccount.Uid}）";
+            : $"米游社账号：{activeAccount.Nickname}";
         TxtStatus.Text = _records.Count == 0
             ? "本地库为空 · 点击「更新记录」从游戏缓存或账号拉取"
             : gameRecords.Count == 0
-                ? $"UID {(_uid.Length == 0 ? "—" : _uid)} 暂无{label}记录，可点击「更新记录」"
+                ? $"{(string.IsNullOrEmpty(_uid) ? "暂无UID" : $"UID {_uid}")} 暂无{label}记录，可点击「更新记录」"
                 : $"UID {_uid} · {label} · 已同步";
 
         var stats = new List<(PoolDef Def, PoolStat Stat)>();
@@ -262,36 +254,49 @@ public partial class GachaView : UserControl
         BuildChart(stats);
 
         PoolGrid.Children.Clear();
-        PoolGrid.ColumnDefinitions.Clear();
+        _poolCards.Clear();
         _poolCount = stats.Count;
-        for (var i = 0; i < stats.Count; i++)
-            PoolGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(262) });
-
         for (var i = 0; i < stats.Count; i++)
         {
             var card = BuildPoolCard(stats[i].Stat, i);
-            Grid.SetColumn(card, i);
+            _poolCards.Add(card);
             PoolGrid.Children.Add(card);
         }
         ResizePoolColumns();
+        Dispatcher.BeginInvoke(new Action(ResizePoolColumns), DispatcherPriority.Loaded);
     }
 
-    /// <summary>0.1.50：记录列宽按可视区域均分，窗口变宽/变窄时实时重排。</summary>
+    /// <summary>
+    /// 0.1.56：记录卡按可视宽度自动分栏并随窗口实时重排。
+    /// 宽屏时三到四列铺满，窄屏自动降为两列/一列；记录区改为纵向滚动，
+    /// 不再固定 262px 列宽把内容挤出屏幕。
+    /// </summary>
     private void ResizePoolColumns()
     {
-        if (_poolCount <= 0 || PoolGrid.ColumnDefinitions.Count != _poolCount) return;
-        var available = PoolScroll.ViewportWidth;
+        if (_poolCount <= 0 || _poolCards.Count != _poolCount) return;
+        var available = PoolScroll.ViewportWidth - 36 - 3; // WrapPanel 左右各 18，并留 3px 防取整换行
         if (double.IsNaN(available) || available <= 0)
-            available = Math.Max(0, ActualWidth - 36);
+            available = Math.Max(0, ActualWidth - 39);
         if (double.IsNaN(available) || available <= 0) return;
-        var column = Math.Max(252, (available - 36) / _poolCount - 12);
-        foreach (var definition in PoolGrid.ColumnDefinitions)
-            definition.Width = new GridLength(column);
 
-        // 页面本身不滚动：卡池高度固定为可视高度，只有卡内记录列表滚动。
+        const double gap = 14;
+        const double minCard = 268;
+        var columns = Math.Min(_poolCount,
+            Math.Clamp((int)Math.Floor((available + gap) / (minCard + gap)), 1, 4));
+        var cardWidth = Math.Max(240, (available - (columns - 1) * gap) / columns);
+        var rows = (int)Math.Ceiling(_poolCount / (double)columns);
         var viewportHeight = PoolScroll.ViewportHeight;
-        if (viewportHeight > 0 && Math.Abs(PoolGrid.Height - viewportHeight) > 0.5)
-            PoolGrid.Height = viewportHeight;
+        var cardHeight = rows <= 1
+            ? Math.Max(390, viewportHeight - 6)
+            : 470;
+
+        foreach (var card in _poolCards)
+        {
+            card.Width = cardWidth;
+            card.Height = cardHeight;
+            card.Margin = new Thickness(0, 0, gap, gap);
+        }
+        PoolGrid.Width = available;
     }
 
     private void BuildSummary(List<(PoolDef Def, PoolStat Stat)> stats, int totalPulls, int topPulls)

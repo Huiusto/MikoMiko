@@ -402,8 +402,9 @@ public static class SignService
     public sealed record GeetestChallenge(string Gt, string? Challenge, string? RiskType, bool UseV4);
 
     /// <summary>
-    /// 创建极验验证（对齐 TeyvatGuide `miscReq.create` 的 App 凭据链路）：
-    /// stoken / stuid / mid 的 K2 类型 1 签名，client_type 2。
+    /// 创建极验验证（严格对齐 TeyvatGuide `tus-mission` → `miscReq.challenge(ckSign)`）：
+    /// 只带 stoken / stuid / mid，X4 类型 1 签名，client_type 保持默认 5。
+    /// 米游社打卡的 challenge 是 web/X4 身份签发的，K2 签发后再拿给 X6 signIn 会校验不通过。
     /// </summary>
     public static async Task<(GeetestChallenge? Data, string? Error)> CreateVerificationAsync(string cookie)
     {
@@ -412,8 +413,8 @@ public static class SignService
             return (null, "账号缺少 stoken，无法发起极验验证");
 
         var query = "is_high=true";
-        var headers = BuildHeader(ck, "GET", query, MiHoYoHttp.K2Salt,
-            isSign: true, clientType: 2, ua: PcUa, referer: "https://webstatic.mihoyo.com");
+        var headers = BuildHeader(ck, "GET", query, MiHoYoHttp.X4Salt,
+            isSign: true, clientType: 5, ua: PcUa, referer: "https://webstatic.mihoyo.com");
         var api = await MiHoYoHttp.SendWithHeadersAsync(
             "GET", $"{BbsApi}/misc/api/createVerification?{query}", null, headers);
         if (api.Retcode != 0 || api.Data is not { } data)
@@ -430,7 +431,7 @@ public static class SignService
 
     /// <summary>
     /// 提交极验 SDK `getValidate()` 的原始对象，换取签到用的 `x-rpc-challenge`。
-    /// 对齐 TeyvatGuide `miscReq.verify`：body 原样透传，K2 类型 2 签名（body 参与 DS），client_type 2。
+    /// 严格对齐 TeyvatGuide `miscReq.verify`：body 原样透传，X4 类型 2 签名（body 参与 DS），client_type 5。
     /// V4 的 lot_number / captcha_output / pass_token / gen_time 不可改写成 V3 字段。
     /// </summary>
     public static async Task<(string? Challenge, string? Error)> VerifyCaptchaAsync(
@@ -443,8 +444,8 @@ public static class SignService
         var body = validateJson?.Trim() ?? "";
         if (body.Length == 0) return (null, "极验结果为空");
 
-        var headers = BuildHeader(ck, "POST", body, MiHoYoHttp.K2Salt,
-            isSign: false, clientType: 2, ua: PcUa, referer: "https://webstatic.mihoyo.com");
+        var headers = BuildHeader(ck, "POST", body, MiHoYoHttp.X4Salt,
+            isSign: false, clientType: 5, ua: PcUa, referer: "https://webstatic.mihoyo.com");
         var api = await MiHoYoHttp.SendWithHeadersAsync(
             "POST", $"{BbsApi}/misc/api/verifyVerification", body, headers);
         if (api.Retcode != 0 || api.Data is not { } data)
