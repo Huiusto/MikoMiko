@@ -19,15 +19,15 @@ using WinForms = System.Windows.Forms;
 [assembly: AssemblyProduct("MikoMiko")]
 [assembly: AssemblyCompany("MikoMiko Contributors")]
 [assembly: AssemblyDescription("MikoMiko 安装与卸载程序")]
-[assembly: AssemblyVersion("0.1.57.0")]
-[assembly: AssemblyFileVersion("0.1.57.0")]
+[assembly: AssemblyVersion("0.1.58.0")]
+[assembly: AssemblyFileVersion("0.1.58.0")]
 
 namespace MikoMikoSetup
 {
     internal static class Program
     {
         private const string AppName = "MikoMiko";
-        private const string AppVersion = "0.1.57";
+        private const string AppVersion = "0.1.58";
         private const string AppExe = "MikoMiko.exe";
         private const string Publisher = "MikoMiko Contributors";
         private const string AppUrl = "https://github.com/Huiusto/MikoMiko";
@@ -121,6 +121,66 @@ namespace MikoMikoSetup
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "MikoMiko");
         }
 
+        internal static string NormalizeInstallTarget(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) throw new InvalidOperationException("请选择安装路径。");
+            var full = Path.GetFullPath(value);
+            var trimmed = full.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (!string.Equals(Path.GetFileName(trimmed), AppName, StringComparison.OrdinalIgnoreCase))
+                full = Path.Combine(trimmed, AppName);
+            var target = Path.GetFullPath(full).TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var root = (Path.GetPathRoot(target) ?? string.Empty).TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (string.IsNullOrEmpty(root) || string.Equals(target, root, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("不能直接安装到磁盘根目录。");
+            return target;
+        }
+
+        internal static long RequiredSpaceBytes()
+        {
+            long total = 0;
+            try
+            {
+                long payloadLength;
+                using (var payload = OpenPayload(out payloadLength))
+                using (var archive = new ZipArchive(payload, ZipArchiveMode.Read))
+                {
+                    total = archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)).Sum(e => e.Length);
+                }
+            }
+            catch
+            {
+                total = 300L * 1024L * 1024L;
+            }
+            try
+            {
+                var uninstaller = Assembly.GetExecutingAssembly()
+                    .GetManifestResourceStream("UninstallUI.exe");
+                if (uninstaller != null)
+                {
+                    total += uninstaller.Length;
+                    uninstaller.Dispose();
+                }
+            }
+            catch { }
+            return total;
+        }
+
+        internal static string AvailableSpaceText(string path)
+        {
+            try
+            {
+                var root = Path.GetPathRoot(Path.GetFullPath(path));
+                if (string.IsNullOrEmpty(root)) return "--";
+                return FormatSize(new DriveInfo(root).AvailableFreeSpace);
+            }
+            catch
+            {
+                return "--";
+            }
+        }
+
         internal static string ReadInstallDir()
         {
             try
@@ -186,7 +246,7 @@ namespace MikoMikoSetup
 
         internal static void InstallWorker(string target, Action<double> progress, Action<string> status)
         {
-            target = Path.GetFullPath(target).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            target = NormalizeInstallTarget(target);
             if (string.IsNullOrEmpty(target)) throw new InvalidOperationException("安装路径无效。");
 
             if (status != null) status("正在结束旧版本进程...");
@@ -463,6 +523,8 @@ namespace MikoMikoSetup
         private readonly Canvas _chromeCanvas;
 
         private TextBox _pathBox;
+        private TextBlock _spaceText;
+        private long _requiredBytes;
         private Border _progressFill;
         private TextBlock _progressPercent;
         private string _target;
@@ -613,6 +675,9 @@ namespace MikoMikoSetup
         {
             ShowPage("Page.Directory.png");
             _target = string.IsNullOrWhiteSpace(_target) ? _initialTarget : _target;
+            try { _target = Program.NormalizeInstallTarget(_target); }
+            catch { _target = Program.DefaultInstallDir(); }
+            _requiredBytes = Program.RequiredSpaceBytes();
 
             var boxBack = new Border
             {
@@ -624,7 +689,7 @@ namespace MikoMikoSetup
                 Height = 52
             };
             Canvas.SetLeft(boxBack, 99);
-            Canvas.SetTop(boxBack, 393);
+            Canvas.SetTop(boxBack, 410);
             _pageCanvas.Children.Add(boxBack);
 
             _pathBox = new TextBox
@@ -642,12 +707,47 @@ namespace MikoMikoSetup
                 TextWrapping = TextWrapping.NoWrap
             };
             Canvas.SetLeft(_pathBox, 103);
-            Canvas.SetTop(_pathBox, 396);
+            Canvas.SetTop(_pathBox, 413);
             _pageCanvas.Children.Add(_pathBox);
+            _pathBox.TextChanged += delegate { UpdateSpaceInfo(); };
+
+            var spaceBack = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFB, 0xFE)),
+                Width = 540,
+                Height = 24
+            };
+            Canvas.SetLeft(spaceBack, 108);
+            Canvas.SetTop(spaceBack, 467);
+            _pageCanvas.Children.Add(spaceBack);
+
+            _spaceText = new TextBlock
+            {
+                FontFamily = UiFont,
+                FontSize = 10.5,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x6B, 0x7A, 0x90)),
+                Width = 520,
+                Height = 24,
+                TextAlignment = TextAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Canvas.SetLeft(_spaceText, 116);
+            Canvas.SetTop(_spaceText, 470);
+            _pageCanvas.Children.Add(_spaceText);
+            UpdateSpaceInfo();
 
             AddHotspot(_pageCanvas, 161, 507, 214, 55, ShowWelcome);
             AddHotspot(_pageCanvas, 558, 507, 218, 55, delegate { StartInstall(); });
-            AddHotspot(_pageCanvas, 748, 392, 130, 50, BrowseDirectory);
+            AddHotspot(_pageCanvas, 748, 409, 130, 50, BrowseDirectory);
+        }
+
+        private void UpdateSpaceInfo()
+        {
+            if (_spaceText == null) return;
+            var path = _pathBox == null ? _target : _pathBox.Text.Trim();
+            var required = Program.FormatSize(_requiredBytes);
+            var available = string.IsNullOrWhiteSpace(path) ? "--" : Program.AvailableSpaceText(path);
+            _spaceText.Text = "所需空间：" + required + "    可用空间：" + available;
         }
 
         private void BrowseDirectory()
@@ -659,8 +759,15 @@ namespace MikoMikoSetup
                 try { dialog.SelectedPath = _pathBox.Text; } catch { }
                 if (dialog.ShowDialog() == WinForms.DialogResult.OK)
                 {
-                    _pathBox.Text = dialog.SelectedPath;
-                    _pathBox.CaretIndex = _pathBox.Text.Length;
+                    try
+                    {
+                        _pathBox.Text = Program.NormalizeInstallTarget(dialog.SelectedPath);
+                        _pathBox.CaretIndex = _pathBox.Text.Length;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, ex.Message, "MikoMiko", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
                 }
             }
         }
@@ -672,9 +779,12 @@ namespace MikoMikoSetup
                 var value = (_pathBox == null ? _target : _pathBox.Text).Trim();
                 if (string.IsNullOrWhiteSpace(value)) throw new InvalidOperationException("请选择安装路径。");
                 if (value.IndexOfAny(Path.GetInvalidPathChars()) >= 0) throw new InvalidOperationException("安装路径包含无效字符。");
-                var full = Path.GetFullPath(value);
-                if (Path.GetPathRoot(full).TrimEnd('\\').Length == 0) throw new InvalidOperationException("不能直接安装到磁盘根目录。");
-                _target = full.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                _target = Program.NormalizeInstallTarget(value);
+                if (_pathBox != null && !string.Equals(_pathBox.Text, _target, StringComparison.OrdinalIgnoreCase))
+                {
+                    _pathBox.Text = _target;
+                    _pathBox.CaretIndex = _pathBox.Text.Length;
+                }
                 return true;
             }
             catch (Exception ex)

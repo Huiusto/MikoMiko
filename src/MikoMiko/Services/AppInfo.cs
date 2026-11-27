@@ -4,7 +4,7 @@
 public static class AppInfo
 {
     public const string Name = "MikoMiko";
-    public const string Version = "0.1.57";
+    public const string Version = "0.1.58";
     public const string RepositoryUrl = "https://github.com/Huiusto/MikoMiko";
     public const string ReleasesApi = "https://api.github.com/repos/Huiusto/MikoMiko/releases/latest";
     public const string License = "MIT License";
