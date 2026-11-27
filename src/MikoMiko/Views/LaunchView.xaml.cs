@@ -49,8 +49,6 @@ public partial class LaunchView : UserControl
     private bool _paused;
     private bool _preparing;
     private bool _webReady;
-    private bool _showReserve;
-    private bool _showMhyy;
     private readonly HashSet<string> _runningGames = new();
     private List<string> _gameOrder = new();
     private Dictionary<string, GameUpdateService.UpdateState> _updateStates = new();
@@ -112,19 +110,6 @@ public partial class LaunchView : UserControl
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         MikoNestBridge.Reload();
-        if (!LauncherBackgroundService.LoadUiFlag("hideLobbyExtras", false))
-        {
-            _showReserve = false;
-            _showMhyy = false;
-            LauncherBackgroundService.SaveUiFlag("showReserve", false);
-            LauncherBackgroundService.SaveUiFlag("showMhyy", false);
-            LauncherBackgroundService.SaveUiFlag("hideLobbyExtras", true);
-        }
-        else
-        {
-            _showReserve = LauncherBackgroundService.LoadUiFlag("showReserve", false);
-            _showMhyy = LauncherBackgroundService.LoadUiFlag("showMhyy", false);
-        }
         _gameOrder = LauncherBackgroundService.LoadGameOrder();
         if (_webReady)
         {
@@ -370,8 +355,6 @@ public partial class LaunchView : UserControl
             preparing = _preparing,
             accent = "#4EA4DD",
             hint = BuildHint(),
-            showReserve = _showReserve,
-            showMhyy = _showMhyy,
             customBackground = false,
             gameInfo,
             install = InstallStateFor(_selectedKey),
@@ -782,18 +765,6 @@ public partial class LaunchView : UserControl
                 case "uninstall":
                     UninstallGame();
                     break;
-
-                case "uiFlag":
-                {
-                    var name = ReadString(e.WebMessageAsJson, "name");
-                    var value = ReadBool(e.WebMessageAsJson, "value");
-                    if (name == "showReserve") _showReserve = value;
-                    else if (name == "showMhyy") _showMhyy = value;
-                    else break;
-                    LauncherBackgroundService.SaveUiFlag(name!, value);
-                    PushState();
-                    break;
-                }
 
                 case "mhyy":
                     OpenUrlRequested?.Invoke("https://mhyy.mihoyo.com/");

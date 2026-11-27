@@ -62,7 +62,6 @@ public sealed partial class ShellViewModel : ObservableObject
         _moment = new MomentViewModel(content, OpenMoment, OpenUserProfile);
         _mine = new MineViewModel(content, _settings, OpenItem);
         _settingsVm = new SettingsViewModel(settingsService, content);
-        _settingsVm.LanguageChanged = RefreshLocalization;
         _upload = new UploadViewModel(OpenUploadUrl);
         _upload.CloseRequested = CloseUpload;
 

@@ -374,15 +374,6 @@
       <div class="kv"><div class="key">安装目录</div><div class="val" id="gsDir">未定位</div></div>
       <div class="kv"><div class="key">所在磁盘可用空间</div><div class="val" id="gsFree">—</div></div>
       <div class="divider"></div>
-      <div class="gs-section">启动页显示</div>
-      <div class="check-row">
-        <label class="check"><input type="checkbox" id="chkReserve"> 显示「预约游戏」卡片</label>
-        <label class="check"><input type="checkbox" id="chkMhyy"> 显示「米哈云游」按钮</label>
-      </div>
-      <div class="divider"></div>
-      <div class="gs-section">官方启动器壁纸</div>
-      <div class="kv"><div class="key">当前背景</div><div class="val" id="gsBg">官方壁纸</div></div>
-      <div class="bg-grid" id="gsBgGrid"></div>
       <div class="gs-actions">
         <button class="gs-btn" id="gsOpenDir">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 7.2c0-1 .8-1.8 1.8-1.8h4l2 2.2h7.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8H5.3c-1 0-1.8-.8-1.8-1.8Z"/><path d="M3.8 10.4h16.4"/></svg>
@@ -714,34 +705,6 @@
     $('icBar').style.width = pct + '%';
   }
 
-  function applyUiFlags() {
-    if (!state) return;
-    $('reserveGroup').style.display = state.showReserve === false ? 'none' : '';
-    $('btnMhyy').style.display = state.showMhyy === false ? 'none' : '';
-  }
-
-  function renderBgGrid() {
-    const grid = $('gsBgGrid');
-    grid.innerHTML = '';
-    const list = state.officialBackgrounds || [];
-    list.forEach((item, i) => {
-      if (!item || !item.image) return;
-      const cell = document.createElement('div');
-      cell.className = 'bg-item' + (i === (state.officialIndex || 0) ? ' on' : '');
-      const img = document.createElement('img');
-      img.src = item.image;
-      img.alt = '';
-      img.loading = 'lazy';
-      const cap = document.createElement('span');
-      cap.className = 'cap';
-      cap.textContent = `官方壁纸 ${i + 1}${item.video ? ' · 动态' : ''}`;
-      cell.appendChild(img);
-      cell.appendChild(cap);
-      cell.onclick = () => send({ type: 'officialBg', index: i });
-      grid.appendChild(cell);
-    });
-  }
-
   function updateSettingsView() {
     if (!state) return;
     const info = state.gameInfo || {};
@@ -750,17 +713,6 @@
     $('gsExe').textContent = info.exe || '—';
     $('gsDir').textContent = info.dir || '未定位';
     $('gsFree').textContent = info.free || '—';
-    $('chkReserve').checked = state.showReserve !== false;
-    $('chkMhyy').checked = state.showMhyy !== false;
-    const officialIndex = state.officialIndex || 0;
-    $('gsBg').textContent = listLength()
-      ? `官方壁纸 · 第 ${officialIndex + 1} 张`
-      : '暂无官方壁纸，正在同步…';
-    renderBgGrid();
-  }
-
-  function listLength() {
-    return (state.officialBackgrounds || []).filter(i => i && i.image).length;
   }
 
   function openSettings() {
@@ -772,19 +724,11 @@
     $('settingsModal').classList.remove('on');
   }
 
-  function setUiFlag(name, checked) {
-    if (!state) return;
-    state[name] = checked;
-    applyUiFlags();
-    send({ type: 'uiFlag', name, value: checked });
-  }
-
   function render() {
     renderGames();
     renderMainButton();
     renderDots();
     applyBackground();
-    applyUiFlags();
     updateSettingsView();
     $('saving').classList.toggle('on', !!state.preparing);
     applyLanguage();
@@ -869,8 +813,6 @@
   $('gsOpenDir').onclick = () => send({ type: 'openDir' });
   $('gsRelocate').onclick = () => send({ type: 'locate' });
   $('gsUninstall').onclick = () => send({ type: 'uninstall' });
-  $('chkReserve').onchange = e => setUiFlag('showReserve', e.target.checked);
-  $('chkMhyy').onchange = e => setUiFlag('showMhyy', e.target.checked);
 
   $('btnSaveBg').onclick = () => send({ type: 'saveBg' });
   $('btnPause').onclick = () => send({ type: 'pauseToggle' });

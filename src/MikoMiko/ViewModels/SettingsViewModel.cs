@@ -50,9 +50,6 @@ public sealed partial class SettingsViewModel : ObservableObject
             new("Dark", Loc.Instance["S.Theme.Dark"]),
         };
 
-        LanguageOptions = new ObservableCollection<ChoiceOption>(
-            Loc.Supported.Select(l => new ChoiceOption(l.Code, l.Display)));
-
         FontOptions = new ObservableCollection<ChoiceOption>(
             FontService.Available.Select(f => new ChoiceOption(f.Name, f.Display)));
 
@@ -85,7 +82,6 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public ObservableCollection<ChoiceOption> Sections { get; }
     public ObservableCollection<ChoiceOption> ThemeOptions { get; }
-    public ObservableCollection<ChoiceOption> LanguageOptions { get; }
     public ObservableCollection<ChoiceOption> FontOptions { get; }
     public ObservableCollection<ChoiceOption> QualityOptions { get; }
     public ObservableCollection<ChoiceOption> WindowSizeOptions { get; }
@@ -151,8 +147,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>点击抽屉外任意位置关闭更新日志。</summary>
     public void CloseChangelog() => IsChangelogOpen = false;
 
-    public Action? LanguageChanged { get; set; }
-
     public Action? ThemeChanged { get; set; }
 
     // ---------------------------------------------------------------- 选项
@@ -165,17 +159,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         ThemeService.Apply(option.Key);
         IsSelected(ThemeOptions, option);
         ThemeChanged?.Invoke();
-    }
-
-    [RelayCommand]
-    private void SelectLanguage(ChoiceOption? option)
-    {
-        if (option is null) return;
-        Settings.Language = option.Key;
-        Loc.Instance.SetLanguage(option.Key);
-        IsSelected(LanguageOptions, option);
-        RefreshLabels();
-        LanguageChanged?.Invoke();
     }
 
     [RelayCommand]
@@ -548,7 +531,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     public void SyncSelections()
     {
         IsSelected(ThemeOptions, Settings.Theme);
-        IsSelected(LanguageOptions, Settings.Language);
         IsSelected(FontOptions, Settings.Font);
         IsSelected(QualityOptions, Settings.Quality);
         IsSelected(WindowSizeOptions, Settings.WindowSize);
@@ -568,56 +550,4 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private static void IsSelected(IEnumerable<ChoiceOption> options, ChoiceOption selected)
         => IsSelected(options, selected.Key);
-
-    /// <summary>语言变化后刷新所有选项文案。</summary>
-    public void RefreshLabels()
-    {
-        foreach (var option in ThemeOptions)
-        {
-            option.Label = option.Key switch
-            {
-                "System" => Loc.Instance["S.Theme.System"],
-                "Light" => Loc.Instance["S.Theme.Light"],
-                _ => Loc.Instance["S.Theme.Dark"],
-            };
-        }
-
-        LanguageOptions[0].Label = "简体中文";
-        LanguageOptions[1].Label = "繁體中文";
-        LanguageOptions[2].Label = "English";
-
-        for (var i = 0; i < WindowSizeOptions.Count; i++)
-        {
-            WindowSizeOptions[i].Label = i switch
-            {
-                0 => Loc.Instance["S.WindowDefault"],
-                1 => Loc.Instance["S.WindowSmall"],
-                _ => Loc.Instance["S.WindowLarge"],
-            };
-        }
-
-        for (var i = 0; i < CloseOptions.Count; i++)
-        {
-            CloseOptions[i].Label = i switch
-            {
-                0 => Loc.Instance["S.CloseTray"],
-                1 => Loc.Instance["S.CloseExit"],
-                _ => Loc.Instance["S.CloseAsk"],
-            };
-        }
-
-        var sectionKeys = new[]
-        {
-            "S.General", "S.Cache", "S.Common",
-            "S.Maintain", "S.AppInfo", "S.About", "S.Disclaimer",
-        };
-        for (var i = 0; i < Sections.Count && i < sectionKeys.Length; i++)
-        {
-            Sections[i].Label = Loc.Instance[sectionKeys[i]];
-        }
-
-        OnPropertyChanged(nameof(AccountName));
-        OnPropertyChanged(nameof(AccountUid));
-        OnPropertyChanged(nameof(IsLoggedIn));
-    }
 }

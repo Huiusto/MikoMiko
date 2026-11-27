@@ -194,27 +194,6 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <StackPanel Orientation="Horizontal" Margin="0,12,0,10">
-                            <TextBlock Text="{Binding [S.Language], Source={x:Static loc:Loc.Instance}}"
-                                       Style="{StaticResource RowLabel}" />
-                            <TextBlock Text="{Binding [S.LanguageHint], Source={x:Static loc:Loc.Instance}}"
-                                       Style="{StaticResource RowHint}" Margin="4,0,0,0" />
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding LanguageOptions}" Margin="0,0,0,8">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Content="{Binding Label}" Style="{StaticResource ChipButton}"
-                                            Command="{Binding DataContext.SelectLanguageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                            CommandParameter="{Binding}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
                         <TextBlock Text="{Binding [S.Startup], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource RowLabel}" Margin="0,14,0,10" />
                         <CheckBox Content="{Binding [S.AutoStart], Source={x:Static loc:Loc.Instance}}"
