@@ -1,4 +1,4 @@
-; MikoMiko 0.1.56 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
+﻿; MikoMiko 0.1.56 安装脚本（NSIS 3.x，Unicode，单用户安装，无需管理员权限）
 Unicode true
 SetCompressor /SOLID lzma
 
