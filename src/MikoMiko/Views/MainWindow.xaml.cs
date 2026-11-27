@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shell;
 using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 
@@ -159,6 +160,8 @@ public partial class MainWindow : Window
     private ResizeMode _resizeBeforeVideoFullscreen = ResizeMode.CanResize;
     private Rect _boundsBeforeVideoFullscreen;
     private bool _topmostBeforeVideoFullscreen;
+    private Thickness _resizeBorderBeforeVideoFullscreen = new(6);
+    private Brush? _backgroundBeforeVideoFullscreen;
 
     /// <summary>视频页最大化：隐藏左侧导航、页头与窗口边距，并真正覆盖任务栏所在的整块屏幕。</summary>
     public void ToggleVideoFullscreen()
@@ -179,6 +182,14 @@ public partial class MainWindow : Window
             ? new Rect(Left, Top, Width, Height)
             : RestoreBounds;
         _topmostBeforeVideoFullscreen = Topmost;
+        _backgroundBeforeVideoFullscreen = Background;
+        var chrome = WindowChrome.GetWindowChrome(this);
+        if (chrome is not null)
+        {
+            _resizeBorderBeforeVideoFullscreen = chrome.ResizeBorderThickness;
+            chrome.ResizeBorderThickness = new Thickness(0);
+        }
+        Background = System.Windows.Media.Brushes.Black;
         IsVideoFullscreen = true;
         NavColumn.Width = new GridLength(0);
         HeaderRow.Height = new GridLength(0);
@@ -204,6 +215,10 @@ public partial class MainWindow : Window
             _stateBeforeVideoFullscreen == WindowState.Maximized ? 0 : 10);
 
         Topmost = _topmostBeforeVideoFullscreen;
+        Background = _backgroundBeforeVideoFullscreen ?? (Brush)FindResource("Brush.WindowBg");
+        var chrome = WindowChrome.GetWindowChrome(this);
+        if (chrome is not null)
+            chrome.ResizeBorderThickness = _resizeBorderBeforeVideoFullscreen;
         WindowStyle = _styleBeforeVideoFullscreen;
         ResizeMode = _resizeBeforeVideoFullscreen;
         if (_stateBeforeVideoFullscreen == WindowState.Maximized)

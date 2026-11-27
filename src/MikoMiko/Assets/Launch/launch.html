@@ -169,14 +169,21 @@
   }
   .install-card.show { visibility: visible; }
   .main-wrap:hover .install-card.show { opacity: 1; transform: translateY(0); }
-  .ic-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .ic-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+  .ic-head-left { display: flex; align-items: center; gap: 8px; }
   .ic-state { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.86); }
   .ic-state .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,.28);
                     border-top-color: #4EA4DD; animation: spin 1s linear infinite; }
   .install-card.paused .ic-state .spin { animation: none; border-color: rgba(78,164,221,.55); }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .ic-percent { font-size: 14px; font-weight: 700; color: #4EA4DD; letter-spacing: .2px; }
-  .ic-eta { margin-top: 5px; font-size: 11.5px; color: rgba(255,255,255,.46); text-align: right; }
+  .ic-percent { font-size: 15px; font-weight: 700; color: #4EA4DD; letter-spacing: .2px; }
+  .ic-eta { margin-top: 0; font-size: 11.5px; color: rgba(255,255,255,.48); text-align: right; }
+  .ic-stats { margin-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+  .ic-stat { display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 8px; }
+  .ic-stat-label { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,.76); font-size: 11.5px; }
+  .ic-stat-label svg { width: 13px; height: 13px; opacity: .8; }
+  .ic-stat-size { font-size: 11.5px; color: rgba(255,255,255,.92); font-variant-numeric: tabular-nums; }
+  .ic-stat-speed { font-size: 11px; color: rgba(255,255,255,.46); text-align: right; min-width: 64px; font-variant-numeric: tabular-nums; }
   .ic-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,.10); overflow: hidden; margin-top: 12px; }
   .ic-bar i { display: block; height: 100%; width: 0; border-radius: 4px;
               background: linear-gradient(90deg, #3F92C8, #4EA4DD); transition: width .3s linear; }
@@ -342,11 +349,28 @@
           <button class="btn accent main-btn" id="btnMain"><span id="mainText">开始游戏</span></button>
           <div class="install-card" id="installCard" aria-hidden="true">
             <div class="ic-head">
-              <div class="ic-state"><span class="spin"></span><span id="icTitle">正在下载游戏资源</span></div>
               <div class="ic-percent" id="icPercent">0.00%</div>
+              <div class="ic-eta" id="icEta">剩余时间：计算中</div>
             </div>
-            <div class="ic-eta" id="icEta">剩余时间：计算中</div>
             <div class="ic-bar"><i id="icBar"></i></div>
+            <div class="ic-stats">
+              <div class="ic-stat">
+                <div class="ic-stat-label">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M8 2v8M4.8 7l3.2 3.2L11.2 7"/><path d="M3 13.5h10"/></svg>
+                  <span>下载</span>
+                </div>
+                <div class="ic-stat-size" id="icDownloadSize">0 B / 0 B</div>
+                <div class="ic-stat-speed" id="icDownloadSpeed"></div>
+              </div>
+              <div class="ic-stat">
+                <div class="ic-stat-label">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 4.5h10v7H3zM5.5 4.5V2.8h5v1.7"/><path d="M5.8 8h4.4"/></svg>
+                  <span>安装</span>
+                </div>
+                <div class="ic-stat-size" id="icInstallSize">0 B / 0 B</div>
+                <div class="ic-stat-speed" id="icInstallSpeed"></div>
+              </div>
+            </div>
           </div>
         </div>
         <button class="btn settings-btn" id="btnGameSettings" title="游戏设置" aria-label="游戏设置">
@@ -642,7 +666,7 @@
         label.textContent = '正在取消安装…';
         btn.disabled = true;
       } else {
-        label.textContent = `${inst.paused ? '继续安装' : '暂停安装'} ${(Number(inst.percent) || 0).toFixed(2)}%`;
+        label.textContent = inst.paused ? '继续安装' : '暂停安装';
         btn.disabled = false;
       }
       btn.title = '';
@@ -697,12 +721,15 @@
     card.classList.toggle('paused', !!(inst && inst.paused));
     if (!active) return;
     const pct = Math.max(0, Math.min(100, Number(inst.percent) || 0));
-    $('icTitle').textContent = inst.stage || (inst.paused ? '安装已暂停' : '正在下载游戏资源');
     $('icPercent').textContent = pct.toFixed(2) + '%';
     const left = Math.max(0, (inst.downloadTotalBytes || 0) - (inst.downloadDoneBytes || 0));
     const speed = Number(inst.speedBytes) || 0;
     $('icEta').textContent = inst.paused ? '已暂停，等待继续' : formatEta(speed > 0 ? left / speed : 0);
     $('icBar').style.width = pct + '%';
+    $('icDownloadSize').textContent = `${inst.downloadDone || '0 B'} / ${inst.downloadTotal || '0 B'}`;
+    $('icDownloadSpeed').textContent = inst.downloadSpeed || '';
+    $('icInstallSize').textContent = `${inst.installDone || '0 B'} / ${inst.installTotal || '0 B'}`;
+    $('icInstallSpeed').textContent = inst.installSpeed || '';
   }
 
   function updateSettingsView() {

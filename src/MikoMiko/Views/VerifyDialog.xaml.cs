@@ -16,8 +16,7 @@ public partial class VerifyDialog : Window
     private readonly HoyoAccount _account;
     private readonly string? _aigis;
     private bool _initialized;
-    private bool _submitting;
-    private string? _challenge;
+    private string? _validation;
 
     public VerifyDialog(HoyoAccount account, string? aigis)
     {
@@ -32,13 +31,14 @@ public partial class VerifyDialog : Window
         Loaded += OnLoaded;
     }
 
+    /// <summary>返回极验 getValidate() 的原始 JSON，由调用方在弹窗关闭后提交，避免窗口内长时间等待接口。</summary>
     public static Task<string?> ShowAsync(Window? owner, HoyoAccount account, string? aigis = null)
     {
         owner ??= Application.Current?.MainWindow;
         var dialog = new VerifyDialog(account, aigis);
         if (owner is not null && owner.IsVisible) dialog.Owner = owner;
         dialog.ShowDialog();
-        return Task.FromResult(dialog._challenge);
+        return Task.FromResult(dialog._validation);
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -48,9 +48,15 @@ public partial class VerifyDialog : Window
         await ReloadChallengeAsync();
     }
 
+    private void Header_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ButtonState == System.Windows.Input.MouseButtonState.Pressed) DragMove();
+    }
+
+    private void Close_Click(object sender, RoutedEventArgs e) => DialogResult = false;
+
     private async Task ReloadChallengeAsync()
     {
-        StatusPill.Visibility = Visibility.Collapsed;
         LoadingPanel.Visibility = Visibility.Visible;
         TxtLoading.Text = "正在向米游社申请极验验证…";
         try
@@ -84,7 +90,7 @@ public partial class VerifyDialog : Window
         }
     }
 
-    private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         string? type = null;
         string? data = null;
@@ -113,50 +119,14 @@ public partial class VerifyDialog : Window
                 break;
 
             case "validate":
-                if (string.IsNullOrWhiteSpace(data) || _submitting) break;
-                _submitting = true;
-                // 0.1.50：成功后不再用整页白色 Loading 覆盖极验，避免「验证成功」画面定格。
-                TxtStatus.Text = "验证成功，正在完成验证…";
-                StatusPill.Visibility = Visibility.Visible;
-                try
+                if (string.IsNullOrWhiteSpace(data)) break;
+                _validation = data;
+                // 对齐 MikoNest：拿到极验结果后立刻关闭弹窗，后续校验与重试交回任务页，
+                // 不再在模态窗口里等待接口，也不会出现「验证成功」后画面定格。
+                Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    var verifyTask = SignService.VerifyCaptchaAsync(_account.Cookie, data);
-                    var completed = await Task.WhenAny(verifyTask, Task.Delay(TimeSpan.FromSeconds(20)));
-                    if (completed != verifyTask)
-                    {
-                        TxtStatus.Text = "验证结果提交超时，请按 Esc 关闭后重试";
-                        await Task.Delay(1200);
-                        _submitting = false;
-                        await ReloadChallengeAsync();
-                        break;
-                    }
-
-                    var (challenge, error) = await verifyTask;
-                    if (!string.IsNullOrWhiteSpace(challenge))
-                    {
-                        TxtStatus.Text = "验证通过，正在返回任务页…";
-                        _challenge = challenge;
-                        DialogResult = true;
-                        break;
-                    }
-
-                    // 验证未通过时短暂显示原因，再刷新一张新的验证码。
-                    TxtStatus.Text = error ?? "验证未通过，正在刷新验证码…";
-                    StatusPill.Visibility = Visibility.Collapsed;
-                    _submitting = false;
-                    await ReloadChallengeAsync();
-                }
-                catch (Exception ex)
-                {
-                    TxtStatus.Text = "验证结果提交失败：" + ex.Message;
-                    await Task.Delay(1200);
-                    _submitting = false;
-                    await ReloadChallengeAsync();
-                }
-                finally
-                {
-                    _submitting = false;
-                }
+                    if (IsLoaded) DialogResult = true;
+                }), System.Windows.Threading.DispatcherPriority.Background);
                 break;
         }
     }

@@ -183,7 +183,7 @@ public partial class GachaView : UserControl
                      .GroupBy(r => r.Uid)
                      .OrderByDescending(g => g.Count()))
         {
-            choices.Add(new UidChoice(group.Key, $"{group.Key} · {group.Count()} 条", group.Count()));
+            choices.Add(new UidChoice(group.Key, group.Key, group.Count()));
         }
 
         if (gameRecords.Count == 0)
@@ -191,7 +191,7 @@ public partial class GachaView : UserControl
             foreach (var account in HoyoAccountService.All.Where(a => !string.IsNullOrWhiteSpace(a.Uid)))
             {
                 if (choices.Any(c => c.Uid == account.Uid)) continue;
-                choices.Add(new UidChoice(account.Uid, $"{account.Uid} · 无记录", 0));
+                choices.Add(new UidChoice(account.Uid, $"{account.Uid} · 未同步", 0));
             }
         }
 
@@ -226,10 +226,8 @@ public partial class GachaView : UserControl
             "genshin_beyond" => "颂愿记录",
             _ => "祈愿记录",
         };
-        TxtSubtitle.Text = $"本地库 {_records.Count:N0} 条 · {label} {gameRecords.Count:N0} 条";
+        TxtSubtitle.Text = $"{label} · 本地记录 · MikoNest 数据";
         TxtDataDir.Text = "数据目录：" + MikoNestBridge.DataDir;
-        TxtUid.Text = _uid.Length == 0 ? "UID —" : $"UID {_uid}";
-        TxtSidebarStats.Text = $"{gameRecords.Count:N0} 条";
         TxtSummarySub.Text = gameRecords.Count == 0
             ? $"{label} · 暂无记录"
             : $"{label} · 最近 {gameRecords.Max(r => ParseTime(r.Time)):yyyy/MM/dd HH:mm}";
@@ -241,7 +239,7 @@ public partial class GachaView : UserControl
             ? "本地库为空 · 点击「更新记录」从游戏缓存或账号拉取"
             : gameRecords.Count == 0
                 ? $"UID {(_uid.Length == 0 ? "—" : _uid)} 暂无{label}记录，可点击「更新记录」"
-                : $"UID {_uid} · {label} {gameRecords.Count:N0} 条 · 已同步";
+                : $"UID {_uid} · {label} · 已同步";
 
         var stats = new List<(PoolDef Def, PoolStat Stat)>();
         var matched = new HashSet<GachaRecord>();
@@ -288,6 +286,11 @@ public partial class GachaView : UserControl
         var column = Math.Max(252, (available - 36) / _poolCount - 12);
         foreach (var definition in PoolGrid.ColumnDefinitions)
             definition.Width = new GridLength(column);
+
+        // 页面本身不滚动：卡池高度固定为可视高度，只有卡内记录列表滚动。
+        var viewportHeight = PoolScroll.ViewportHeight;
+        if (viewportHeight > 0 && Math.Abs(PoolGrid.Height - viewportHeight) > 0.5)
+            PoolGrid.Height = viewportHeight;
     }
 
     private void BuildSummary(List<(PoolDef Def, PoolStat Stat)> stats, int totalPulls, int topPulls)
@@ -540,12 +543,11 @@ public partial class GachaView : UserControl
             BorderThickness = new Thickness(1),
             Background = Theme("Brush.Card"),
             Padding = new Thickness(0),
-            VerticalAlignment = VerticalAlignment.Top,
+            VerticalAlignment = VerticalAlignment.Stretch,
         };
 
         var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
         // 顶部 accent 线 + 淡彩 wash（仿 MikoNest 卡池卡）
         var topLine = new Border
@@ -576,7 +578,7 @@ public partial class GachaView : UserControl
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         Grid.SetRow(body, 0);
         root.Children.Add(body);
 

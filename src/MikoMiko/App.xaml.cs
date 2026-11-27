@@ -152,9 +152,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.50"), "v0.1.50", "MikoMiko 0.1.50",
-                    "· 安装时可自选安装位置，升级默认沿用原目录\n· 「追番/影视」排版重做，播放失败直接在软件内提示\n· 每日任务验证码直接在软件内载入极验滑块\n· 切换账号浮层支持一键添加账号，并显示头像与米游社 UID\n· 卸载前自动关闭软件，避免文件占用",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.50.exe", "");
+                    new Version("0.1.51"), "v0.1.51", "MikoMiko 0.1.51",
+                    "· 启动页下载不再显示「正在写入」等文件信息，只在下载按钮悬浮卡中查看下载/安装进度\n· 修复视频最大化后四周白边\n· 抽卡页将游戏、UID 与记录设置收进右上角一排，概览/分析改为顶部浮层\n· 抽卡记录只能滚动单个卡池内部，页面不再整体滚动\n· 每日任务验证码改为取到结果立即关窗再校验，点击验证不再卡住\n· 设置页合并通用设置与应用维护，应用信息卡改为关于在上、信息在下",
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.51.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();

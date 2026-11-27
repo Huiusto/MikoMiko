@@ -144,8 +144,6 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
                 <!-- 常规设置 -->
@@ -271,26 +269,15 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 通用设置 -->
-                <Border Grid.Row="3" Grid.Column="0" MinHeight="180"
-                        Style="{StaticResource SectionCard}" Margin="0,0,0,14" Tag="Common">
-                    <StackPanel>
-                        <TextBlock Text="{Binding [S.Common], Source={x:Static loc:Loc.Instance}}"
-                                   Style="{StaticResource SectionTitle}" />
-                        <CheckBox Content="{Binding [S.CheckUpdateStart], Source={x:Static loc:Loc.Instance}}"
-                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.CheckUpdateOnStartup}" />
-                        <TextBlock Text="{Binding [S.AppDesc], Source={x:Static loc:Loc.Instance}}"
-                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   TextWrapping="Wrap" Margin="0,8,0,0" HorizontalAlignment="Stretch" />
-                    </StackPanel>
-                </Border>
-
-                <!-- 应用维护 -->
-                <Border Grid.Row="4" Grid.Column="0" MinHeight="180"
+                <!-- 应用维护：合并原「通用设置」与「应用维护」 -->
+                <Border Grid.Row="2" Grid.Column="0" MinHeight="180"
                         Style="{StaticResource SectionCard}" Margin="0,0,0,14" Tag="Maintain">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Maintain], Source={x:Static loc:Loc.Instance}}"
                                    Style="{StaticResource SectionTitle}" />
+                        <CheckBox Content="{Binding [S.CheckUpdateStart], Source={x:Static loc:Loc.Instance}}"
+                                  Style="{StaticResource MikoCheckBox}" IsChecked="{Binding Settings.CheckUpdateOnStartup}"
+                                  Margin="0,2,0,10" />
 
                         <StackPanel Orientation="Horizontal">
                             <Button Content="{Binding [S.CheckUpdate], Source={x:Static loc:Loc.Instance}}"
@@ -310,18 +297,37 @@
                                 Style="{StaticResource SoftButton}" Height="32" Padding="14,0"
                                 HorizontalAlignment="Left" Margin="0,12,0,0"
                                 Command="{Binding ToggleChangelogCommand}" />
+
+                        <TextBlock Text="{Binding [S.AppDesc], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" Margin="0,14,0,0" HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </Border>
 
-                <!-- 应用信息 -->
-                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource SectionCard}"
+                <!-- 应用信息：关于在上，版本与数据目录在下 -->
+                <Border Grid.Row="3" Grid.Column="0" Style="{StaticResource SectionCard}"
                         Margin="0,0,0,14" Tag="AppInfo">
                     <StackPanel>
-                        <TextBlock Text="应用信息与关于"
+                        <TextBlock Text="应用信息"
                                    Style="{StaticResource SectionTitle}" />
-                        <TextBlock Text="版本、数据目录与项目说明集中在这里。"
+                        <TextBlock Text="关于 MikoMiko、运行环境与数据目录。"
                                    FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
                                    Margin="0,0,0,16" />
+
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="pack://application:,,,/Assets/icon.png" Width="64" Height="64" />
+                            <StackPanel Margin="16,2,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="MikoMiko" FontSize="17" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding [About.Slogan], Source={x:Static loc:Loc.Instance}}"
+                                           FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding [About.Desc], Source={x:Static loc:Loc.Instance}}"
+                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
+                                   TextWrapping="Wrap" Margin="0,14,0,0" HorizontalAlignment="Stretch" />
+
+                        <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,20,0,18" />
 
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -360,27 +366,12 @@
                             <Button Content="更改数据目录" Style="{StaticResource GhostButton}" Height="34" Padding="16,0"
                                     Margin="10,0,0,0" Command="{Binding ChangeDataDirectoryCommand}" />
                         </StackPanel>
-
-                        <Border Height="1" Background="{DynamicResource Brush.Border}" Margin="0,20,0,16" />
-
-                        <StackPanel Orientation="Horizontal">
-                            <Image Source="pack://application:,,,/Assets/icon.png" Width="64" Height="64" />
-                            <StackPanel Margin="16,2,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="MikoMiko" FontSize="17" FontWeight="SemiBold" />
-                                <TextBlock Text="{Binding [About.Slogan], Source={x:Static loc:Loc.Instance}}"
-                                           FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}" Margin="0,4,0,0" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <TextBlock Text="{Binding [About.Desc], Source={x:Static loc:Loc.Instance}}"
-                                   FontSize="12.5" Foreground="{DynamicResource Brush.TextSecondary}"
-                                   TextWrapping="Wrap" Margin="0,14,0,0" HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </Border>
 
 
                 <!-- 免责说明 -->
-                <Border Grid.Row="6" Grid.Column="0" Style="{StaticResource SectionCard}"
+                <Border Grid.Row="4" Grid.Column="0" Style="{StaticResource SectionCard}"
                         Margin="0,0,0,14" Tag="Disclaimer">
                     <StackPanel>
                         <TextBlock Text="{Binding [S.Disclaimer], Source={x:Static loc:Loc.Instance}}"
@@ -392,7 +383,7 @@
                 </Border>
 
                 <!-- 开源说明 -->
-                <Border Grid.Row="7" Grid.Column="0" Style="{StaticResource SectionCard}"
+                <Border Grid.Row="5" Grid.Column="0" Style="{StaticResource SectionCard}"
                         Margin="0,0,0,14" Tag="OpenSource">
                     <StackPanel>
                         <Grid Margin="0,0,0,8">

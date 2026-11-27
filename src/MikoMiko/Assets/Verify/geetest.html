@@ -107,8 +107,7 @@
         initGeetest4({
           captchaId: DATA.gt,
           riskType: DATA.riskType || 'slide',
-          product: 'float',
-          nextWidth: '500px',
+          product: 'popup',
           lang: 'zho',
           userInfo: JSON.stringify({ session_id: DATA.sessionId || '' }),
           https: true,
@@ -118,6 +117,7 @@
           host.innerHTML = '';
           captchaObj.appendTo('#geetest');
           captchaObj.onReady(showStage);
+          setTimeout(showStage, 450);
           captchaObj.onSuccess(() => finish(captchaObj, done));
           captchaObj.onClose(() => { if (!done.value) post('close'); });
         });
@@ -141,6 +141,7 @@
           host.innerHTML = '';
           captchaObj.appendTo('#geetest');
           captchaObj.onReady(showStage);
+          setTimeout(showStage, 450);
           captchaObj.onSuccess(() => finish(captchaObj, done));
           captchaObj.onClose(() => { if (!done.value) post('close'); });
         });

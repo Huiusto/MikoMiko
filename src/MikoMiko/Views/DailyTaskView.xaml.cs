@@ -589,14 +589,22 @@ public partial class DailyTaskView : UserControl
         if (result.Retcode != 1034) return result;
 
         AppendLog(new SignLogEntry { Text = $"{game.Name} 触发验证码，正在软件内直接载入极验", Level = "WARN" });
-        var challenge = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
-        if (string.IsNullOrWhiteSpace(challenge))
+        var validation = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
+        if (string.IsNullOrWhiteSpace(validation))
         {
             AppendLog(new SignLogEntry { Text = "已取消安全验证，本次签到未完成", Level = "WARN" });
             return result;
         }
 
-        AppendLog(new SignLogEntry { Text = "验证完成，正在重试签到…", Level = "INFO" });
+        AppendLog(new SignLogEntry { Text = "验证完成，正在校验验证结果…", Level = "INFO" });
+        var (challenge, verifyError) = await SignService.VerifyCaptchaAsync(account.Cookie, validation);
+        if (string.IsNullOrWhiteSpace(challenge))
+        {
+            AppendLog(new SignLogEntry { Text = "安全验证未通过：" + (verifyError ?? "请稍后重试"), Level = "ERROR" });
+            return result;
+        }
+
+        AppendLog(new SignLogEntry { Text = "验证通过，正在重试签到…", Level = "INFO" });
         return await SignService.SignRoleAsync(account.Cookie, game, role, challenge);
     }
 
@@ -606,10 +614,17 @@ public partial class DailyTaskView : UserControl
         if (result.Retcode != 1034) return result;
 
         AppendLog(new SignLogEntry { Text = "米游社打卡触发验证码，正在软件内直接载入极验", Level = "WARN" });
-        var challenge = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
-        if (string.IsNullOrWhiteSpace(challenge))
+        var validation = await VerifyDialog.ShowAsync(Window.GetWindow(this), account, result.Aigis);
+        if (string.IsNullOrWhiteSpace(validation))
         {
             AppendLog(new SignLogEntry { Text = "已取消安全验证，本次打卡未完成", Level = "WARN" });
+            return result;
+        }
+
+        var (challenge, verifyError) = await SignService.VerifyCaptchaAsync(account.Cookie, validation);
+        if (string.IsNullOrWhiteSpace(challenge))
+        {
+            AppendLog(new SignLogEntry { Text = "安全验证未通过：" + (verifyError ?? "请稍后重试"), Level = "ERROR" });
             return result;
         }
 

@@ -71,6 +71,11 @@ public partial class LaunchView : UserControl
         public long InstallDone { get; set; }
         public long InstallTotal { get; set; }
         public double Speed { get; set; }
+        public double DownloadSpeed { get; set; }
+        public double InstallSpeed { get; set; }
+        public long LastSpeedTick { get; set; }
+        public long LastDownloadBytes { get; set; }
+        public long LastInstallBytes { get; set; }
         public bool Cancelling { get; set; }
         public bool OwnsTarget { get; set; }
 
@@ -402,6 +407,8 @@ public partial class LaunchView : UserControl
             installTotalBytes = job.InstallTotal,
             speed = job.Speed > 0 ? $"{job.Speed / 1024.0 / 1024.0:0.0} MB/s" : string.Empty,
             speedBytes = job.Speed,
+            downloadSpeed = job.DownloadSpeed > 0 ? $"{job.DownloadSpeed / 1024.0 / 1024.0:0.00} MB/s" : string.Empty,
+            installSpeed = job.InstallSpeed > 0 ? $"{job.InstallSpeed / 1024.0 / 1024.0:0.00} MB/s" : string.Empty,
         };
     }
 
@@ -449,6 +456,27 @@ public partial class LaunchView : UserControl
             job.InstallDone = p.InstallDone;
             job.InstallTotal = p.InstallTotal;
             job.Speed = p.BytesPerSecond;
+            var nowTick = Stopwatch.GetTimestamp();
+            if (job.LastSpeedTick == 0)
+            {
+                job.LastSpeedTick = nowTick;
+                job.LastDownloadBytes = p.Done;
+                job.LastInstallBytes = p.InstallDone;
+            }
+            else
+            {
+                var seconds = (nowTick - job.LastSpeedTick) / (double)Stopwatch.Frequency;
+                if (seconds >= 0.45)
+                {
+                    var downloadDelta = Math.Max(0, p.Done - job.LastDownloadBytes);
+                    var installDelta = Math.Max(0, p.InstallDone - job.LastInstallBytes);
+                    if (downloadDelta > 0) job.DownloadSpeed = downloadDelta / seconds;
+                    if (installDelta > 0) job.InstallSpeed = installDelta / seconds;
+                    job.LastSpeedTick = nowTick;
+                    job.LastDownloadBytes = p.Done;
+                    job.LastInstallBytes = p.InstallDone;
+                }
+            }
             PushInstallState(key);
         });
 
@@ -609,9 +637,8 @@ public partial class LaunchView : UserControl
     {
         if (_installJobs.TryGetValue(_selectedKey, out var job))
         {
-            var detail = $"{job.Stage} {FormatSize(job.Done)} / {FormatSize(job.Total)}";
-            if (job.Speed > 0) detail += $"　{job.Speed / 1024.0 / 1024.0:0.0} MB/s";
-            return job.Cancelling ? "正在取消安装并清理已写入的文件…" : detail;
+            // 安装中只保留主按钮悬停卡里的进度，页面提示区不再显示“正在写入 xxx”。
+            return job.Cancelling ? "正在取消安装并清理已写入的文件…" : string.Empty;
         }
         if (_runningGames.Contains(_selectedKey)) return "游戏运行中，退出游戏后按钮会自动恢复。";
         var dir = MikoNestBridge.GetGameDir(_selectedKey);
