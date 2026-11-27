@@ -9,5 +9,5 @@
         Background="White"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <!-- 0.1.43：直接使用整张启动画面，不再叠加 GIF 与文案 -->
-    <Image Source="/Assets/Setup/splash.png" Stretch="UniformToFill" />
+    <Image Source="/Assets/Setup/splash.png" Stretch="Uniform" />
 </Window>
