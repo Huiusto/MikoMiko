@@ -124,6 +124,12 @@
   .bell svg { fill: #4EA4DD; }
   .empty { color: #788492; }
   .loading { color: #6E7A88; }
+
+  /* 播放控件只在鼠标悬浮在视频区域时出现，移开后只留画面 */
+  .media-panel .nav-arrow,
+  .media-panel #videoBar { opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+  .media-panel:hover .nav-arrow,
+  .media-panel:hover #videoBar { opacity: 1; pointer-events: auto; }
 </style>
 </head>
 <body>

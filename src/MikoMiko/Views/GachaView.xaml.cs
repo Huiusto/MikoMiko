@@ -96,7 +96,6 @@ public partial class GachaView : UserControl
             new PoolDef { Name = "光锥活动跃迁", Types = new[] { "12" }, PoolNames = new[] { "光锥" }, PityTarget = 80 },
             new PoolDef { Name = "联动角色跃迁", Types = new[] { "21" }, PoolNames = new[] { "联动角色", "合作角色" }, PityTarget = 90 },
             new PoolDef { Name = "联动光锥跃迁", Types = new[] { "22" }, PoolNames = new[] { "联动光锥", "合作光锥" }, PityTarget = 80 },
-            new PoolDef { Name = "新手跃迁", Types = new[] { "2" }, PoolNames = new[] { "新手" }, PityTarget = 50 },
         },
         ["zzz"] = new[]
         {
@@ -232,6 +231,13 @@ public partial class GachaView : UserControl
         var poolDefs = PoolDefs[_game];
         var gameRecords = _records.Where(r => r.GameKey == _game &&
                                                (string.IsNullOrEmpty(_uid) || r.Uid == _uid)).ToList();
+        if (_game == "starrail")
+        {
+            // 0.1.68：星铁不再展示新手跃迁，同时把这些记录从统计里剔除，
+            // 避免它们落到「其他祈愿」又变相显示出来。
+            gameRecords = gameRecords.Where(r => r.GachaType != "2" &&
+                                                 !(r.PoolName ?? "").Contains("新手")).ToList();
+        }
         var label = _game == "genshin_beyond" ? "千星奇域" : Games.First(g => g.Key == _game).Name;
         TxtHeaderTitle.Text = _game switch
         {
@@ -289,35 +295,42 @@ public partial class GachaView : UserControl
     }
 
     /// <summary>
-    /// 0.1.57：所有抽卡记录卡固定排成一行。宽窗口下按可视宽度均分铺满，
-    /// 窄窗口下保持最小可读卡宽并改为横向滚动，不再折行。
+    /// 0.1.68：卡池卡按可视宽度自动分列，卡池多时折到第二行，不再把右侧卡池
+    /// 藏进横向滚动条。列数尽量均分（如 8 个卡池排成 4×2），每行卡高按行数
+    /// 均分可视高度；放不下时整个卡池区纵向滚动。
     /// </summary>
     private void ResizePoolColumns()
     {
         if (_poolCount <= 0 || _poolCards.Count != _poolCount) return;
-        var available = PoolScroll.ViewportWidth - 36; // StackPanel 左右各 18
+        var available = PoolScroll.ViewportWidth - 36; // WrapPanel 左右各 18
         if (double.IsNaN(available) || available <= 0)
             available = Math.Max(0, ActualWidth - 38);
         if (double.IsNaN(available) || available <= 0) return;
 
         const double gap = 14;
-        // 0.1.67：崩坏3 有 6 个补给卡池，原最小卡宽 232 会把精准/扩充装备等挤到窗口
-        // 右侧之外。降到 170 后 6 张卡可以在常见窗口宽度内同排铺满，不再默认藏到右侧。
-        const double minReadable = 170;
-        var fitWidth = (available - (_poolCount - 1) * gap) / _poolCount;
-        var cardWidth = fitWidth >= minReadable ? fitWidth : 268;
-        var contentWidth = _poolCount * cardWidth + (_poolCount - 1) * gap;
+        const double minReadable = 220;
+        var maxColumns = Math.Max(1, (int)Math.Floor((available + gap) / (minReadable + gap)));
+        maxColumns = Math.Min(maxColumns, _poolCount);
+        var rows = (int)Math.Ceiling(_poolCount / (double)maxColumns);
+        var columns = (int)Math.Ceiling(_poolCount / (double)rows);
+        var cardWidth = Math.Max(120, (available - (columns - 1) * gap) / columns);
+
         var viewportHeight = PoolScroll.ViewportHeight;
-        var cardHeight = Math.Max(390, viewportHeight - 8);
+        var cardHeight = viewportHeight > 0
+            ? Math.Max(300, (viewportHeight - (rows - 1) * gap - 8) / rows)
+            : 390;
 
         for (var i = 0; i < _poolCards.Count; i++)
         {
             var card = _poolCards[i];
+            var column = i % columns;
+            var row = i / columns;
+            var isLastRow = row >= rows - 1;
             card.Width = cardWidth;
             card.Height = cardHeight;
-            card.Margin = new Thickness(0, 0, i == _poolCards.Count - 1 ? 0 : gap, 0);
+            card.Margin = new Thickness(0, 0, column == columns - 1 ? 0 : gap, isLastRow ? 0 : gap);
         }
-        PoolGrid.Width = Math.Max(available, contentWidth);
+        PoolGrid.Width = available;
     }
 
     private void BuildSummary(List<(PoolDef Def, PoolStat Stat)> stats, int totalPulls, int topPulls)
