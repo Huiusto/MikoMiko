@@ -153,9 +153,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.59"), "v0.1.59", "MikoMiko 0.1.59",
+                    new Version("0.1.60"), "v0.1.60", "MikoMiko 0.1.60",
                     "· 安装器：修复选择安装路径页路径输入框与「浏览」按钮垂直错位\n· 安装器：禁止直接安装到磁盘根目录",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.59.exe", "");
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.60.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();
@@ -257,6 +257,7 @@ public partial class App : Application
                     : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap" ? "Anime"
                     : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
+                    : page is "GachaSettings" ? "Gacha"
                     : page == "MineQr" ? "Mine"
                     : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
                     : page == "MineAccount" ? "Mine"
@@ -460,11 +461,21 @@ public partial class App : Application
                     startDelay.Start();
                 }
                 Log(path, "navigated");
+                if (page == "GachaSettings")
+                {
+                    FindChild<Views.GachaView>(MainWindow!)?.DebugOpenSettings();
+                    MainWindow!.UpdateLayout();
+                }
                 var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : page == "UploadArticle" ? 32 : page == "ReaderComments" ? 9 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();
                     Log(path, "capturing");
+                    if (page == "GachaSettings")
+                    {
+                        FindChild<Views.GachaView>(MainWindow!)?.DebugOpenSettings();
+                        MainWindow!.UpdateLayout();
+                    }
                     if (page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups")
                     {
                         var view = FindChild<Views.SettingsView>(MainWindow!);

@@ -16,7 +16,7 @@ public partial class UpdateWindow : Window
         InitializeComponent();
         _info = info;
         _settings = settings;
-        VersionText.Text = $"当前版本 {AppInfo.Version}  →  最新版本 {info.Tag}";
+        VersionText.Text = string.IsNullOrWhiteSpace(info.Tag) ? $"v{info.Version}" : info.Tag;
         NotesText.Text = string.IsNullOrWhiteSpace(info.Notes) ? "该版本未提供更新说明。" : info.Notes;
     }
 
@@ -63,7 +63,7 @@ public partial class UpdateWindow : Window
         }
 
         InstallButton.IsEnabled = false;
-        InstallButton.Content = "正在下载…";
+        DownloadPanel.Visibility = Visibility.Visible;
         DownloadProgress.Visibility = Visibility.Visible;
         StatusText.Text = "正在下载安装包，请稍候…";
 
@@ -76,7 +76,6 @@ public partial class UpdateWindow : Window
         if (path is null)
         {
             InstallButton.IsEnabled = true;
-            InstallButton.Content = "重新下载";
             StatusText.Text = "下载失败，请检查网络后重试";
             return;
         }

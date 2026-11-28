@@ -1,150 +1,90 @@
 <Window x:Class="MikoMiko.Views.UpdateWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MikoMiko 更新" Width="840" Height="600"
+        Title="MikoMiko 更新" Width="960" Height="640"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False"
         FontFamily="{DynamicResource Font.Ui}"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
-    <Grid Margin="18">
-        <Border CornerRadius="26" Background="White" ClipToBounds="True">
+    <Grid>
+        <Border CornerRadius="28" Background="White" ClipToBounds="True">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="34" ShadowDepth="8" Direction="270" Opacity="0.20" Color="#6A92B9" />
             </Border.Effect>
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="350" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+                <Image Source="/Assets/Setup/update-notice-full.png" Stretch="Fill" />
 
-                <!-- 左侧：银发少女插画 -->
-                <Border Grid.Column="0" CornerRadius="26,0,0,26">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#F7FBFF" Offset="0" />
-                            <GradientStop Color="#E4F2FF" Offset="0.52" />
-                            <GradientStop Color="#D3E8FC" Offset="1" />
-                        </LinearGradientBrush>
-                    </Border.Background>
-                    <Grid>
-                        <Ellipse Width="220" Height="220" Fill="#FFFFFF" Opacity="0.45"
-                                 HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-70,-80,0,0" />
-                        <Ellipse Width="140" Height="140" Fill="#A8CEF0" Opacity="0.22"
-                                 HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-40,-20" />
-                        <Ellipse Width="12" Height="12" Fill="#8DBEE8" Opacity="0.65"
-                                 HorizontalAlignment="Left" VerticalAlignment="Center" Margin="34,60,0,0" />
-                        <Ellipse Width="7" Height="7" Fill="#FFFFFF"
-                                 HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,74,56,0" />
+                <!-- 版本号覆盖图内烘焙的 V1.8.0，始终显示当前检测到的新版本 -->
+                <Border Width="140" Height="36" Background="#F8FAFD"
+                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="624,299,0,0" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Top"
+                            Margin="633,303,0,0">
+                    <TextBlock Text="版本" FontSize="18" FontWeight="SemiBold" Foreground="#6B8AAA" />
+                    <TextBlock x:Name="VersionText" FontSize="18" FontWeight="SemiBold" Foreground="#2C7FC4"
+                               Margin="5,0,0,0" />
+                </StackPanel>
 
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,12,0,0">
-                            <TextBlock Text="MikoMiko · 陪伴更新" FontSize="12.5" FontWeight="SemiBold"
-                                       Foreground="#4B83B7" HorizontalAlignment="Center" />
-                            <Border Width="286" Height="350" Margin="0,16,0,0" CornerRadius="22" Background="White">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="26" ShadowDepth="6" Direction="270"
-                                                      Opacity="0.16" Color="#6E9FC9" />
-                                </Border.Effect>
-                                <Image Source="/Assets/Setup/update-notice-hero.png" Stretch="Uniform"
-                                       Margin="12,10,12,8" />
-                            </Border>
-                        </StackPanel>
+                <!-- 图内自带关闭 ×：透明热点 -->
+                <Button HorizontalAlignment="Left" VerticalAlignment="Top" Width="46" Height="38"
+                        Margin="898,20,0,0" Background="Transparent" BorderThickness="0" Cursor="Hand"
+                        Click="Close_Click" ToolTip="关闭">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent" />
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
 
-                        <TextBlock Text="新的版本，也在努力变得更好" FontSize="11.5" Foreground="#6E93B4"
-                                   HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28" />
-                    </Grid>
-                </Border>
+                <!-- 图内自带「忽略」「更新」按钮：透明热点承接原有点击逻辑 -->
+                <Button x:Name="IgnoreButton" HorizontalAlignment="Left" VerticalAlignment="Top"
+                        Width="310" Height="50" Margin="148,515,0,0"
+                        Background="Transparent" BorderThickness="0" Cursor="Hand"
+                        Click="Cancel_Click" ToolTip="忽略此版本">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent" />
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
 
-                <!-- 右侧：版本信息与操作 -->
-                <Grid Grid.Column="1" Margin="36,30,34,28">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
+                <Button x:Name="InstallButton" HorizontalAlignment="Left" VerticalAlignment="Top"
+                        Width="320" Height="50" Margin="520,515,0,0"
+                        Background="Transparent" BorderThickness="0" Cursor="Hand"
+                        Click="Install_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="Transparent" />
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
 
-                    <Grid>
-                        <StackPanel Orientation="Horizontal">
-                            <Border Width="46" Height="46" CornerRadius="14" Background="#EAF5FF">
-                                <Image Source="/Assets/icon.png" Width="30" Height="30" Stretch="Uniform" />
-                            </Border>
-                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="MikoMiko" FontSize="16" FontWeight="SemiBold" Foreground="#21384D" />
-                                <TextBlock Text="陪伴式更新" FontSize="11" Foreground="#89A2B8" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="34" Height="34"
-                                Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                Click="Close_Click" ToolTip="关闭">
-                            <Path Data="M5 5 L15 15 M15 5 L5 15" Stroke="#8AA6BE" StrokeThickness="1.8"
-                                  Width="16" Height="16" Stretch="Uniform" />
-                        </Button>
-                    </Grid>
-
-                    <StackPanel Grid.Row="1" Margin="0,26,0,0">
-                        <TextBlock Text="发现新版本" FontSize="28" FontWeight="Bold" Foreground="#1E3448" />
-                        <TextBlock Text="少女已经把新版本收拾好啦，更新后就能马上见面。" FontSize="12.5"
-                                   Foreground="#7C95AB" Margin="0,8,0,0" TextWrapping="Wrap" />
-                    </StackPanel>
-
-                    <Border Grid.Row="2" Margin="0,18,0,0" CornerRadius="10" Background="#F0F7FF"
-                            Padding="14,9" HorizontalAlignment="Left">
-                        <TextBlock x:Name="VersionText" FontSize="12.5" FontWeight="SemiBold" Foreground="#3D7DB5" />
-                    </Border>
-
-                    <Grid Grid.Row="3" Margin="0,18,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Text="更新内容" FontSize="13" FontWeight="SemiBold" Foreground="#314A61" />
-                        <Border Grid.Row="1" Margin="0,8,0,0" CornerRadius="12" Background="#F8FBFF"
-                                BorderBrush="#E3EFFB" BorderThickness="1" Padding="14,10">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <TextBlock x:Name="NotesText" TextWrapping="Wrap" LineHeight="22" FontSize="12.5"
-                                           Foreground="#627D95" />
-                            </ScrollViewer>
-                        </Border>
-                    </Grid>
-
-                    <StackPanel Grid.Row="4" Margin="0,14,0,0">
-                        <Grid>
-                            <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="#7C95AB" />
-                            <TextBlock Text="自动安装到当前目录并重启软件" FontSize="11" Foreground="#A4B6C7"
-                                       HorizontalAlignment="Right" />
-                        </Grid>
-                        <ProgressBar x:Name="DownloadProgress" Height="8" Minimum="0" Maximum="1" Value="0"
-                                     Margin="0,8,0,0" Visibility="Collapsed"
-                                     Foreground="#63A7DB" Background="#E6F1FB" BorderThickness="0">
+                <!-- 下载/安装状态浮层，默认隐藏，不遮挡原图 -->
+                <Border x:Name="DownloadPanel" Visibility="Collapsed"
+                        HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,12"
+                        Background="#F4FFFFFF" BorderBrush="#D7E8FA" BorderThickness="1"
+                        CornerRadius="14" Padding="18,10" MinWidth="460">
+                    <StackPanel>
+                        <TextBlock x:Name="StatusText" FontSize="11.5" Foreground="#5F7F9A"
+                                   HorizontalAlignment="Center" TextAlignment="Center" />
+                        <ProgressBar x:Name="DownloadProgress" Height="7" Minimum="0" Maximum="1" Value="0"
+                                     Margin="0,8,0,0" Foreground="#63A7DB" Background="#E6F1FB"
+                                     BorderThickness="0">
                             <ProgressBar.Template>
                                 <ControlTemplate TargetType="ProgressBar">
                                     <Grid>
-                                        <Border x:Name="PART_Track" CornerRadius="4" Background="#E6F1FB" />
-                                        <Border x:Name="PART_Indicator" CornerRadius="4" Background="#63A7DB"
+                                        <Border x:Name="PART_Track" CornerRadius="3.5" Background="#E6F1FB" />
+                                        <Border x:Name="PART_Indicator" CornerRadius="3.5" Background="#63A7DB"
                                                 HorizontalAlignment="Left" />
                                     </Grid>
                                 </ControlTemplate>
                             </ProgressBar.Template>
                         </ProgressBar>
                     </StackPanel>
+                </Border>
 
-                    <Grid Grid.Row="5" Margin="0,18,0,0">
-                        <Button Content="打开 Release 页面" Style="{StaticResource LinkButton}"
-                                Foreground="#5A97CC"
-                                HorizontalAlignment="Left" VerticalAlignment="Center"
-                                Click="OpenRelease_Click" />
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Content="稍后更新" Style="{StaticResource GhostButton}" Height="38" Padding="20,0"
-                                    Click="Cancel_Click" />
-                            <Button x:Name="InstallButton" Content="立即更新" Style="{StaticResource AccentButton}"
-                                    Height="38" Padding="24,0" Margin="10,0,0,0" Click="Install_Click" />
-                        </StackPanel>
-                    </Grid>
-                </Grid>
+                <!-- 代码兼容占位：新提示图不再显示更新说明文本 -->
+                <TextBlock x:Name="NotesText" Visibility="Collapsed" />
             </Grid>
         </Border>
     </Grid>

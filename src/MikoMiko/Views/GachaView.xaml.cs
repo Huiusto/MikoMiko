@@ -51,8 +51,8 @@ public partial class GachaView : UserControl
         public int SecondPity;
         public DateTime Earliest;
         public DateTime Latest;
-        public List<(string Name, int Pity, DateTime Time)> TopRows = new();
-        public List<(string Name, int Pity, DateTime Time)> SecondRows = new();
+        public List<(string Name, string ItemType, int Pity, DateTime Time)> TopRows = new();
+        public List<(string Name, string ItemType, int Pity, DateTime Time)> SecondRows = new();
         public double Average => TopCount > 0 ? Total / (double)TopCount : 0;
         public double TopRate => Total > 0 ? TopCount * 100d / Total : 0;
         public double SecondRate => Total > 0 ? SecondCount * 100d / Total : 0;
@@ -125,6 +125,13 @@ public partial class GachaView : UserControl
         UpdateGameIcon(Games[0]);
         PoolScroll.SizeChanged += (_, _) => ResizePoolColumns();
         Loaded += (_, _) => ReloadData();
+    }
+
+    /// <summary>截图验收用：直接展开记录设置面板。</summary>
+    public void DebugOpenSettings()
+    {
+        PanelSettings.Visibility = Visibility.Visible;
+        TxtDataDir.Text = "数据目录：" + MikoNestBridge.DataDir;
     }
 
     private void ReloadData()
@@ -504,14 +511,14 @@ public partial class GachaView : UserControl
             if (rank == topRank)
             {
                 stat.TopCount++;
-                stat.TopRows.Insert(0, (record.Name, stat.Pity, time));
+                stat.TopRows.Insert(0, (record.Name, record.ItemType, stat.Pity, time));
                 stat.Pity = 0;
                 stat.SecondPity = 0;
             }
             else if (rank == topRank - 1)
             {
                 stat.SecondCount++;
-                stat.SecondRows.Insert(0, (record.Name, stat.SecondPity, time));
+                stat.SecondRows.Insert(0, (record.Name, record.ItemType, stat.SecondPity, time));
                 stat.SecondPity = 0;
             }
             else if (rank == topRank - 2)
@@ -718,9 +725,7 @@ public partial class GachaView : UserControl
         }
         else
         {
-            var limited = topSelected &&
-                          (stat.Name.Contains("角色活动") || stat.Name.Contains("武器活动") ||
-                           stat.Name.Contains("角色祈愿") || stat.Name.Contains("武器祈愿"));
+            var limited = topSelected && IsLimitedPool(_game, stat.Name);
             foreach (var row in rows.Take(120))
                 list.Children.Add(BuildRecordRow(row, topSelected, limited));
         }
@@ -731,7 +736,7 @@ public partial class GachaView : UserControl
         return card;
     }
 
-    private Border BuildRecordRow((string Name, int Pity, DateTime Time) row, bool topSelected, bool limited)
+    private Border BuildRecordRow((string Name, string ItemType, int Pity, DateTime Time) row, bool topSelected, bool limited)
     {
         var rankColor = topSelected ? Color.FromRgb(0xE0, 0xB1, 0x5C) : Color.FromRgb(0xA9, 0x82, 0xD6);
         var pityColor = PityColor(row.Pity, topSelected ? PityTarget : 10, topSelected);
@@ -794,7 +799,7 @@ public partial class GachaView : UserControl
         Grid.SetColumn(name, 1);
         line.Children.Add(name);
 
-        if (limited)
+        if (limited && IsUpTopItem(_game, row.Name, row.ItemType))
         {
             var up = new Border
             {
@@ -807,7 +812,7 @@ public partial class GachaView : UserControl
                 Margin = new Thickness(3, 0, 4, 0),
                 Child = new TextBlock
                 {
-                    Text = "UP",
+                    Text = "UP！",
                     FontSize = 9,
                     FontWeight = FontWeights.SemiBold,
                     Foreground = new SolidColorBrush(Color.FromRgb(0xD9, 0xA9, 0x3C)),
@@ -835,6 +840,64 @@ public partial class GachaView : UserControl
         wrap.Children.Add(BuildPityBar(row.Pity, topSelected ? PityTarget : 10, pityColor));
         return new Border { Child = wrap, Background = Brushes.Transparent };
     }
+
+    private static bool IsLimitedPool(string game, string poolName) => game switch
+    {
+        "genshin" => poolName is "角色活动祈愿" or "武器活动祈愿",
+        "starrail" => poolName is "角色活动跃迁" or "光锥活动跃迁" or "角色联动跃迁" or "联动跃迁",
+        "zzz" => poolName is "独家频段" or "音擎频段",
+        "bh3" => poolName is "精准补给" or "扩充补给" or "活动补给",
+        _ => false,
+    };
+
+    /// <summary>限定卡池里的最高稀有度条目：排除常驻角色/武器、圣痕等非角色武器后显示 UP！。</summary>
+    private static bool IsUpTopItem(string game, string name, string itemType)
+    {
+        if (!NonUpTopItems.TryGetValue(game, out var standard)) return false;
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        itemType ??= "";
+        if (itemType.Contains("圣痕", StringComparison.Ordinal) ||
+            itemType.Contains("材料", StringComparison.Ordinal) ||
+            itemType.Contains("道具", StringComparison.Ordinal)) return false;
+        return !standard.Contains(name.Trim());
+    }
+
+    private static readonly Dictionary<string, HashSet<string>> NonUpTopItems = new(StringComparer.Ordinal)
+    {
+        ["genshin"] = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "迪卢克", "刻晴", "琴", "莫娜", "七七", "提纳里", "迪希雅", "梦见月瑞希",
+            "阿莫斯之弓", "和璞鸢", "狼的末路", "风鹰剑", "四风原典",
+            "天空之翼", "天空之傲", "天空之脊", "天空之刃", "天空之卷",
+        },
+        ["zzz"] = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "冯·莱卡恩", "丽娜", "猫宫又奈", "「11号」", "格莉丝", "珂蕾妲",
+            "硫磺石", "拘缚者", "嵌合编译器", "啜泣摇篮", "燃狱齿轮",
+            "钢铁肉垫", "深海访客", "时光切片", "防爆者VI型", "旋钻机-赤轴",
+        },
+        ["starrail"] = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "姬子", "瓦尔特", "布洛妮娅", "杰帕德", "克拉拉", "彦卿", "白露",
+            "银河铁道之夜", "以世界之名", "无可取代的东西", "时节不居",
+            "制胜的瞬间", "如泥酣眠", "但战斗还未结束",
+        },
+        ["bh3"] = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "空之律者", "理之律者", "识之律者", "失落迷迭", "不灭星锚", "魇夜星渊",
+            "螺旋·愚戏之匣", "真我·人之律者", "玉骑士·月痕", "真理之律者",
+            "终焉之律者", "织羽梦旌", "薪炎之律者", "梅比乌斯", "天元骑英",
+            "阿波尼亚", "辉骑士·月魄", "彼岸双生", "云墨丹心", "雷之律者",
+            "空无之钥", "无存之钥", "2nd圣遗物", "3rd圣遗物", "5th圣遗物", "11th圣遗物",
+            "索尔之锤", "超电磁手炮", "雷刀·鬼角", "幽色咏叹调", "灵刀·樱吹雪",
+            "妖刀·赤染樱", "磁暴·斩", "虚无之刃", "提尔的断腕", "火刀·真田",
+            "鲜血之舞", "犹大的誓约", "仿犹大·血之拥抱", "永暮双狼", "断光之努亚达",
+            "残火之鸢", "天殛之境的残响", "诞于寂壤的无殃", "暂无星尘的挽歌",
+            "月痕", "星陨断影", "终焉之律者专属武器", "脉冲太刀17式", "脉冲装·太刀",
+            "凯旋轰鸣", "异度黑核侵蚀", "天火圣裁", "霜落之心", "往世的蛇影",
+            "樱色之约", "丹樱", "苍玄之书人偶", "圣裁与恩典", "所罗门王之钥",
+        },
+    };
 
     private static Color PityColor(int value, int max, bool topSelected)
     {
@@ -1133,6 +1196,41 @@ public partial class GachaView : UserControl
     }
 
     private void OpenDataDir_Click(object sender, RoutedEventArgs e) => OpenDataDir();
+
+    private void ClearAccount_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_uid))
+        {
+            ShowToast("当前没有可清理的游戏 UID 数据");
+            return;
+        }
+        var label = _game == "genshin_beyond"
+            ? "千星奇域"
+            : Games.FirstOrDefault(g => g.Key == _game)?.Name ?? _game;
+        var confirm = MessageBox.Show(
+            Window.GetWindow(this),
+            $"确定清理「{label}」游戏 UID {_uid} 的全部本地抽卡记录吗？\n\n只会清理这一个游戏下的这个 UID，不影响米游社登录账号或其他游戏。清理前会自动保留时间戳备份。",
+            "清理账号数据",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        var removed = GachaFetchService.ClearRecords(_game, _uid);
+        if (removed < 0)
+        {
+            ShowToast("清理失败，记录文件可能正被占用");
+            return;
+        }
+
+        MikoNestBridge.Reload();
+        _records = MikoNestBridge.LoadGachaRecords().ToList();
+        RefreshUids();
+        Render();
+        ShowToast(removed == 0
+            ? $"UID {_uid} 没有可清理的{label}记录"
+            : $"已清理 UID {_uid} 的 {removed:N0} 条{label}记录");
+    }
 
 
     private void CopySummary()

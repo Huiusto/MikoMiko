@@ -419,4 +419,48 @@ public static class GachaFetchService
         }
         return added;
     }
+
+    /// <summary>清理指定游戏 + 游戏 UID 的本地抽卡记录，清理前保留时间戳备份。</summary>
+    public static int ClearRecords(string gameKey, string uid)
+    {
+        if (string.IsNullOrWhiteSpace(gameKey) || string.IsNullOrWhiteSpace(uid)) return -1;
+        var existing = MikoNestBridge.LoadGachaRecords().ToList();
+        var remaining = existing
+            .Where(r => !(string.Equals(r.GameKey, gameKey, StringComparison.Ordinal) &&
+                          string.Equals(r.Uid, uid, StringComparison.Ordinal)))
+            .ToList();
+        var removed = existing.Count - remaining.Count;
+        if (removed <= 0) return 0;
+
+        try
+        {
+            var dir = MikoNestBridge.DataDir;
+            Directory.CreateDirectory(dir);
+            var file = Path.Combine(dir, "gacha_records.json");
+            if (File.Exists(file))
+            {
+                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                File.Copy(file, Path.Combine(dir, $"gacha_records.{stamp}.bak"), true);
+                File.Copy(file, file + ".bak", true);
+                File.Copy(file, file + ".lastgood", true);
+            }
+            var doc = new GachaRecordFile
+            {
+                Version = 1,
+                Records = remaining
+                    .OrderByDescending(r => ParseTime(r.Time))
+                    .ThenByDescending(r => r.Id, StringComparer.Ordinal)
+                    .ToList(),
+            };
+            var json = JsonSerializer.Serialize(doc, new JsonSerializerOptions { WriteIndented = false });
+            var temp = file + ".tmp";
+            File.WriteAllText(temp, json, new UTF8Encoding(false));
+            File.Move(temp, file, true);
+        }
+        catch
+        {
+            return -1;
+        }
+        return removed;
+    }
 }

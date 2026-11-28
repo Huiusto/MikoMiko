@@ -19,15 +19,15 @@ using WinForms = System.Windows.Forms;
 [assembly: AssemblyProduct("MikoMiko")]
 [assembly: AssemblyCompany("MikoMiko Contributors")]
 [assembly: AssemblyDescription("MikoMiko 安装与卸载程序")]
-[assembly: AssemblyVersion("0.1.59.0")]
-[assembly: AssemblyFileVersion("0.1.59.0")]
+[assembly: AssemblyVersion("0.1.60.0")]
+[assembly: AssemblyFileVersion("0.1.60.0")]
 
 namespace MikoMikoSetup
 {
     internal static class Program
     {
         private const string AppName = "MikoMiko";
-        private const string AppVersion = "0.1.59";
+        private const string AppVersion = "0.1.60";
         private const string AppExe = "MikoMiko.exe";
         private const string Publisher = "MikoMiko Contributors";
         private const string AppUrl = "https://github.com/Huiusto/MikoMiko";
@@ -687,17 +687,17 @@ namespace MikoMikoSetup
                 CornerRadius = new CornerRadius(29),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(0xBF, 0xD9, 0xFA)),
                 BorderThickness = new Thickness(1.4),
-                Width = 807,
-                Height = 57
+                Width = 808,
+                Height = 58
             };
-            Canvas.SetLeft(boxBack, 81);
-            Canvas.SetTop(boxBack, 406);
+            Canvas.SetLeft(boxBack, 80);
+            Canvas.SetTop(boxBack, 404);
             _pageCanvas.Children.Add(boxBack);
 
             var row = new Grid();
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(126) });
             boxBack.Child = row;
 
             _pathBox = new TextBox
@@ -708,7 +708,8 @@ namespace MikoMikoSetup
                 Foreground = new SolidColorBrush(Color.FromRgb(0x50, 0x5A, 0x6B)),
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(28, 0, 4, 0),
+                Padding = new Thickness(28, 0, 6, 0),
+                Height = 58,
                 VerticalContentAlignment = VerticalAlignment.Center,
                 TextWrapping = TextWrapping.NoWrap
             };
@@ -729,8 +730,8 @@ namespace MikoMikoSetup
 
             var browseZone = new Border
             {
-                Background = new SolidColorBrush(Color.FromRgb(0xF7, 0xFB, 0xFF)),
-                CornerRadius = new CornerRadius(0, 22, 22, 0)
+                Background = new SolidColorBrush(Color.FromRgb(0xFB, 0xFD, 0xFF)),
+                CornerRadius = new CornerRadius(0, 24, 24, 0)
             };
             Grid.SetColumn(browseZone, 2);
             row.Children.Add(browseZone);
@@ -742,8 +743,9 @@ namespace MikoMikoSetup
                 FontSize = 19,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = new SolidColorBrush(Color.FromRgb(0x49, 0x98, 0xE8)),
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center
             };
             browseZone.Child = browseText;
 
@@ -751,10 +753,10 @@ namespace MikoMikoSetup
             {
                 Background = new SolidColorBrush(Color.FromRgb(0xF8, 0xFA, 0xFE)),
                 Width = 560,
-                Height = 34
+                Height = 32
             };
             Canvas.SetLeft(spaceBack, 108);
-            Canvas.SetTop(spaceBack, 462);
+            Canvas.SetTop(spaceBack, 467);
             _pageCanvas.Children.Add(spaceBack);
 
             _spaceText = new TextBlock
@@ -763,18 +765,18 @@ namespace MikoMikoSetup
                 FontSize = 11.5,
                 Foreground = new SolidColorBrush(Color.FromRgb(0x6B, 0x7A, 0x90)),
                 Width = 540,
-                Height = 24,
+                Height = 22,
                 TextAlignment = TextAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Center
             };
             Canvas.SetLeft(_spaceText, 128);
-            Canvas.SetTop(_spaceText, 470);
+            Canvas.SetTop(_spaceText, 473);
             _pageCanvas.Children.Add(_spaceText);
             UpdateSpaceInfo();
 
             AddHotspot(_pageCanvas, 161, 507, 214, 55, ShowWelcome);
             AddHotspot(_pageCanvas, 558, 507, 218, 55, delegate { StartInstall(); });
-            AddHotspot(_pageCanvas, 767, 406, 120, 57, BrowseDirectory);
+            AddHotspot(_pageCanvas, 762, 404, 126, 58, BrowseDirectory);
         }
 
         private void UpdateSpaceInfo()

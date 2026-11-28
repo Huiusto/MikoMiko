@@ -227,14 +227,12 @@
                            VerticalAlignment="Center" Stretch="UniformToFill" />
                     <ComboBox x:Name="ComboGame" Tag="游戏" Width="132" Margin="0,0,8,0"
                               Style="{StaticResource GachaCombo}" SelectionChanged="ComboGame_SelectionChanged" />
-                    <ComboBox x:Name="ComboUid" Tag="UID" Width="158" Margin="0,0,8,0"
+                    <ComboBox x:Name="ComboUid" Tag="游戏UID" Width="158" Margin="0,0,8,0"
                               Style="{StaticResource GachaCombo}" SelectionChanged="ComboUid_SelectionChanged" />
                     <Button x:Name="BtnUpdate" Content="更新记录" Width="80" Margin="0,0,8,0"
                             Style="{StaticResource GachaPrimaryButton}" Click="BtnUpdate_Click" />
                     <Button x:Name="BtnSettings" Content="记录设置" Width="78" Margin="0,0,8,0"
                             Style="{StaticResource GachaButton}" Click="BtnSettings_Click" />
-                    <Button Content="导出 CSV" Style="{StaticResource GachaSideItem}" Click="ExportCsv_Click" />
-                    <Button Content="记录目录" Style="{StaticResource GachaSideItem}" Click="OpenDataDir_Click" />
                     <Border Width="1" Height="36" Background="{DynamicResource Brush.BorderSoft}"
                             Margin="2,0,9,0" VerticalAlignment="Center" />
                     <Button x:Name="BtnOverview" Content="记录概览 ▸" Style="{StaticResource GachaToggle}"
@@ -343,11 +341,24 @@
                 <CheckBox x:Name="ChkShowIcon" Content="显示条目圆形图标" FontSize="10.5" IsChecked="True"
                           Foreground="{DynamicResource Brush.TextPrimary}" Margin="0,7,0,0"
                           Checked="DisplayOption_Changed" Unchecked="DisplayOption_Changed" />
+                <Border Height="1" Background="{DynamicResource Brush.BorderSoft}" Margin="0,13,0,0" />
+                <TextBlock Text="记录文件" FontSize="10.5" FontWeight="SemiBold"
+                           Foreground="{DynamicResource Brush.TextPrimary}" Margin="0,11,0,0" />
+                <WrapPanel Margin="0,8,0,0">
+                    <Button Content="导出 CSV" Height="30" Padding="12,0" Style="{StaticResource GachaButton}"
+                            Click="ExportCsv_Click" />
+                    <Button Content="记录目录" Height="30" Padding="12,0" Style="{StaticResource GachaButton}"
+                            Margin="7,0,0,0" Click="OpenDataDir_Click" />
+                    <Button Content="清理账号数据" Height="30" Padding="12,0" Style="{StaticResource GachaButton}"
+                            Margin="7,0,0,0" Foreground="#C0453F" BorderBrush="#E7B9B6"
+                            Click="ClearAccount_Click" />
+                </WrapPanel>
+                <TextBlock Text="清理只删除当前游戏 + 当前游戏 UID 的本地抽卡记录，不影响登录账号与其他游戏。"
+                           FontSize="9.5" Foreground="{DynamicResource Brush.TextTertiary}"
+                           TextWrapping="Wrap" Margin="0,7,0,0" />
                 <StackPanel Orientation="Horizontal" Margin="0,14,0,0" HorizontalAlignment="Right">
-                    <Button Content="打开数据目录" Height="30" Padding="11,0" Style="{StaticResource GachaButton}"
-                            Click="OpenDataDir_Click" />
                     <Button Content="关闭" Height="30" Padding="11,0" Style="{StaticResource GachaButton}"
-                            Margin="7,0,0,0" Click="BtnSettings_Click" />
+                            Click="BtnSettings_Click" />
                 </StackPanel>
             </StackPanel>
         </Border>
