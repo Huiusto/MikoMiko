@@ -316,6 +316,12 @@ public partial class LaunchView : UserControl
     {
         if (!_webReady) return;
 
+        // 以持久化设置为准，避免页面初始化先拿到旧字段导致开关失效。
+        var saved = App.SettingsService.Current;
+        _showReserve = saved.ShowReserve;
+        _showMhyy = saved.ShowMhyy;
+        _showFeed = saved.ShowFeed;
+
         var games = OrderedGames().Select(game => new
         {
             key = game.Key,

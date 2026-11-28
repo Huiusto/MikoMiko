@@ -926,6 +926,7 @@
         feedTab = tab.dataset.kind;
         feedIndex = 0;
         renderFeed();
+        startFeedRotation();
       };
     });
 
@@ -985,6 +986,44 @@
     if (!list.length) return;
     feedIndex = (feedIndex + delta + list.length) % list.length;
     renderFeed();
+    startFeedRotation();
+  }
+
+  const feedOrder = ['activity', 'announce', 'info'];
+
+  // 每 5 秒自动下一条：当前页签走完就接下个页签，资讯之后回到活动，循环往复。
+  function advanceFeed() {
+    if (!state || state.showFeed === false) return;
+    const all = (state.feed && state.feed.items) || [];
+    if (!all.length) return;
+    const list = feedList();
+    if (!list.length) {
+      feedTab = 'activity';
+      feedIndex = 0;
+      renderFeed();
+      return;
+    }
+    if (feedIndex + 1 < list.length) {
+      feedIndex += 1;
+      renderFeed();
+      return;
+    }
+    const cur = feedOrder.indexOf(feedTab);
+    for (let i = 1; i <= feedOrder.length; i++) {
+      const next = feedOrder[(cur + i) % feedOrder.length];
+      if (all.some(x => (x.kind || 'info') === next)) {
+        feedTab = next;
+        feedIndex = 0;
+        renderFeed();
+        return;
+      }
+    }
+  }
+
+  let feedTimer = null;
+  function startFeedRotation() {
+    if (feedTimer) clearInterval(feedTimer);
+    feedTimer = setInterval(advanceFeed, 5000);
   }
 
   function render() {
@@ -1027,6 +1066,7 @@
     applyAccent(state.accent);
     preloadBackgrounds();
     render();
+    startFeedRotation();
   };
 
   window.mikoUpdate = function (json) {
