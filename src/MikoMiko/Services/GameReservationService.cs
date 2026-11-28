@@ -58,7 +58,7 @@ public static class GameReservationService
         {
             var url = $"{ApiRoot}/getGameReservationContent?launcher_id={LauncherId}&language=zh-cn&game_id={info.GameId}";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.UserAgent.ParseAdd("MikoMiko/0.1.66 HoYoPlay/1.0");
+            request.Headers.UserAgent.ParseAdd("MikoMiko/0.1.67 HoYoPlay/1.0");
             using var response = await Http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);

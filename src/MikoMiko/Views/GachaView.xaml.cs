@@ -301,7 +301,9 @@ public partial class GachaView : UserControl
         if (double.IsNaN(available) || available <= 0) return;
 
         const double gap = 14;
-        const double minReadable = 232;
+        // 0.1.67：崩坏3 有 6 个补给卡池，原最小卡宽 232 会把精准/扩充装备等挤到窗口
+        // 右侧之外。降到 170 后 6 张卡可以在常见窗口宽度内同排铺满，不再默认藏到右侧。
+        const double minReadable = 170;
         var fitWidth = (available - (_poolCount - 1) * gap) / _poolCount;
         var cardWidth = fitWidth >= minReadable ? fitWidth : 268;
         var contentWidth = _poolCount * cardWidth + (_poolCount - 1) * gap;

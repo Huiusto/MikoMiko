@@ -262,6 +262,7 @@ public partial class App : Application
                     : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
                     : page == "MineAccount" ? "Mine"
                     : page is "Upload" or "UploadType" or "UploadArticle" ? "Home"
+                    : page == "UploadLaunch" ? "Launch"
                     : page is "Reservation" or "Mhyy" ? "Launch"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
@@ -427,6 +428,17 @@ public partial class App : Application
                     Shell.SearchText = "原神";
                     _ = Shell.SearchAsync();
                 }
+                if (page == "UploadLaunch")
+                {
+                    var uploadDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                    uploadDelay.Tick += (_, _) =>
+                    {
+                        uploadDelay.Stop();
+                        Shell.OpenUpload();
+                        Log(path, "upload-open-from-launch");
+                    };
+                    uploadDelay.Start();
+                }
                 if (page is "Upload" or "UploadType" or "UploadArticle")
                 {
                     Shell.OpenUpload();
@@ -512,7 +524,7 @@ public partial class App : Application
                     FindChild<Views.GachaView>(MainWindow!)?.DebugOpenSettings();
                     MainWindow!.UpdateLayout();
                 }
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "Reservation" or "Mhyy" ? 10 : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : page == "UploadArticle" ? 32 : page == "ReaderComments" ? 9 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "Reservation" or "Mhyy" ? 10 : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "UploadLaunch" ? 6 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : page == "UploadArticle" ? 32 : page == "ReaderComments" ? 9 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();

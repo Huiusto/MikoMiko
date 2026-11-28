@@ -7,13 +7,13 @@
              FontFamily="{DynamicResource Font.Ui}">
     <Grid Background="{DynamicResource Brush.WindowBg}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="52" />
+            <RowDefinition Height="44" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Background="{DynamicResource Brush.WindowBg}"
                 BorderBrush="{DynamicResource Brush.Border}" BorderThickness="0,0,0,1">
-            <Grid Margin="14,0,12,0">
+            <Grid Margin="12,0,10,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -31,12 +31,6 @@
                     <Path Data="M7 1 A6 6 0 1 0 13 6 M13 6 V2.2 M13 6 H9.2" Stroke="{DynamicResource Brush.TextSecondary}"
                           StrokeThickness="1.4" Width="14" Height="14" Stretch="Uniform" />
                 </Button>
-
-                <Border x:Name="AddressBox" Grid.Column="2" Height="32" CornerRadius="7" Background="{DynamicResource Brush.SearchBg}"
-                        Margin="10,0,10,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="AddressText" FontSize="12" Foreground="{DynamicResource Brush.TextTertiary}"
-                               VerticalAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis" />
-                </Border>
 
                 <Button Grid.Column="3" Style="{StaticResource CaptionButton}" Width="30" Height="30"
                         Click="Close_Click" ToolTip="{Binding [Common.Close], Source={x:Static loc:Loc.Instance}}">

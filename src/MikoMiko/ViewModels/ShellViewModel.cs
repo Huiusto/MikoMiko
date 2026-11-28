@@ -671,6 +671,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public void OpenLink(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
+        if (IsReservationOpen) CloseReservation();
         var match = Regex.Match(url, @"(?:article|post)/(\d+)", RegexOptions.IgnoreCase);
         if (url.Contains("miyoushe.com", StringComparison.OrdinalIgnoreCase) && match.Success)
         {
@@ -721,8 +722,10 @@ public sealed partial class ShellViewModel : ObservableObject
     public void CloseReservation()
     {
         if (ReservationView is null) return;
+        var view = ReservationView;
         ReservationView = null;
         IsReservationOpen = false;
+        view.CloseAndDispose();
         if (!IsBrowserOpen && _currentKey == "Launch") _launchView?.SetWebHidden(false);
     }
 
@@ -815,6 +818,9 @@ public sealed partial class ShellViewModel : ObservableObject
     public void OpenUpload()
     {
         PauseAllPlayback();
+        CloseBrowser();
+        if (IsReservationOpen) CloseReservation();
+        _launchView?.SetWebHidden(true);
         _upload.Reset();
         UploadView ??= new Views.UploadView(_upload);
         IsUploadOpen = true;
@@ -825,6 +831,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         IsUploadOpen = false;
         UploadView = null;
+        if (!IsBrowserOpen && !IsReservationOpen && _currentKey == "Launch") _launchView?.SetWebHidden(false);
     }
 
     /// <summary>上传页属于米游社编辑页，直接交给软件内浏览器，避免被帖子正则误判。</summary>
@@ -832,6 +839,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         CloseUpload();
         CloseBrowser();
+        _launchView?.SetWebHidden(true);
         BrowserView = new Views.BrowserView(url, CloseBrowser);
         IsBrowserOpen = true;
     }

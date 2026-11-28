@@ -23,7 +23,34 @@ public partial class ReservationView : UserControl
         _gameKey = gameKey;
         CloseRequested = closeRequested;
         ReserveRequested = reserveRequested;
-        Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x0D, 0x10, 0x16);
+        Web.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0xF3, 0xF7, 0xFB);
+    }
+
+    /// <summary>关闭预约页时先暂停并卸载视频，再销毁 WebView2，避免声音在页面关掉后继续播放。</summary>
+    public void CloseAndDispose()
+    {
+        try
+        {
+            if (Web.CoreWebView2 is not null)
+            {
+                Web.CoreWebView2.ExecuteScriptAsync("window.stopMedia && window.stopMedia();");
+            }
+        }
+        catch
+        {
+        }
+        try
+        {
+            Web.Visibility = Visibility.Collapsed;
+            // 消息回调里同步 Dispose 可能和 WebView2 自己的事件分发重入，放到下一个 UI 周期销毁。
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try { Web.Dispose(); } catch { }
+            }));
+        }
+        catch
+        {
+        }
     }
 
     public Action? CloseRequested { get; set; }

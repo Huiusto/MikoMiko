@@ -89,6 +89,9 @@ public partial class LaunchView : UserControl
     public void SetWebHidden(bool hidden)
     {
         Web.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+        // 隐藏 WebView2 后，上传弹层等覆盖页下面会露出这个底色；深色会像一块黑屏。
+        Root.Background = new System.Windows.Media.SolidColorBrush(
+            hidden ? System.Windows.Media.Color.FromRgb(0xF3, 0xF7, 0xFB) : System.Windows.Media.Color.FromRgb(0x0B, 0x0D, 0x12));
     }
 
     /// <summary>预约卡片：参数为游戏键（planet / yinyuan 等）和官网兜底链接。</summary>

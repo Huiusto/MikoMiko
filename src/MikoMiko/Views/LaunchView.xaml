@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              FontFamily="Microsoft YaHei UI" ClipToBounds="True">
-    <Grid Background="#0B0D12" ClipToBounds="True">
+    <Grid x:Name="Root" Background="#0B0D12" ClipToBounds="True">
         <!-- 与 MikoNest 启动页同一套 HTML 页面：官方壁纸与 webm 动态壁纸由 WebView2 直接播放 -->
         <wv2:WebView2 x:Name="Web" />
     </Grid>

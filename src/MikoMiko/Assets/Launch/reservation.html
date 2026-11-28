@@ -82,6 +82,48 @@
   .empty { color: rgba(255,255,255,.55); font-size: 14px; }
   .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     color: rgba(255,255,255,.65); font-size: 14px; }
+
+  /* MikoMiko 浅色主题：白底 + 米蓝，不再使用官方启动器的整页深色 */
+  html, body { background: #F3F7FB; color: #171A20; }
+  #bg { filter: blur(30px) brightness(1.12) saturate(.55); opacity: .24; }
+  #shade { background:
+      radial-gradient(120% 90% at 18% 8%, rgba(78,164,221,.08), rgba(243,247,251,0) 58%),
+      linear-gradient(180deg, rgba(255,255,255,.86), rgba(243,247,251,.97)); }
+  .close { background: #E8F0F8; color: #5A6675; box-shadow: 0 2px 10px rgba(43,72,98,.10); }
+  .close:hover { background: #D8E8F5; color: #171A20; }
+  .media-panel { background: #E8EEF5; border: 1px solid #DCE6EF;
+    box-shadow: 0 18px 48px rgba(78,164,221,.18), 0 4px 14px rgba(43,72,98,.08); }
+  .media-panel video, .media-panel img { background: #E8EEF5; }
+  .nav-arrow { width: 42px; height: 42px; border-radius: 50%; opacity: 1; font-size: 22px;
+    background: rgba(255,255,255,.90); color: #33404E; box-shadow: 0 3px 12px rgba(30,54,76,.18); }
+  .nav-arrow:hover { background: #fff; color: #171A20; }
+  .nav-arrow.left { left: 14px; }
+  .nav-arrow.right { right: 14px; background: rgba(255,255,255,.90); }
+  .video-bar { background: rgba(255,255,255,.93); color: #171A20;
+    box-shadow: 0 3px 14px rgba(36,64,88,.14); backdrop-filter: blur(10px); }
+  .icon-btn { color: #33404E; }
+  .time { color: #5A6675; }
+  .seek { background: linear-gradient(90deg, #4EA4DD var(--p, 0%), #D6E0EA var(--p, 0%)); }
+  .seek::-webkit-slider-thumb { background: #4EA4DD; box-shadow: 0 1px 4px rgba(40,70,96,.25); }
+  .logo { max-height: 86px; padding: 14px 22px; border-radius: 16px;
+    background: linear-gradient(135deg, #26313D, #141A22);
+    box-shadow: 0 6px 18px rgba(30,48,66,.18); }
+  .logo-title { color: #171A20; }
+  .intro { color: #3E4652; }
+  .tag { background: #E8F4FC; border-color: #CFE6F7; color: #2A6E97; }
+  .strip-arrow { background: #E8F0F8; color: #4B5A6A; }
+  .strip-arrow:hover { background: #D8E8F5; color: #171A20; }
+  .thumbs { scrollbar-color: #C7D6E4 transparent; }
+  .thumb { background: #E8EEF5; border-color: #D4DFEA; }
+  .thumb.active { border-color: #4EA4DD; box-shadow: 0 0 0 2px rgba(78,164,221,.18); }
+  .thumb .play { color: #2B3440; background: rgba(255,255,255,.78); text-shadow: none; }
+  .reserve { background: #4EA4DD; color: #fff; box-shadow: 0 10px 26px rgba(78,164,221,.32);
+    padding: 0 38px 0 8px; }
+  .reserve:hover { background: #6FB8E7; }
+  .bell { background: #fff; }
+  .bell svg { fill: #4EA4DD; }
+  .empty { color: #788492; }
+  .loading { color: #6E7A88; }
 </style>
 </head>
 <body>
@@ -232,6 +274,15 @@
   };
   videoEl.onplay = () => $('play').textContent = '❚❚';
   videoEl.onpause = () => $('play').textContent = '▶';
+
+  window.stopMedia = () => {
+    try {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
+    } catch (e) { }
+  };
+  window.addEventListener('pagehide', window.stopMedia);
   $('mute').onclick = () => {
     videoEl.muted = !videoEl.muted;
     $('mute').textContent = videoEl.muted ? '🔇' : '🔊';

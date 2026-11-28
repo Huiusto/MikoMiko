@@ -21,14 +21,6 @@ public partial class BrowserView : UserControl
         _isUploadPage = url.Contains("newArticle", StringComparison.OrdinalIgnoreCase);
         _isPlayer = immersivePlayer;
         CloseRequested = closeRequested;
-        if (immersivePlayer)
-        {
-            AddressBox.Visibility = Visibility.Collapsed;
-        }
-        else
-        {
-            AddressText.Text = url;
-        }
     }
 
     public Action? CloseRequested { get; set; }
@@ -44,10 +36,6 @@ public partial class BrowserView : UserControl
             var environment = await CoreWebView2Environment.CreateAsync(null, dataDir);
             await Web.EnsureCoreWebView2Async(environment);
             await InjectAccountCookiesAsync();
-            Web.CoreWebView2.NavigationStarting += (_, args) =>
-            {
-                if (!_isPlayer) AddressText.Text = args.Uri;
-            };
             Web.CoreWebView2.NavigationCompleted += async (_, args) =>
             {
                 LoadingPanel.Visibility = Visibility.Collapsed;
@@ -66,7 +54,6 @@ public partial class BrowserView : UserControl
         catch (Exception)
         {
             LoadingPanel.Visibility = Visibility.Collapsed;
-            AddressText.Text = "网页组件初始化失败，请在设置中检查 WebView2 运行库";
         }
     }
 
