@@ -320,8 +320,7 @@ public partial class GachaView : UserControl
                         p.Stat.Name.Contains("活动") || p.Stat.Name.Contains("限定") ||
                         p.Stat.Name.Contains("独家") || p.Stat.Name.Contains("角色") ||
                         p.Stat.Name.Contains("武器") || p.Stat.Name.Contains("联动") ||
-                        p.Stat.Name.Contains("扩充") || p.Stat.Name.Contains("精准") ||
-                        p.Stat.Name.Contains("颂愿")))
+                        p.Stat.Name.Contains("扩充") || p.Stat.Name.Contains("精准")))
             .Sum(p => p.Stat.TopCount);
         // 常驻颂愿按 4★ 上限统计，它的 TopCount 是 4★，需要归到 4★ 行；
         // 其余卡池仍按 5★/4★/3★ 三档。
