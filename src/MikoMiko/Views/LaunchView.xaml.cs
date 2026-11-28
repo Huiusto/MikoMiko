@@ -85,6 +85,15 @@ public partial class LaunchView : UserControl
     /// <summary>启动页需要在内置浏览器打开的网址（米哈云游等），由 Shell 接管。</summary>
     public event Action<string>? OpenUrlRequested;
 
+    /// <summary>WebView2 是独立子窗口，会被上层页面自带的 WebView2 抢 z 序；覆盖层打开时先隐藏。</summary>
+    public void SetWebHidden(bool hidden)
+    {
+        Web.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /// <summary>预约卡片：参数为游戏键（planet / yinyuan 等）和官网兜底链接。</summary>
+    public event Action<string, string?>? ReservationRequested;
+
     private static readonly Dictionary<string, string> UninstallBiz = new()
     {
         ["genshin"] = "hk4e_cn",
@@ -821,8 +830,16 @@ public partial class LaunchView : UserControl
 
                 case "reserve":
                 {
+                    var game = ReadString(e.WebMessageAsJson, "game");
                     var url = ReadString(e.WebMessageAsJson, "url");
-                    if (!string.IsNullOrEmpty(url)) OpenUrlRequested?.Invoke(url);
+                    if (!string.IsNullOrEmpty(game))
+                    {
+                        ReservationRequested?.Invoke(game, url);
+                    }
+                    else if (!string.IsNullOrEmpty(url))
+                    {
+                        OpenUrlRequested?.Invoke(url);
+                    }
                     break;
                 }
             }

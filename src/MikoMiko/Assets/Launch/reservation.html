@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>游戏预约</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0d1016; color: #fff;
+    font-family: "Microsoft YaHei UI", "Segoe UI", "PingFang SC", sans-serif; }
+  #bg { position: fixed; inset: -40px; background-size: cover; background-position: center;
+    filter: blur(34px) brightness(.42) saturate(1.05); transform: scale(1.08); }
+  #shade { position: fixed; inset: 0;
+    background: radial-gradient(120% 90% at 22% 12%, rgba(27,38,48,.25), rgba(5,8,12,.82) 72%),
+                linear-gradient(180deg, rgba(6,8,12,.2), rgba(5,7,11,.92)); }
+  .stage { position: relative; z-index: 2; width: 100%; height: 100%; padding: 3.2vh 3.2vw 2.4vh;
+    display: flex; flex-direction: column; }
+  .close { position: absolute; top: 2.2vh; right: 2.2vw; width: 38px; height: 38px; border: 0;
+    border-radius: 50%; background: rgba(255,255,255,.08); color: rgba(255,255,255,.78);
+    font-size: 24px; line-height: 38px; cursor: pointer; z-index: 9; transition: .18s; }
+  .close:hover { background: rgba(255,255,255,.18); color: #fff; }
+
+  .main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(260px, .85fr);
+    gap: 3.2vw; align-items: center; }
+  .media-panel { position: relative; width: 100%; height: min(58vh, 620px); background: #05070a;
+    border-radius: 20px; overflow: hidden; box-shadow: 0 22px 64px rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center; }
+  .media-panel video, .media-panel img { width: 100%; height: 100%; object-fit: cover; background: #05070a; }
+  .media-panel img { display: none; }
+  .nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 54px; height: 76px;
+    border: 0; background: transparent; color: rgba(255,255,255,.86); font-size: 34px; cursor: pointer;
+    opacity: .65; transition: .18s; z-index: 4; }
+  .nav-arrow:hover { opacity: 1; background: linear-gradient(90deg, rgba(0,0,0,.28), transparent); }
+  .nav-arrow.right { right: 0; background: linear-gradient(270deg, rgba(0,0,0,.28), transparent); }
+  .nav-arrow.left { left: 0; }
+
+  .video-bar { position: absolute; left: 18px; right: 18px; bottom: 14px; height: 46px; z-index: 5;
+    display: flex; align-items: center; gap: 12px; padding: 0 16px; border-radius: 12px;
+    background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.55)); backdrop-filter: blur(2px); }
+  .video-bar.hidden { display: none; }
+  .icon-btn { width: 30px; height: 30px; border: 0; background: transparent; color: #fff;
+    font-size: 15px; cursor: pointer; }
+  .time { font-size: 12.5px; color: rgba(255,255,255,.8); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .seek { flex: 1; height: 4px; appearance: none; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(90deg, #f2a43a var(--p, 0%), rgba(255,255,255,.35) var(--p, 0%)); }
+  .seek::-webkit-slider-thumb { appearance: none; width: 13px; height: 13px; border-radius: 50%; background: #fff; }
+  .mute { font-size: 16px; }
+
+  .info { min-width: 0; padding-right: 1vw; align-self: center; }
+  .logo { max-width: 100%; max-height: 92px; object-fit: contain; display: block; margin-bottom: 26px; }
+  .logo-title { font-size: 34px; font-weight: 800; letter-spacing: 1px; margin-bottom: 24px; display: none; }
+  .intro { font-size: 16px; line-height: 1.95; color: rgba(255,255,255,.9); white-space: pre-line;
+    text-align: justify; margin-bottom: 24px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 10px; }
+  .tag { padding: 7px 16px; border-radius: 8px; background: rgba(255,255,255,.09);
+    border: 1px solid rgba(255,255,255,.12); color: rgba(255,255,255,.82); font-size: 13.5px; }
+
+  .bottom { height: 112px; display: flex; align-items: center; gap: 14px; padding-top: 8px; }
+  .thumb-strip { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; overflow: hidden; }
+  .strip-arrow { flex: 0 0 42px; width: 42px; height: 60px; border: 0; border-radius: 8px;
+    background: rgba(255,255,255,.04); color: rgba(255,255,255,.7); font-size: 20px; cursor: pointer; }
+  .strip-arrow:hover { background: rgba(255,255,255,.12); color: #fff; }
+  .thumbs { display: flex; gap: 9px; overflow-x: auto; scrollbar-width: none; padding: 3px; }
+  .thumbs::-webkit-scrollbar { display: none; }
+  .thumb { position: relative; flex: 0 0 auto; width: 98px; height: 55px; border-radius: 7px; overflow: hidden;
+    border: 2px solid rgba(255,255,255,.22); cursor: pointer; background: #05070a; padding: 0; transition: .15s; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .82; }
+  .thumb.active { border-color: #f4c13c; box-shadow: 0 0 0 1px rgba(244,193,60,.3); }
+  .thumb.active img { opacity: 1; }
+  .thumb .play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px; text-shadow: 0 2px 8px #000; background: rgba(0,0,0,.18); }
+
+  .reserve { flex: 0 0 auto; display: flex; align-items: center; gap: 0; border: 0; border-radius: 999px;
+    background: #08090b; color: #fff; height: 64px; padding: 0 40px 0 8px; cursor: pointer;
+    font-size: 21px; font-weight: 700; letter-spacing: 2px; box-shadow: 0 8px 28px rgba(0,0,0,.5);
+    transition: .18s; }
+  .reserve:hover { transform: translateY(-2px); background: #14161a; }
+  .bell { width: 48px; height: 48px; margin-right: 18px; border-radius: 50%; background: #fff;
+    display: flex; align-items: center; justify-content: center; }
+  .bell svg { width: 24px; height: 24px; fill: #111; }
+
+  .empty { color: rgba(255,255,255,.55); font-size: 14px; }
+  .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.65); font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="bg"></div><div id="shade"></div>
+<div class="stage">
+  <button class="close" id="close" title="关闭">×</button>
+  <div class="main">
+    <div class="media-panel" id="mediaPanel">
+      <video id="video" muted playsinline loop></video>
+      <img id="image" alt="">
+      <div class="loading" id="loading">正在加载预约内容…</div>
+      <button class="nav-arrow left" id="prev">‹</button>
+      <button class="nav-arrow right" id="next">›</button>
+      <div class="video-bar hidden" id="videoBar">
+        <button class="icon-btn" id="play">❚❚</button>
+        <span class="time" id="time">00:00 / 00:00</span>
+        <input class="seek" id="seek" type="range" min="0" max="100" value="0">
+        <button class="icon-btn mute" id="mute">🔇</button>
+      </div>
+    </div>
+    <div class="info">
+      <img class="logo" id="logo" alt="">
+      <div class="logo-title" id="logoTitle"></div>
+      <div class="intro" id="intro"></div>
+      <div class="tags" id="tags"></div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="thumb-strip">
+      <button class="strip-arrow" id="stripPrev">‹</button>
+      <div class="thumbs" id="thumbs"></div>
+      <button class="strip-arrow" id="stripNext">›</button>
+    </div>
+    <button class="reserve" id="reserve">
+      <span class="bell"><svg viewBox="0 0 24 24"><path d="M12 22a2.2 2.2 0 0 0 2.1-1.6h-4.2A2.2 2.2 0 0 0 12 22Zm6-5.3-1.4-1.5v-4.2a4.7 4.7 0 0 0-3.4-4.5V5.4a1.2 1.2 0 0 0-2.4 0v1.1a4.7 4.7 0 0 0-3.4 4.5v4.2L6 16.7V18h12Z"/></svg></span>
+      预约
+    </button>
+  </div>
+</div>
+<script>
+  const data = __DATA__;
+  const $ = id => document.getElementById(id);
+  const items = Array.isArray(data.medias) ? data.medias : [];
+  const videoEl = $('video'), imageEl = $('image');
+  let current = 0, loaded = false;
+
+  function post(payload) {
+    try { window.chrome.webview.postMessage(payload); } catch (e) { }
+  }
+  $('close').onclick = () => post({ type: 'close' });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') post({ type: 'close' }); });
+  $('reserve').onclick = () => post({ type: 'reserve', url: data.link });
+
+  if (data.logo) { $('logo').src = data.logo; $('logo').style.display = 'block'; }
+  else { $('logoTitle').textContent = data.name; $('logoTitle').style.display = 'block'; }
+  $('intro').textContent = data.introduction || '';
+  (data.tags || []).forEach(t => {
+    const span = document.createElement('span'); span.className = 'tag'; span.textContent = t;
+    $('tags').appendChild(span);
+  });
+
+  function fmt(s) {
+    if (!Number.isFinite(s)) s = 0;
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+
+  function buildThumb(item, index) {
+    const btn = document.createElement('button');
+    btn.className = 'thumb'; btn.title = item.type === 'video' ? '视频' : '图片';
+    const img = document.createElement('img'); img.src = item.cover; img.alt = '';
+    btn.appendChild(img);
+    if (item.type === 'video') {
+      const p = document.createElement('span'); p.className = 'play'; p.textContent = '▶';
+      btn.appendChild(p);
+    }
+    btn.onclick = () => select(index);
+    btn.dataset.index = index;
+    return btn;
+  }
+
+  function renderThumbs() {
+    const box = $('thumbs'); box.innerHTML = '';
+    items.forEach((item, i) => box.appendChild(buildThumb(item, i)));
+  }
+
+  function updateActive() {
+    document.querySelectorAll('.thumb').forEach(el => el.classList.toggle('active', Number(el.dataset.index) === current));
+    const active = document.querySelector('.thumb.active');
+    if (active && typeof active.scrollIntoView === 'function') {
+      active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }
+
+  function select(index) {
+    if (!items.length) {
+      $('loading').style.display = 'none';
+      $('mediaPanel').querySelector('.empty')?.remove();
+      const empty = document.createElement('div'); empty.className = 'empty';
+      empty.textContent = '暂时没有预约素材，点击预约前往官网';
+      $('mediaPanel').appendChild(empty);
+      return;
+    }
+    current = (index + items.length) % items.length;
+    const item = items[current];
+    $('loading').style.display = 'none';
+    $('bg').style.backgroundImage = 'url("' + item.cover.replace(/"/g, '\\"') + '")';
+
+    if (item.type === 'video' && item.resource) {
+      imageEl.style.display = 'none';
+      videoEl.style.display = 'block';
+      $('videoBar').classList.remove('hidden');
+      if (videoEl.dataset.src !== item.resource) {
+        videoEl.dataset.src = item.resource;
+        videoEl.src = item.resource;
+        videoEl.load();
+      }
+      videoEl.play().catch(() => { });
+      $('play').textContent = '❚❚';
+    } else {
+      videoEl.pause();
+      videoEl.style.display = 'none';
+      $('videoBar').classList.add('hidden');
+      imageEl.style.display = 'block';
+      imageEl.src = item.resource || item.cover;
+    }
+    updateActive();
+  }
+
+  $('prev').onclick = () => select(current - 1);
+  $('next').onclick = () => select(current + 1);
+  $('stripPrev').onclick = () => $('thumbs').scrollBy({ left: -320, behavior: 'smooth' });
+  $('stripNext').onclick = () => $('thumbs').scrollBy({ left: 320, behavior: 'smooth' });
+
+  $('play').onclick = () => {
+    if (videoEl.paused) { videoEl.play(); $('play').textContent = '❚❚'; }
+    else { videoEl.pause(); $('play').textContent = '▶'; }
+  };
+  $('seek').oninput = () => {
+    if (Number.isFinite(videoEl.duration)) videoEl.currentTime = videoEl.duration * (Number($('seek').value) / 100);
+  };
+  videoEl.ontimeupdate = () => {
+    const d = videoEl.duration || 0, t = videoEl.currentTime || 0;
+    $('time').textContent = fmt(t) + ' / ' + fmt(d);
+    const p = d > 0 ? (t / d) * 100 : 0;
+    $('seek').value = String(p);
+    $('seek').style.setProperty('--p', p + '%');
+  };
+  videoEl.onplay = () => $('play').textContent = '❚❚';
+  videoEl.onpause = () => $('play').textContent = '▶';
+  $('mute').onclick = () => {
+    videoEl.muted = !videoEl.muted;
+    $('mute').textContent = videoEl.muted ? '🔇' : '🔊';
+  };
+
+  renderThumbs();
+  select(0);
+  if (!data.logo && !data.introduction) $('loading').style.display = 'none';
+</script>
+</body>
+</html>

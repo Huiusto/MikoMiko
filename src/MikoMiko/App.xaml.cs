@@ -262,11 +262,34 @@ public partial class App : Application
                     : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
                     : page == "MineAccount" ? "Mine"
                     : page is "Upload" or "UploadType" or "UploadArticle" ? "Home"
+                    : page is "Reservation" or "Mhyy" ? "Launch"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
-                if ((page is "Gacha" or "GachaUpdate") && args.Length >= 4)
+                if (page == "Reservation")
                 {
-                    var targetGame = args[3];
+                    var key = args.Length >= 4 ? args[3] : "planet";
+                    var openDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                    openDelay.Tick += (_, _) =>
+                    {
+                        openDelay.Stop();
+                        Shell.OpenReservation(key, null);
+                        Log(path, "reservation-open=" + key);
+                    };
+                    openDelay.Start();
+                }
+                if (page == "Mhyy")
+                {
+                    var openDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                    openDelay.Tick += (_, _) =>
+                    {
+                        openDelay.Stop();
+                        Shell.OpenLink("https://mhyy.mihoyo.com/");
+                        Log(path, "mhyy-open");
+                    };
+                    openDelay.Start();
+                }
+                if ((page is "Gacha" or "GachaUpdate") && args.Length >= 4)
+                {                    var targetGame = args[3];
                     var selectDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
                     selectDelay.Tick += (_, _) =>
                     {
@@ -489,7 +512,7 @@ public partial class App : Application
                     FindChild<Views.GachaView>(MainWindow!)?.DebugOpenSettings();
                     MainWindow!.UpdateLayout();
                 }
-                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : page == "UploadArticle" ? 32 : page == "ReaderComments" ? 9 : 2) };
+                var delayed = new DispatcherTimer { Interval = TimeSpan.FromSeconds(page is "Reservation" or "Mhyy" ? 10 : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? 12 : page is "Search" or "MineQr" or "Posts" or "MineGame" or "UserProfile" ? 6 : page is "UserGame" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 12 : page == "Moment" ? 12 : page == "UploadArticle" ? 32 : page == "ReaderComments" ? 9 : 2) };
                 delayed.Tick += (_, _) =>
                 {
                     delayed.Stop();
@@ -543,6 +566,7 @@ public partial class App : Application
                     if (page is not ("VideoPlay" or "VideoOptions" or "VideoComments")) Shell.Video.IsPlaying = false; // 截图时停在封面，避免抓到解码中的黑帧
                     var settle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(
                         page == "GachaUpdate" ? 45000
+                        : page is "Reservation" or "Mhyy" ? 5000
                         : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 7000
                         : page == "Anime4K" ? 22000 : page == "AnimeTap" ? 26000 : 400) };
                     settle.Tick += (_, _) =>
@@ -551,7 +575,7 @@ public partial class App : Application
                         Shell.AnimePage?.ResetScroll();
                         if (page == "ReaderComments") Shell.ReaderView?.ScrollToComments();
                         MainWindow!.UpdateLayout();
-                        if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap")
+                        if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap" or "Reservation" or "Mhyy")
                             CaptureWindowFromScreen(path);
                         else
                             CaptureWindow(path);

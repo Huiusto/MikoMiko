@@ -230,6 +230,11 @@
                             Focusable="False"
                             Visibility="{Binding IsProfileOpen, Converter={StaticResource BoolToVis}}" />
 
+            <!-- ==================== 游戏预约页（官方启动器同款版式，覆盖内容区） ==================== -->
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding ReservationView}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                            Focusable="False" />
+
             <!-- ==================== 软件内网页（正文外链，不跳系统浏览器） ==================== -->
             <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding BrowserView}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"

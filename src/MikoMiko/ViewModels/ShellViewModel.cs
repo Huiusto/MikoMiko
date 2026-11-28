@@ -23,6 +23,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly BilibiliAnimeService _bilibiliAnime = new();
     private readonly AnimeFollowService _animeFollows;
     private readonly AnimeDanmakuService _animeDanmaku;
+    private Views.LaunchView? _launchView;
 
     /// <summary>视频页 ViewModel（截图工具与外部调用用）。</summary>
     public VideoViewModel Video => _video;
@@ -120,6 +121,10 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>软件内网页视图（正文里的外部链接），不打开系统浏览器。</summary>
     [ObservableProperty] private Views.BrowserView? _browserView;
     [ObservableProperty] private bool _isBrowserOpen;
+
+    /// <summary>启动页预约卡片的软件内预约页（官方启动器同款版式）。</summary>
+    [ObservableProperty] private Views.ReservationView? _reservationView;
+    [ObservableProperty] private bool _isReservationOpen;
 
     /// <summary>首页「网页」页签：内置浏览器默认打开米游社，并提供推荐网页入口。</summary>
     [ObservableProperty] private Views.WebHubView? _webHubPage;
@@ -430,6 +435,7 @@ public sealed partial class ShellViewModel : ObservableObject
         // 首页打开帖子后切到视频 / 动态等页面时，自动关闭阅读器与浏览器
         if (IsReaderOpen) CloseReader();
         if (IsBrowserOpen) CloseBrowser();
+        if (IsReservationOpen) CloseReservation();
         if (IsWebHubOpen) CloseWebHub();
         if (IsUploadOpen) CloseUpload();
         CloseProfile();
@@ -460,6 +466,7 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         CurrentView = view;
+        if (key == "Launch") _launchView?.SetWebHidden(IsBrowserOpen || IsReservationOpen);
         if (view is Views.VideoView videoView) VideoPage = videoView;
 
         if (key == "Home")
@@ -488,7 +495,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private Views.LaunchView CreateLaunchView()
     {
         var view = new Views.LaunchView();
+        _launchView = view;
         view.OpenUrlRequested += url => OpenLink(url);
+        view.ReservationRequested += (key, fallbackUrl) => OpenReservation(key, fallbackUrl);
         return view;
     }
 
@@ -677,6 +686,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
         CloseBrowser();
         WebHubPage?.PauseMedia();
+        _launchView?.SetWebHidden(true);
         BrowserView = new Views.BrowserView(url, CloseBrowser);
         IsBrowserOpen = true;
     }
@@ -687,6 +697,33 @@ public sealed partial class ShellViewModel : ObservableObject
         if (BrowserView is null) return;
         BrowserView = null;
         IsBrowserOpen = false;
+        if (!IsReservationOpen && _currentKey == "Launch") _launchView?.SetWebHidden(false);
+    }
+
+    /// <summary>
+    /// 启动页预约卡片：星布谷地 / 因缘精灵使用官方启动器同款预约内容页；
+    /// 其他游戏没有对应接口时直接在内置浏览器打开官网预约页。
+    /// </summary>
+    public void OpenReservation(string? gameKey, string? fallbackUrl)
+    {
+        if (string.IsNullOrWhiteSpace(gameKey) || !GameReservationService.Supports(gameKey))
+        {
+            if (!string.IsNullOrWhiteSpace(fallbackUrl)) OpenLink(fallbackUrl);
+            return;
+        }
+        CloseBrowser();
+        _launchView?.SetWebHidden(true);
+        ReservationView = new Views.ReservationView(gameKey, CloseReservation, url => OpenLink(url));
+        IsReservationOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseReservation()
+    {
+        if (ReservationView is null) return;
+        ReservationView = null;
+        IsReservationOpen = false;
+        if (!IsBrowserOpen && _currentKey == "Launch") _launchView?.SetWebHidden(false);
     }
 
     /// <summary>追番/影视在软件内播放：先提取真实视频流，再交给内置播放器，不展示第三方网页。</summary>

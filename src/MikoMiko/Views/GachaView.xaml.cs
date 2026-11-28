@@ -616,7 +616,6 @@ public partial class GachaView : UserControl
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         Grid.SetRow(body, 0);
         root.Children.Add(body);
@@ -744,21 +743,6 @@ public partial class GachaView : UserControl
         Grid.SetRow(segmented, 3);
         body.Children.Add(segmented);
 
-        // 记录滑块：上下拖动控制下方记录前后移动
-        var slider = new Slider
-        {
-            Minimum = 0,
-            Maximum = 1,
-            Value = 0,
-            Height = 18,
-            Margin = new Thickness(0, 0, 0, 6),
-            IsMoveToPointEnabled = true,
-            IsEnabled = false,
-            ToolTip = "拖动滑块，或按住鼠标左键拖动记录列表前后查看",
-        };
-        Grid.SetRow(slider, 4);
-        body.Children.Add(slider);
-
         // 记录列表
         var scroll = new ScrollViewer
         {
@@ -787,22 +771,7 @@ public partial class GachaView : UserControl
         }
         scroll.Content = list;
 
-        // 滑块和滚动区域双向同步；记录区支持按住鼠标左键上下拖动。
-        var syncing = false;
-        slider.ValueChanged += (_, args) =>
-        {
-            if (!syncing) scroll.ScrollToVerticalOffset(args.NewValue);
-        };
-        scroll.ScrollChanged += (_, _) =>
-        {
-            var max = Math.Max(0, scroll.ScrollableHeight);
-            syncing = true;
-            slider.Maximum = Math.Max(1, max);
-            slider.IsEnabled = max > 0.5;
-            slider.Value = Math.Min(scroll.VerticalOffset, slider.Maximum);
-            syncing = false;
-        };
-
+        // 记录区支持按住鼠标左键上下拖动。
         var dragging = false;
         var dragStart = new Point();
         var dragOffset = 0d;
@@ -829,7 +798,7 @@ public partial class GachaView : UserControl
         };
         scroll.LostMouseCapture += (_, _) => dragging = false;
 
-        Grid.SetRow(scroll, 5);
+        Grid.SetRow(scroll, 4);
         body.Children.Add(scroll);
 
         return card;
