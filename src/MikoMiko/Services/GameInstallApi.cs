@@ -281,7 +281,7 @@ public static class GameInstallApi
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
-            req.Headers.TryAddWithoutValidation("User-Agent", "MikoMiko/0.1.62");
+            req.Headers.TryAddWithoutValidation("User-Agent", "MikoMiko/0.1.63");
             using var resp = await Http.SendAsync(req).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return null;
             return JsonDocument.Parse(await resp.Content.ReadAsStringAsync().ConfigureAwait(false));
@@ -292,4 +292,5 @@ public static class GameInstallApi
         }
     }
 }
+
 

@@ -429,7 +429,7 @@ public static class GachaFetchService
     /// （如 size=5、init_log_gacha_type），必须清掉分页/卡池旧参数再追加，否则会被
     /// 官方接口按缓存里的旧 size 截断，永远只能拿到前几条。
     /// </summary>
-    private static string BuildPoolUrl(string apiUrl, string gachaType, int page, string endId)
+    private static string BuildPoolUrl(string apiUrl, string gameKey, string gachaType, int page, string endId)
     {
         var hash = apiUrl.IndexOf('#');
         if (hash >= 0) apiUrl = apiUrl[..hash];
@@ -440,7 +440,8 @@ public static class GachaFetchService
             : apiUrl[(q + 1)..].Split('&', StringSplitOptions.RemoveEmptyEntries)
                 .Where(p => !IsPagingParam(p))
                 .ToList();
-        parts.Add("gacha_type=" + gachaType);
+        // 绝区零接口只认 real_gacha_type，传 gacha_type 会返回 retcode=0 但 list 为空。
+        parts.Add((gameKey == "zzz" ? "real_gacha_type=" : "gacha_type=") + gachaType);
         parts.Add("page=" + page);
         parts.Add("size=20");
         if (endId.Length > 0) parts.Add("end_id=" + Uri.EscapeDataString(endId));
@@ -451,6 +452,7 @@ public static class GachaFetchService
     {
         var key = pair.Split('=', 2)[0];
         return key.Equals("gacha_type", StringComparison.OrdinalIgnoreCase)
+               || key.Equals("real_gacha_type", StringComparison.OrdinalIgnoreCase)
                || key.Equals("page", StringComparison.OrdinalIgnoreCase)
                || key.Equals("size", StringComparison.OrdinalIgnoreCase)
                || key.Equals("end_id", StringComparison.OrdinalIgnoreCase);
@@ -467,21 +469,17 @@ public static class GachaFetchService
         var page = 1;
         var endId = "";
         var seen = new HashSet<string>();
-        for (var guard = 0; guard < 600; guard++)
+        var stall = 0;
+        for (var guard = 0; guard < 1000; guard++)
         {
             ct.ThrowIfCancellationRequested();
-            var url = BuildPoolUrl(endpoint, gachaType, page, endId);
+            var url = BuildPoolUrl(endpoint, gameKey, gachaType, page, endId);
 
             var api = await MiHoYoHttp.GetPlainAsync(url, null, BbsUa);
-            if (api.Retcode == -110)
+            for (var retry = 0; api.Retcode == -110 && retry < 4; retry++)
             {
-                await Task.Delay(1200, ct);
+                await Task.Delay(1200 * (retry + 1), ct);
                 api = await MiHoYoHttp.GetPlainAsync(url, null, BbsUa);
-                if (api.Retcode == -110)
-                {
-                    await Task.Delay(2400, ct);
-                    api = await MiHoYoHttp.GetPlainAsync(url, null, BbsUa);
-                }
             }
             if (api.Retcode != 0 || api.Data is null)
                 return (records, $"{api.Message}（{api.Retcode}）");
@@ -491,13 +489,15 @@ public static class GachaFetchService
                 return (records, "接口没有返回记录列表");
 
             var count = 0;
-            var lastId = endId;
+            var added = 0;
+            var pageLastId = "";
             foreach (var item in list.EnumerateArray())
             {
                 count++;
                 var id = item.GetProp("id");
+                if (id.Length > 0) pageLastId = id;
                 if (!seen.Add(id)) continue;
-                lastId = id;
+                added++;
                 var rank = item.GetProp("rank_type");
                 if (gameKey == "zzz" && int.TryParse(rank, out var zzzRank) && zzzRank is >= 2 and <= 4)
                     rank = (zzzRank + 1).ToString();
@@ -519,9 +519,16 @@ public static class GachaFetchService
                     PoolName = PoolName(gameKey, gachaType),
                 });
             }
-            if (count < 20) break;
-            if (lastId == endId) break;
-            endId = lastId;
+            // 绝区零接口固定每页只给 5 条（size 参数会被忽略），不能再用“本页少于 20 条”
+            // 判断结束，否则 327 条记录只会拉到前 5 条。以列表为空或连续几页没有新记录为结束条件。
+            if (count == 0) break;
+            if (added == 0)
+            {
+                if (++stall >= 3) break;
+            }
+            else stall = 0;
+            if (pageLastId.Length == 0) break;
+            endId = pageLastId;
             page++;
         }
         return (records, "");
