@@ -95,8 +95,8 @@ public partial class GachaView : UserControl
         ["zzz"] = new[]
         {
             new PoolDef { Name = "常驻频段", Types = new[] { "1" }, PoolNames = new[] { "常驻" } },
-            new PoolDef { Name = "独家频段", Types = new[] { "2" }, PoolNames = new[] { "独家", "角色" } },
-            new PoolDef { Name = "音擎频段", Types = new[] { "3" }, PoolNames = new[] { "音擎", "武器" } },
+            new PoolDef { Name = "独家频段", Types = new[] { "2", "102" }, PoolNames = new[] { "独家", "角色" } },
+            new PoolDef { Name = "音擎频段", Types = new[] { "3", "103" }, PoolNames = new[] { "音擎", "武器" } },
             new PoolDef { Name = "邦布频段", Types = new[] { "5" }, PoolNames = new[] { "邦布" } },
         },
         ["bh3"] = new[]
