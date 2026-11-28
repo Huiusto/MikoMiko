@@ -616,6 +616,7 @@ public partial class GachaView : UserControl
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         Grid.SetRow(body, 0);
         root.Children.Add(body);
@@ -743,11 +744,27 @@ public partial class GachaView : UserControl
         Grid.SetRow(segmented, 3);
         body.Children.Add(segmented);
 
+        // 记录滑块：上下拖动控制下方记录前后移动
+        var slider = new Slider
+        {
+            Minimum = 0,
+            Maximum = 1,
+            Value = 0,
+            Height = 18,
+            Margin = new Thickness(0, 0, 0, 6),
+            IsMoveToPointEnabled = true,
+            IsEnabled = false,
+            ToolTip = "拖动滑块，或按住鼠标左键拖动记录列表前后查看",
+        };
+        Grid.SetRow(slider, 4);
+        body.Children.Add(slider);
+
         // 记录列表
         var scroll = new ScrollViewer
         {
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Cursor = Cursors.SizeAll,
         };
         var list = new StackPanel { Margin = new Thickness(0, 0, 2, 0) };
         var rows = topSelected ? stat.TopRows : stat.SecondRows;
@@ -769,7 +786,50 @@ public partial class GachaView : UserControl
                 list.Children.Add(BuildRecordRow(row, topSelected, limited, stat.PityTarget, stat.PityNote));
         }
         scroll.Content = list;
-        Grid.SetRow(scroll, 4);
+
+        // 滑块和滚动区域双向同步；记录区支持按住鼠标左键上下拖动。
+        var syncing = false;
+        slider.ValueChanged += (_, args) =>
+        {
+            if (!syncing) scroll.ScrollToVerticalOffset(args.NewValue);
+        };
+        scroll.ScrollChanged += (_, _) =>
+        {
+            var max = Math.Max(0, scroll.ScrollableHeight);
+            syncing = true;
+            slider.Maximum = Math.Max(1, max);
+            slider.IsEnabled = max > 0.5;
+            slider.Value = Math.Min(scroll.VerticalOffset, slider.Maximum);
+            syncing = false;
+        };
+
+        var dragging = false;
+        var dragStart = new Point();
+        var dragOffset = 0d;
+        scroll.PreviewMouseLeftButtonDown += (_, args) =>
+        {
+            if (IsInsideScrollBar(args.OriginalSource)) return;
+            dragging = true;
+            dragStart = args.GetPosition(scroll);
+            dragOffset = scroll.VerticalOffset;
+            scroll.CaptureMouse();
+        };
+        scroll.PreviewMouseMove += (_, args) =>
+        {
+            if (!dragging || args.LeftButton != MouseButtonState.Pressed) return;
+            var delta = args.GetPosition(scroll).Y - dragStart.Y;
+            scroll.ScrollToVerticalOffset(dragOffset - delta);
+            args.Handled = true;
+        };
+        scroll.PreviewMouseLeftButtonUp += (_, _) =>
+        {
+            if (!dragging) return;
+            dragging = false;
+            scroll.ReleaseMouseCapture();
+        };
+        scroll.LostMouseCapture += (_, _) => dragging = false;
+
+        Grid.SetRow(scroll, 5);
         body.Children.Add(scroll);
 
         return card;
@@ -864,7 +924,7 @@ public partial class GachaView : UserControl
 
         var value = new TextBlock
         {
-            Text = $"{row.Pity}/{currentTarget}",
+            Text = row.Pity.ToString(),
             FontSize = 11.5,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(pityColor),
@@ -880,6 +940,17 @@ public partial class GachaView : UserControl
         wrap.Children.Add(rowBorder);
         wrap.Children.Add(BuildPityBar(row.Pity, currentTarget, pityColor));
         return new Border { Child = wrap, Background = Brushes.Transparent };
+    }
+
+    private static bool IsInsideScrollBar(object? source)
+    {
+        while (source is DependencyObject node)
+        {
+            if (node is System.Windows.Controls.Primitives.ScrollBar) return true;
+            try { source = VisualTreeHelper.GetParent(node); }
+            catch { return false; }
+        }
+        return false;
     }
 
     private static bool IsLimitedPool(string game, string poolName) => game switch
@@ -1040,6 +1111,23 @@ public partial class GachaView : UserControl
         Render();
     }
 
+    public void DebugSelectGame(string key)
+    {
+        var choice = Games.FirstOrDefault(g => g.Key == key);
+        if (choice is null) return;
+        ComboGame.SelectedItem = choice;
+        if (_game != key)
+        {
+            _beyond = false;
+            _game = key;
+            _uid = "";
+            UpdateGameIcon(choice);
+            UpdateBeyondBadge();
+            RefreshUids();
+            Render();
+        }
+    }
+
     private void ComboGame_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressGame || ComboGame.SelectedItem is not GameChoice choice) return;
@@ -1094,6 +1182,20 @@ public partial class GachaView : UserControl
         if (_updating) return;
         var gameKey = CurrentBaseGame;
         var gameLabel = Games.FirstOrDefault(g => g.Key == gameKey)?.Name ?? gameKey;
+
+        // 更新前先确认对应游戏正在运行，并且最近确实打开过抽卡记录页。
+        // 只凭历史缓存会读到几小时前甚至上次启动的 authkey，游戏内的记录页其实并没有打开。
+        var cacheEntry = GachaFetchService.FindCachedEntry(gameKey);
+        var pageOpen = cacheEntry is not null
+                       && GachaFetchService.IsGameRunning(gameKey)
+                       && DateTime.UtcNow - cacheEntry.WriteTimeUtc <= TimeSpan.FromMinutes(15);
+        if (!pageOpen)
+        {
+            TxtStatus.Text = $"未检测到 {gameLabel} 抽卡记录页";
+            ShowToast("请在游戏内打开抽卡记录");
+            return;
+        }
+
         var uid = _uid;
         var account = HoyoAccountService.Active;
         var roleList = new List<SignRole>();
@@ -1319,7 +1421,7 @@ public partial class GachaView : UserControl
         TxtToastText.Text = text;
         TxtToast.Visibility = Visibility.Visible;
         _toastTimer?.Stop();
-        _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.6) };
+        _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _toastTimer.Tick += (_, _) =>
         {
             TxtToast.Visibility = Visibility.Collapsed;

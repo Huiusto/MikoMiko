@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -100,22 +101,50 @@ public static class GachaFetchService
         };
     }
 
-    /// <summary>从游戏缓存中找出最近一次打开的抽卡记录页 URL（含 authkey）。</summary>
-    public static string? FindCachedUrl(string gameKey)
+    public sealed record CacheHit(string Url, DateTime WriteTimeUtc);
+
+    /// <summary>从游戏缓存中找出最近一次打开的抽卡记录页 URL，并返回缓存写入时间。</summary>
+    public static CacheHit? FindCachedEntry(string gameKey)
     {
         if (!Games.TryGetValue(gameKey, out var game)) return null;
         var files = EnumerateGameCacheFiles(game);
-        string? pageUrl = null;
+        CacheHit? pageHit = null;
         foreach (var file in files.OrderByDescending(File.GetLastWriteTimeUtc))
         {
             var url = ReadUrlFromCache(file, game.CachePrefix, game.CacheAltPrefix);
             if (string.IsNullOrWhiteSpace(url)) continue;
+            var time = File.GetLastWriteTimeUtc(file);
             // 绝区零等新版页面会把完整 getGachaLog 请求缓存下来；这种 URL 自带正确域名和参数，
             // 比把抽卡页前缀硬换成 API 域名可靠，优先直接使用。
-            if (IsDirectApiUrl(url)) return url;
-            pageUrl ??= url;
+            if (IsDirectApiUrl(url)) return new CacheHit(url, time);
+            pageHit ??= new CacheHit(url, time);
         }
-        return pageUrl;
+        return pageHit;
+    }
+
+    /// <summary>从游戏缓存中找出最近一次打开的抽卡记录页 URL（含 authkey）。</summary>
+    public static string? FindCachedUrl(string gameKey) => FindCachedEntry(gameKey)?.Url;
+
+    /// <summary>当前游戏的客户端进程是否正在运行。</summary>
+    public static bool IsGameRunning(string gameKey)
+    {
+        var names = gameKey switch
+        {
+            "genshin" => new[] { "YuanShen", "GenshinImpact" },
+            "starrail" => new[] { "StarRail" },
+            "zzz" => new[] { "ZenlessZoneZero" },
+            "bh3" => new[] { "BH3" },
+            _ => Array.Empty<string>(),
+        };
+        foreach (var name in names)
+        {
+            try
+            {
+                if (Process.GetProcessesByName(name).Length > 0) return true;
+            }
+            catch { }
+        }
+        return false;
     }
 
     /// <summary>

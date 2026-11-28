@@ -264,6 +264,18 @@ public partial class App : Application
                     : page is "Upload" or "UploadType" or "UploadArticle" ? "Home"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
+                if ((page is "Gacha" or "GachaUpdate") && args.Length >= 4)
+                {
+                    var targetGame = args[3];
+                    var selectDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
+                    selectDelay.Tick += (_, _) =>
+                    {
+                        selectDelay.Stop();
+                        FindChild<Views.GachaView>(MainWindow!)?.DebugSelectGame(targetGame);
+                        Log(path, "gacha-select=" + targetGame);
+                    };
+                    selectDelay.Start();
+                }
                 if (page == "GachaUpdate")
                 {
                     var updateDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
