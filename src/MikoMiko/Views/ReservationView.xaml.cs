@@ -134,6 +134,7 @@ public partial class ReservationView : UserControl
             tags = content.Tags,
             medias = content.Medias.Select(m => new { type = m.Type.Contains("VIDEO", StringComparison.OrdinalIgnoreCase) ? "video" : "image", cover = m.Cover, resource = m.Resource }),
             link = content.OfficialUrl,
+            actionLabel = content.ActionLabel,
         };
         var json = JsonSerializer.Serialize(data);
         return template.Replace("__DATA__", json);

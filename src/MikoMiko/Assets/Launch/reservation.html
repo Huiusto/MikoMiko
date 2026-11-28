@@ -132,13 +132,15 @@
   .media-panel:hover .nav-arrow,
   .media-panel:hover #videoBar { opacity: 1; pointer-events: auto; }
 
-  /* 源初之结：白色透明 logo 与 slogan 放在深色小底板上保证可见 */
+  /* 源初之结：白色透明 logo 放在深色小底板上保证可见；不再显示 slogan 图 */
   body.nodusfall .logo { max-height: 150px; max-width: 190px; background: #15181D;
     padding: 12px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.12);
-    box-shadow: 0 12px 32px rgba(24,30,38,.28); margin-bottom: 16px; }
-  body.nodusfall .slogan { display: block; max-width: 100%; max-height: 60px; object-fit: contain;
-    background: #15181D; padding: 10px 14px; border-radius: 12px;
-    margin: 0 0 24px; box-shadow: 0 10px 26px rgba(24,30,38,.2); }
+    box-shadow: 0 12px 32px rgba(24,30,38,.28); margin-bottom: 26px; }
+  /* Varsapura：logo 自带黑色底板，直接作为深色标识显示 */
+  body.varsapura .logo { max-height: 150px; max-width: 260px; padding: 0; border-radius: 12px;
+    border: 1px solid rgba(24,30,38,.16); box-shadow: 0 12px 32px rgba(24,30,38,.22);
+    margin-bottom: 22px; }
+  .bell.external .ext-arrow { color: #4EA4DD; font-size: 23px; font-weight: 800; line-height: 1; }
 </style>
 </head>
 <body>
@@ -174,8 +176,8 @@
       <button class="strip-arrow" id="stripNext">›</button>
     </div>
     <button class="reserve" id="reserve">
-      <span class="bell"><svg viewBox="0 0 24 24"><path d="M12 22a2.2 2.2 0 0 0 2.1-1.6h-4.2A2.2 2.2 0 0 0 12 22Zm6-5.3-1.4-1.5v-4.2a4.7 4.7 0 0 0-3.4-4.5V5.4a1.2 1.2 0 0 0-2.4 0v1.1a4.7 4.7 0 0 0-3.4 4.5v4.2L6 16.7V18h12Z"/></svg></span>
-      预约
+      <span class="bell" id="reserveIcon"><svg viewBox="0 0 24 24"><path d="M12 22a2.2 2.2 0 0 0 2.1-1.6h-4.2A2.2 2.2 0 0 0 12 22Zm6-5.3-1.4-1.5v-4.2a4.7 4.7 0 0 0-3.4-4.5V5.4a1.2 1.2 0 0 0-2.4 0v1.1a4.7 4.7 0 0 0-3.4 4.5v4.2L6 16.7V18h12Z"/></svg></span>
+      <span id="reserveLabel">预约</span>
     </button>
   </div>
 </div>
@@ -197,6 +199,11 @@
   if (data.logo) { $('logo').src = data.logo; $('logo').style.display = 'block'; }
   else { $('logoTitle').textContent = data.name; $('logoTitle').style.display = 'block'; }
   if (data.slogan) { $('slogan').src = data.slogan; }
+  if (data.actionLabel) { $('reserveLabel').textContent = data.actionLabel; }
+  if (data.actionLabel && data.actionLabel !== '预约') {
+    $('reserveIcon').innerHTML = '<span class="ext-arrow">↗</span>';
+    $('reserveIcon').classList.add('external');
+  }
   $('intro').textContent = data.introduction || '';
   (data.tags || []).forEach(t => {
     const span = document.createElement('span'); span.className = 'tag'; span.textContent = t;

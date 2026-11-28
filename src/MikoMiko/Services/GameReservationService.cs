@@ -28,13 +28,15 @@ public static class GameReservationService
         IReadOnlyList<string> Tags,
         IReadOnlyList<Media> Medias,
         string OfficialUrl,
-        string Slogan = "");
+        string Slogan = "",
+        string ActionLabel = "预约");
 
     private static readonly Dictionary<string, (string GameId, string Name, string OfficialUrl)> Games = new()
     {
         ["planet"] = ("ERYDdvf0w8", "星布谷地", "https://planet.mihoyo.com"),
         ["yinyuan"] = ("m8TGERqknS", "崩坏：因缘精灵", "https://yyjl.mihoyo.com"),
         ["nodusfall"] = ("", "源初之结", "https://nodusfall.mihoyo.com/home"),
+        ["varsapura"] = ("", "Varsapura", "https://varsapura.city/"),
     };
 
     public static bool Supports(string key) => Games.ContainsKey(key);
@@ -56,15 +58,17 @@ public static class GameReservationService
             ? found
             : ("", key, "");
 
-        // 0.1.69：源初之结官方启动器接口尚未开放，使用随包素材构建同款预约页。
+        // 0.1.70：源初之结与 Varsapura 官方启动器接口尚未开放，使用随包素材构建同款页面。
         if (key == "nodusfall")
             return LoadNodusfall(info.Name, info.OfficialUrl);
+        if (key == "varsapura")
+            return LoadVarsapura(info.Name, info.OfficialUrl);
 
         try
         {
             var url = $"{ApiRoot}/getGameReservationContent?launcher_id={LauncherId}&language=zh-cn&game_id={info.GameId}";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.UserAgent.ParseAdd("MikoMiko/0.1.69 HoYoPlay/1.0");
+            request.Headers.UserAgent.ParseAdd("MikoMiko/0.1.70 HoYoPlay/1.0");
             using var response = await Http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -140,8 +144,29 @@ public static class GameReservationService
             "《源初之结》是由米哈游研发的奇幻写实题材动作游戏。玩家将以「织者」的身份踏入神权陨落、秩序崩塌的世界，结识强大的伙伴，共同迎战撼天动地的强敌，不断夺取存于世间的神格之力，并最终重建世界秩序。",
             new[] { "奇幻写实", "动作", "开放世界", "米哈游" },
             medias,
+            officialUrl);
+    }
+
+    private static Content LoadVarsapura(string name, string officialUrl)
+    {
+        const string baseUrl = "https://miko.local/reservation-varsapura/";
+        var medias = Enumerable.Range(1, 9)
+            .Select(i =>
+            {
+                var url = $"{baseUrl}{i:00}.jpg";
+                return new Media("IMAGE", url, url);
+            })
+            .ToList();
+        return new Content(
+            "varsapura",
+            name,
+            baseUrl + "logo.png",
+            "《Varsapura》是米哈游 HoYoverse 用虚幻引擎 5 打造的一款新怪谈风格都市开放世界动作 RPG，玩家扮演「空心人」加入「阴影控制局」，在雨城现实中对抗超自然沼泽化灾厄，预计 2027 年后发售，可能登陆 PC、主机和移动端多平台。",
+            new[] { "新怪谈", "都市开放世界", "动作 RPG", "虚幻引擎 5" },
+            medias,
             officialUrl,
-            baseUrl + "slogan.png");
+            "",
+            "第三方介绍");
     }
 
     private static Content Fallback(string key, string name, string officialUrl)
