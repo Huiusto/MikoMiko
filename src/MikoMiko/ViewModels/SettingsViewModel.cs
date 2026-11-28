@@ -135,16 +135,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         "zh-TW" =>
             "0.1.71 · 追番/影視移除所有外部瀏覽器與網頁跳轉，只在本軟體內解析播放，失敗僅提示。" +
-            "啟動頁左下角新增目前遊戲的資訊卡片，滑鼠懸浮可切換上一張與下一張。" +
-            "更新日誌改為簡版，每版兩三句、帶顏文字，版本間用橫線隔開。 (๑•̀ㅂ•́)و✧",
+            "啟動頁左下角新增與官方啟動器同步的「相關內容」，資訊卡可懸浮切換、遊戲設定可隱藏。" +
+            "更新日誌改為簡版，每版兩三句、帶顏文字，版本間用橫線隔開。",
         "en-US" =>
             "0.1.71 · Anime/Films no longer opens any external browser or web page; everything resolves and plays inside the app, with an in-app notice on failure. " +
-            "Launch adds a game news carousel at the lower-left, with previous and next buttons on hover. " +
-            "Settings now shows a concise changelog, two or three lines per version with kaomoji and dividers. (๑•̀ㅂ•́)و✧",
+            "Launch adds official-synced Related Content at the lower-left with hover switching and a visibility toggle in game settings. " +
+            "Settings now shows a concise changelog, two or three lines per version with kaomoji and dividers.",
         _ =>
             "0.1.71 · 追番/影视去掉所有外部浏览器和网页跳转，只在本软件内解析播放，失败只提示。" +
-            "启动页左下角新增当前游戏的资讯卡片，鼠标悬浮可切换上一张和下一张。" +
-            "更新日志改为简版，每版两三句、带颜文字，版本间用横线隔开。 (๑•̀ㅂ•́)و✧",
+            "启动页左下角新增与官方启动器同步的「相关内容」，可悬浮切换，游戏设置里能单独隐藏。" +
+            "更新日志改为简版，每版两三句、带颜文字，版本间用横线隔开。",
     };
 
     private static readonly string[] ChangelogKaomoji =

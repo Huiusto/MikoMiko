@@ -91,7 +91,7 @@
 
   /* 左侧壁纸控制条：鼠标靠近左边缘时浮现 */
   .side {
-    position: fixed; left: 22px; top: 50%; transform: translateY(-50%) translateX(-6px);
+    position: fixed; left: 22px; top: 43%; transform: translateY(-50%) translateX(-6px);
     width: 46px; height: 238px; padding: 10px 6px;
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     border-radius: 23px;
@@ -132,17 +132,28 @@
 
   .bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
 
-  /* 左下角游戏资讯：与启动器同款悬浮轮播 */
-  .game-feed { width: 588px; max-width: 62vw; margin-bottom: 16px; }
-  .feed-head { display: flex; align-items: center; justify-content: space-between;
-               margin-bottom: 7px; padding: 0 2px; }
+  /* 左下角官方「相关内容」：活动 / 公告 / 资讯，数据来自 HoYoPlay */
+  .game-feed { width: 520px; max-width: 58vw; margin-bottom: 16px; }
+  .feed-head { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;
+               height: 22px; margin-bottom: 8px; padding: 0 2px; }
   .feed-head .name { font-size: 12.5px; font-weight: 600; letter-spacing: .4px;
-                     color: rgba(255,255,255,.94); text-shadow: 0 1px 4px rgba(0,0,0,.65); }
+                     color: rgba(255,255,255,.94); text-shadow: 0 1px 4px rgba(0,0,0,.65);
+                     white-space: nowrap; flex: 0 1 auto; min-width: 0;
+                     overflow: hidden; text-overflow: ellipsis; }
   .feed-head .name::before { content: ""; display: inline-block; width: 3px; height: 12px;
                              border-radius: 2px; margin-right: 8px; vertical-align: -2px;
                              background: var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
-  .feed-head .count { font-size: 10.5px; color: rgba(255,255,255,.55); letter-spacing: 1px; }
-  .feed-card { position: relative; display: flex; height: 146px; border-radius: 14px; overflow: hidden;
+  .feed-tabs { display: flex; align-items: center; gap: 3px; flex: 0 0 auto;
+               margin-left: auto; padding: 2px 4px; border-radius: 9px;
+               background: rgba(8,11,17,.68); box-shadow: 0 2px 10px rgba(0,0,0,.30); }
+  .feed-tab { padding: 3px 9px; border-radius: 7px; cursor: pointer; font-size: 11px;
+              color: rgba(255,255,255,.82); border: 1px solid transparent;
+              background: transparent; transition: color .15s ease, background .15s ease;
+              text-shadow: 0 1px 4px rgba(0,0,0,.6); white-space: nowrap; }
+  .feed-tab:hover { color: #fff; background: rgba(255,255,255,.10); }
+  .feed-tab.on { color: #fff; background: rgba(255,255,255,.16);
+                 border-color: rgba(255,255,255,.20); }
+  .feed-card { position: relative; display: flex; height: 112px; border-radius: 13px; overflow: hidden;
                cursor: pointer; background: rgba(10,13,19,.70);
                border: 1px solid rgba(255,255,255,.18);
                box-shadow: 0 12px 30px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.08);
@@ -150,29 +161,44 @@
                transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
   .feed-card:hover { transform: translateY(-2px); border-color: var(--accent-line);
                      box-shadow: 0 16px 36px rgba(0,0,0,.38), 0 0 0 1px var(--accent-soft) inset; }
-  .feed-cover { position: relative; width: 196px; flex: 0 0 196px; overflow: hidden; background: #171b24; }
-  .feed-cover img { width: 100%; height: 100%; object-fit: cover; display: block;
-                    transition: transform .35s ease, opacity .25s ease; }
-  .feed-card:hover .feed-cover img { transform: scale(1.045); }
+  .feed-cover { position: relative; width: 199px; flex: 0 0 199px; overflow: hidden; background: #171b24; }
+  .feed-cover img { display: block; }
+  .feed-cover img.bg { position: absolute; inset: -16px; width: calc(100% + 32px); height: calc(100% + 32px);
+                       object-fit: cover; filter: blur(14px) brightness(.48) saturate(1.2); transform: scale(1.06); }
+  .feed-cover #feedImg { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain;
+                         transition: transform .35s ease, opacity .25s ease; }
+  .feed-cover .fallback { position: absolute; inset: 0; display: none; flex-direction: column;
+                          align-items: center; justify-content: center; gap: 7px;
+                          color: rgba(255,255,255,.82); background:
+                          radial-gradient(circle at 30% 20%, rgba(78,164,221,.30), transparent 55%),
+                          linear-gradient(145deg, #1b2330, #10141b); }
+  .feed-cover .fallback img { width: 42px; height: 42px; object-fit: contain; opacity: .88;
+                              filter: drop-shadow(0 4px 12px rgba(0,0,0,.4)); }
+  .feed-cover .fallback span { font-size: 12.5px; font-weight: 600; letter-spacing: 3px; }
+  .feed-cover.noimg .fallback { display: flex; }
+  .feed-cover.noimg img { visibility: hidden; }
+  .feed-card:hover .feed-cover #feedImg { transform: scale(1.03); }
   .feed-cover::after { content: ""; position: absolute; inset: 0;
                        background: linear-gradient(90deg, rgba(10,13,19,0) 55%, rgba(10,13,19,.72) 100%); }
-  .feed-body { flex: 1; min-width: 0; padding: 17px 20px 15px 18px; display: flex; flex-direction: column; }
-  .feed-kicker { display: inline-flex; align-self: flex-start; padding: 3px 8px; border-radius: 6px;
-                 font-size: 10px; letter-spacing: .8px; color: var(--accent);
+  .feed-body { flex: 1; min-width: 0; padding: 11px 14px 10px 14px; display: flex; flex-direction: column; position: relative; }
+  .feed-kicker { display: inline-flex; align-self: flex-start; padding: 1px 7px; border-radius: 5px;
+                 font-size: 9.5px; letter-spacing: .6px; color: var(--accent);
                  background: rgba(78,164,221,.12); border: 1px solid rgba(78,164,221,.26); }
-  .feed-title { margin-top: 10px; font-size: 17px; font-weight: 600; line-height: 1.28;
+  .feed-title { margin-top: 7px; font-size: 13.5px; font-weight: 600; line-height: 1.32;
                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
                 text-shadow: 0 2px 10px rgba(0,0,0,.4); }
-  .feed-sub { margin-top: 7px; font-size: 11.5px; line-height: 1.55; color: rgba(255,255,255,.62);
-              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .feed-more { margin-top: auto; font-size: 10.5px; color: rgba(255,255,255,.50); letter-spacing: .4px; }
-  .feed-nav { position: absolute; left: 158px; bottom: 12px; display: flex; gap: 6px;
-              opacity: 0; transform: translateX(-4px); pointer-events: none;
-              transition: opacity .18s ease, transform .18s ease; }
-  .game-feed:hover .feed-nav { opacity: 1; transform: translateX(0); pointer-events: auto; }
-  .feed-nav button { width: 28px; height: 28px; border-radius: 8px; cursor: pointer; color: #fff;
-                     border: 1px solid rgba(255,255,255,.26); background: rgba(12,15,22,.78);
-                     display: grid; place-items: center; font-size: 15px; line-height: 1;
+  .feed-sub { margin-top: 4px; padding-right: 82px; font-size: 10.5px; line-height: 1.45; color: rgba(255,255,255,.62);
+              white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed-more { position: absolute; right: 13px; bottom: 9px; margin: 0;
+               font-size: 9.5px; color: rgba(255,255,255,.50); letter-spacing: .3px; }
+  .feed-nav { position: absolute; inset: 0; z-index: 3; padding: 0 7px;
+              display: flex; align-items: center; justify-content: space-between;
+              opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+  .game-feed:hover .feed-nav { opacity: 1; }
+  .feed-nav button { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; color: #fff;
+                     border: 1px solid rgba(255,255,255,.30); background: rgba(8,11,18,.82);
+                     display: grid; place-items: center; font-size: 13px; line-height: 1;
+                     pointer-events: auto; box-shadow: 0 3px 10px rgba(0,0,0,.35);
                      backdrop-filter: blur(8px); transition: background .16s ease, border-color .16s ease; }
   .feed-nav button:hover { background: var(--accent); border-color: var(--accent); }
   .feed-nav button:active { transform: scale(.94); }
@@ -385,16 +411,27 @@
 
   <div class="game-feed" id="gameFeed">
     <div class="feed-head">
-      <span class="name" id="feedGame">原神 · 近期内容</span>
-      <span class="count" id="feedCount">1 / 3</span>
+      <span class="name" id="feedGame">原神 · 相关内容</span>
+      <div class="feed-tabs" id="feedTabs">
+        <span class="feed-tab on" data-kind="activity">活动</span>
+        <span class="feed-tab" data-kind="announce">公告</span>
+        <span class="feed-tab" data-kind="info">资讯</span>
+      </div>
     </div>
     <div class="feed-card" id="feedCard">
-      <div class="feed-cover"><img id="feedImg" alt=""></div>
+      <div class="feed-cover" id="feedCover">
+        <img id="feedBg" class="bg" alt="">
+        <img id="feedImg" alt="">
+        <div class="fallback" id="feedCoverFallback">
+          <img id="feedCoverIcon" alt="">
+          <span id="feedCoverLabel">活动</span>
+        </div>
+      </div>
       <div class="feed-body">
-        <span class="feed-kicker" id="feedKicker">版本资讯</span>
-        <div class="feed-title" id="feedTitle">提瓦特资讯</div>
-        <div class="feed-sub" id="feedSub">活动玩法、版本内容与官方公告</div>
-        <span class="feed-more">查看详情 · 软件内打开 ↗</span>
+        <span class="feed-kicker" id="feedKicker">活动</span>
+        <div class="feed-title" id="feedTitle">官方相关内容</div>
+        <div class="feed-sub" id="feedSub">与官方启动器同步的活动、公告与资讯</div>
+        <span class="feed-more" id="feedMore">查看详情 · 软件内打开 ↗</span>
       </div>
       <div class="feed-nav">
         <button id="feedPrev" aria-label="上一张" title="上一张">‹</button>
@@ -473,6 +510,7 @@
       <div class="gs-toggles">
         <button class="gs-btn" id="gsReserve">预约游戏卡片：显示</button>
         <button class="gs-btn" id="gsMhyy">米哈云游按钮：显示</button>
+        <button class="gs-btn" id="gsFeed">相关内容：显示</button>
       </div>
       <div class="gs-actions">
         <button class="gs-btn" id="gsOpenDir">
@@ -818,18 +856,23 @@
     $('gsFree').textContent = info.free || '—';
     const showReserve = state.showReserve !== false;
     const showMhyy = state.showMhyy !== false;
+    const showFeed = state.showFeed !== false;
     $('gsReserve').textContent = `预约游戏卡片：${showReserve ? '显示' : '不显示'}`;
     $('gsMhyy').textContent = `米哈云游按钮：${showMhyy ? '显示' : '不显示'}`;
+    $('gsFeed').textContent = `相关内容：${showFeed ? '显示' : '不显示'}`;
     $('gsReserve').classList.toggle('on', showReserve);
     $('gsMhyy').classList.toggle('on', showMhyy);
+    $('gsFeed').classList.toggle('on', showFeed);
   }
 
   function applyUiFlags() {
     if (!state) return;
     const reserve = $('reserveGroup');
     const mhyy = $('btnMhyy');
+    const feed = $('gameFeed');
     if (reserve) reserve.style.display = state.showReserve === false ? 'none' : '';
     if (mhyy) mhyy.style.display = state.showMhyy === false ? 'none' : '';
+    if (feed) feed.style.display = state.showFeed === false ? 'none' : '';
   }
 
   function setUiFlag(name, value) {
@@ -848,35 +891,97 @@
     $('settingsModal').classList.remove('on');
   }
 
-  // ---------- 左下角游戏资讯轮播 ----------
+  // ---------- 左下角官方「相关内容」：活动 / 公告 / 资讯 ----------
   let feedIndex = 0;
   let feedKey = '';
+  let feedSig = '';
+  let feedTab = 'activity';
+  const feedLabels = { activity: '活动', announce: '公告', info: '资讯' };
+
+  function feedList() {
+    const data = state.feed || {};
+    return (data.items || []).filter(x => (x.kind || 'info') === feedTab);
+  }
 
   function renderFeed() {
-    const box = $('gameFeed'), list = state.feed || [];
-    const game = (state.games || []).find(x => x.key === state.selected);
-    if (!list.length) { box.style.display = 'none'; return; }
+    const box = $('gameFeed'), data = state.feed || {};
+    if (state.showFeed === false) { box.style.display = 'none'; return; }
     box.style.display = '';
-    if (feedKey !== state.selected) { feedKey = state.selected; feedIndex = 0; }
+    const all = data.items || [];
+    const sig = `${state.selected}|${all.length}|${all[0] ? all[0].title : ''}|${data.loading ? 1 : 0}`;
+    if (feedKey !== state.selected || feedSig !== sig) {
+      feedKey = state.selected;
+      feedSig = sig;
+      feedIndex = 0;
+      feedTab = 'activity';
+    }
+
+    $('feedGame').textContent = data.title || '当前游戏 · 相关内容';
+    document.querySelectorAll('#feedTabs .feed-tab').forEach(tab => {
+      const on = tab.dataset.kind === feedTab;
+      tab.classList.toggle('on', on);
+      tab.onclick = e => {
+        e.stopPropagation();
+        if (feedTab === tab.dataset.kind) return;
+        feedTab = tab.dataset.kind;
+        feedIndex = 0;
+        renderFeed();
+      };
+    });
+
+    const list = feedList();
+    const loading = !!data.loading;
+    const failed = !!data.failed;
+    const label = feedLabels[feedTab] || '资讯';
+    const cover = $('feedCover'), img = $('feedImg'), bg = $('feedBg');
+
+    if (!list.length) {
+      $('feedKicker').textContent = '官方相关内容';
+      $('feedTitle').textContent = loading ? '正在同步官方内容…' : '相关内容暂时无法加载';
+      $('feedSub').textContent = loading
+        ? '活动、公告、资讯均来自官方启动器数据源'
+        : '请检查网络后重新进入启动页';
+      $('feedMore').textContent = '';
+      $('feedCoverLabel').textContent = label;
+      cover.classList.add('noimg');
+      img.removeAttribute('src');
+      bg.removeAttribute('src');
+      if (data.icon) $('feedCoverIcon').src = data.icon;
+      box.dataset.url = '';
+      return;
+    }
+
     if (feedIndex >= list.length) feedIndex = 0;
     if (feedIndex < 0) feedIndex = list.length - 1;
     const item = list[feedIndex];
-    $('feedGame').textContent = `${game ? game.name : '当前游戏'} · 近期内容`;
-    $('feedCount').textContent = `${feedIndex + 1} / ${list.length}`;
-    const img = $('feedImg');
-    if (img.getAttribute('src') !== item.image) {
-      img.style.opacity = '0';
-      img.onload = () => { img.style.opacity = '1'; };
-      img.src = item.image;
-    }
-    $('feedKicker').textContent = item.kicker || '版本资讯';
+    $('feedKicker').textContent = feedLabels[item.kind] || label;
     $('feedTitle').textContent = item.title || '';
-    $('feedSub').textContent = item.subtitle || '';
+    $('feedSub').textContent = item.date
+      ? `${item.date} · 官方${feedLabels[item.kind] || label}`
+      : `官方${feedLabels[item.kind] || label}`;
+    $('feedMore').textContent = '查看详情 · 软件内打开 ↗';
+
+    if (item.cover) {
+      cover.classList.remove('noimg');
+      if (img.getAttribute('src') !== item.cover) {
+        img.style.opacity = '0';
+        img.onload = () => { img.style.opacity = '1'; };
+        img.onerror = () => { cover.classList.add('noimg'); };
+        img.src = item.cover;
+        if (bg.getAttribute('src') !== item.cover) bg.src = item.cover;
+      }
+    } else {
+      cover.classList.add('noimg');
+      img.removeAttribute('src');
+      bg.removeAttribute('src');
+      $('feedCoverLabel').textContent = feedLabels[item.kind] || label;
+      if (data.icon) $('feedCoverIcon').src = data.icon;
+    }
     box.dataset.url = item.url || '';
   }
 
   function stepFeed(delta) {
-    const list = state.feed || [];
+    const list = feedList();
     if (!list.length) return;
     feedIndex = (feedIndex + delta + list.length) % list.length;
     renderFeed();
@@ -981,6 +1086,7 @@
   $('gsUninstall').onclick = () => send({ type: 'uninstall' });
   $('gsReserve').onclick = () => setUiFlag('showReserve', !(state.showReserve !== false));
   $('gsMhyy').onclick = () => setUiFlag('showMhyy', !(state.showMhyy !== false));
+  $('gsFeed').onclick = () => setUiFlag('showFeed', !(state.showFeed !== false));
 
   $('btnSaveBg').onclick = () => send({ type: 'saveBg' });
   $('btnPause').onclick = () => send({ type: 'pauseToggle' });

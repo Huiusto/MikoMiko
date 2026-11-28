@@ -35,34 +35,6 @@ public partial class LaunchView : UserControl
         ["bh3"] = ("Assets/Launch/bg_bh3.jpg", "fallback_bh3.jpg"),
     };
 
-    private static readonly Dictionary<string, (string Kicker, string Title, string Subtitle, string Url)[]> GameFeed = new()
-    {
-        ["genshin"] = new[]
-        {
-            ("版本资讯", "提瓦特近期内容", "活动玩法、限时任务与版本新内容一览", "https://ys.mihoyo.com/main/news"),
-            ("祈愿预告", "角色与武器祈愿", "查看当前与下一期祈愿池、角色试用安排", "https://ys.mihoyo.com/main/news"),
-            ("开发组", "版本优化说明", "开发组座谈会、体验调整与问题修复汇总", "https://ys.mihoyo.com/main/news"),
-        },
-        ["starrail"] = new[]
-        {
-            ("版本情报", "星穹列车新旅程", "版本活动、开拓任务与奖励一览", "https://sr.mihoyo.com/news"),
-            ("跃迁预告", "角色与光锥跃迁", "当前与下期跃迁、角色试用情报", "https://sr.mihoyo.com/news"),
-            ("开拓笔记", "玩法与活动日程", "限时玩法、历战余响与活动说明", "https://sr.mihoyo.com/news"),
-        },
-        ["zzz"] = new[]
-        {
-            ("版本速报", "新艾利都版本情报", "版本更新、活动日程与新内容速览", "https://zzz.mihoyo.com/news"),
-            ("代理人", "调频与代理人档案", "当期调频、代理人情报与配队参考", "https://zzz.mihoyo.com/news"),
-            ("限时委托", "活动与委托日程", "限时委托、战斗活动与奖励说明", "https://zzz.mihoyo.com/news"),
-        },
-        ["bh3"] = new[]
-        {
-            ("版本资讯", "崩坏3版本速览", "版本活动、主线更新与奖励一览", "https://bh3.mihoyo.com/main/news"),
-            ("补给预告", "角色与装备补给", "当期补给、角色装备与抽取建议", "https://bh3.mihoyo.com/main/news"),
-            ("主线剧情", "主线与活动日程", "最新章节、限时活动与玩法说明", "https://bh3.mihoyo.com/main/news"),
-        },
-    };
-
     private static readonly Dictionary<string, string> Websites = new()
     {
         ["genshin"] = "https://ys.mihoyo.com/",
@@ -73,11 +45,14 @@ public partial class LaunchView : UserControl
 
     private string _selectedKey = "genshin";
     private List<LauncherBackgroundService.BackgroundItem> _bgItems = new();
+    private readonly Dictionary<string, GameContentService.Content> _feedCache = new();
+    private readonly HashSet<string> _feedLoading = new();
     private int _bgIndex;
     private bool _paused;
     private bool _preparing;
     private bool _showReserve = true;
     private bool _showMhyy = true;
+    private bool _showFeed = true;
     private bool _webReady;
     private readonly HashSet<string> _runningGames = new();
     private List<string> _gameOrder = new();
@@ -161,6 +136,7 @@ public partial class LaunchView : UserControl
         var settings = App.SettingsService.Current;
         _showReserve = settings.ShowReserve;
         _showMhyy = settings.ShowMhyy;
+        _showFeed = settings.ShowFeed;
         if (_webReady)
         {
             PushState();
@@ -239,14 +215,6 @@ public partial class LaunchView : UserControl
 
         foreach (var file in IconFiles.Values)
             CopyResource("Assets/Launch/icons/" + file, Path.Combine(iconDir, file));
-
-        var feedDir = Path.Combine(assetDir, "feed");
-        Directory.CreateDirectory(feedDir);
-        foreach (var (key, entries) in GameFeed)
-        {
-            for (var i = 0; i < entries.Length; i++)
-                CopyResource($"Assets/Launch/feed/{key}_{i + 1}.jpg", Path.Combine(feedDir, $"{key}_{i + 1}.jpg"));
-        }
     }
 
     private static void CopyResource(string resourcePath, string targetPath)
@@ -299,7 +267,23 @@ public partial class LaunchView : UserControl
             Math.Max(0, _bgItems.Count - 1));
         _paused = false;
         _preparing = false;
+        _ = LoadFeedAsync(key);
         _ = RefreshOfficialAsync(key);
+    }
+
+    /// <summary>官方启动器「相关内容」：活动 / 公告 / 资讯，直接取 HoYoPlay 数据。</summary>
+    private async Task LoadFeedAsync(string key)
+    {
+        if (_feedCache.ContainsKey(key) || !_feedLoading.Add(key)) return;
+        PushState();
+
+        var content = await GameContentService.LoadAsync(key).ConfigureAwait(false);
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _feedLoading.Remove(key);
+            if (content.Posts.Count > 0) _feedCache[key] = content;
+            if (key == _selectedKey) PushState();
+        }));
     }
 
     private async Task RefreshOfficialAsync(string key)
@@ -414,6 +398,7 @@ public partial class LaunchView : UserControl
             preparing = _preparing,
             showReserve = _showReserve,
             showMhyy = _showMhyy,
+            showFeed = _showFeed,
             accent = "#4EA4DD",
             hint = BuildHint(),
             customBackground = false,
@@ -427,24 +412,35 @@ public partial class LaunchView : UserControl
             $"window.mikoInit({JsonSerializer.Serialize(state)});");
     }
 
-    private object[] BuildFeed(string key)
+    private object BuildFeed(string key)
     {
-        if (!GameFeed.TryGetValue(key, out var entries)) return Array.Empty<object>();
-        var result = new List<object>(entries.Length);
-        for (var i = 0; i < entries.Length; i++)
+        var game = MikoNestBridge.Games.FirstOrDefault(g => g.Key == key);
+        var cached = _feedCache.TryGetValue(key, out var content) ? content : null;
+        var items = cached?.Posts.Select(post => new
         {
-            var (kicker, title, subtitle, url) = entries[i];
-            var imagePath = Path.Combine(SettingsService.DataDirectory, "launch", "assets", "feed", $"{key}_{i + 1}.jpg");
-            result.Add(new
+            kind = post.Kind,
+            title = post.Title,
+            date = post.Date,
+            url = post.Url,
+            cover = post.Cover,
+        }).ToArray() ?? Array.Empty<object>();
+
+        return new
+        {
+            title = $"{game?.Name ?? cached?.GameName ?? "当前游戏"} · 相关内容",
+            loading = _feedLoading.Contains(key),
+            failed = cached == null && !_feedLoading.Contains(key),
+            icon = IconFiles.TryGetValue(key, out var iconFile)
+                ? $"https://{VirtualHost}/launch/assets/icons/{iconFile}"
+                : "",
+            items,
+            tabs = new[]
             {
-                kicker,
-                title,
-                subtitle,
-                url,
-                image = ToUrl(imagePath) ?? $"https://{VirtualHost}/launch/assets/feed/{key}_{i + 1}.jpg",
-            });
-        }
-        return result.ToArray();
+                new { key = "activity", label = "活动" },
+                new { key = "announce", label = "公告" },
+                new { key = "info", label = "资讯" },
+            },
+        };
     }
 
     private void PushPatch(object patch)
@@ -813,12 +809,14 @@ public partial class LaunchView : UserControl
                     var value = ReadNumber(e.WebMessageAsJson, "value") != 0;
                     if (name == "showReserve") _showReserve = value;
                     else if (name == "showMhyy") _showMhyy = value;
+                    else if (name == "showFeed") _showFeed = value;
                     else break;
 
                     var settings = App.SettingsService.Current;
                     settings.ShowReserve = _showReserve;
                     settings.ShowMhyy = _showMhyy;
-                    PushPatch(new { showReserve = _showReserve, showMhyy = _showMhyy });
+                    settings.ShowFeed = _showFeed;
+                    PushPatch(new { showReserve = _showReserve, showMhyy = _showMhyy, showFeed = _showFeed });
                     break;
                 }
 

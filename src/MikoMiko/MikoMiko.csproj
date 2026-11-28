@@ -39,7 +39,6 @@
     <Resource Include="Assets\Launch\*.jpg" />
     <Resource Include="Assets\Launch\*.html" />
     <Resource Include="Assets\Launch\icons\*.png" />
-    <Resource Include="Assets\Launch\feed\*.jpg" />
     <Resource Include="Assets\Profile\*.png" />
     <Resource Include="Assets\Demo\*.jpg" />
     <Resource Include="Assets\Demo\*.png" />

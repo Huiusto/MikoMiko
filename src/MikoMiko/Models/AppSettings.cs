@@ -26,9 +26,10 @@ public sealed partial class AppSettings : ObservableObject
     [ObservableProperty] private bool _rememberLastPage = true;
     [ObservableProperty] private string _lastPage = "Home";
 
-    // 启动页显示开关：预约游戏卡片 / 米哈云游按钮
+    // 启动页显示开关：预约游戏卡片 / 米哈云游按钮 / 左下角官方相关内容
     [ObservableProperty] private bool _showReserve = true;
     [ObservableProperty] private bool _showMhyy = true;
+    [ObservableProperty] private bool _showFeed = true;
     [ObservableProperty] private string _closeAction = "Tray";    // Tray / Exit / Ask
 
     /// <summary>启动首页、视频页与启动页三选一：勾选其一时自动取消另外两个。</summary>
