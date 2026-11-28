@@ -151,16 +151,42 @@ public static class GachaFetchService
         {
             try
             {
-                using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                // Chromium 缓存文件被游戏进程占用时，必须同时共享 Delete，
+                // 否则 FileShare.ReadWrite 仍会被拒绝，游戏运行中就永远读不到 authkey。
+                using var stream = new FileStream(file, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(stream);
                 var text = reader.ReadToEnd();
-                var index = Math.Max(text.LastIndexOf(prefix, StringComparison.OrdinalIgnoreCase),
-                    text.LastIndexOf(altPrefix, StringComparison.OrdinalIgnoreCase));
-                if (index < 0) return null;
-                var end = text.IndexOfAny(new[] { '\0', '"' }, index);
-                if (end < 0) end = text.Length;
-                var url = text[index..end].Trim();
-                return url.Contains("authkey", StringComparison.OrdinalIgnoreCase) ? url : null;
+
+                // 同一个缓存块里既有真正的抽卡页 URL，也有大量 gacha-df01aea2/xxx.js|png 静态资源。
+                // 旧实现只取最后一个 prefix 命中，经常命中图片后直接判空；这里向前遍历所有命中，
+                // 只接受带 authkey 的页面 URL，并优先返回位置最靠后的那一条。
+                var bestIndex = -1;
+                string? best = null;
+                foreach (var p in new[] { prefix, altPrefix })
+                {
+                    if (string.IsNullOrWhiteSpace(p)) continue;
+                    var search = text.Length - 1;
+                    while (search >= 0)
+                    {
+                        var index = text.LastIndexOf(p, search, StringComparison.OrdinalIgnoreCase);
+                        if (index < 0) break;
+                        var end = text.IndexOfAny(new[] { '\0', '"', '\r', '\n' }, index);
+                        if (end < 0) end = text.Length;
+                        var url = text[index..end].Trim();
+                        if (url.Contains('?') && url.Contains("authkey", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (index > bestIndex)
+                            {
+                                bestIndex = index;
+                                best = url;
+                            }
+                            break; // 同一前缀更早的命中一定比当前这条旧
+                        }
+                        search = index - 1;
+                    }
+                }
+                return best;
             }
             catch (IOException)
             {
@@ -206,9 +232,46 @@ public static class GachaFetchService
         return (null, generated.Message);
     }
 
-    public static async Task<(string? Url, string Message)> GenerateAuthKeyAsync(string gameKey, string cookie,
-        string uid, string region)
+    /// <summary>
+    /// 更新抽卡记录：先读游戏缓存 authkey，失败再用米游社账号换取 authkey。
+    /// 用户刚在游戏内打开抽卡历史时，缓存里的 authkey 最可靠；即使已登录米游社，
+    /// 也不能跳过缓存直接用账号换 key（换 key 接口失败或账号不同都会导致空结果）。
+    /// </summary>
+    public static async Task<(List<GachaRecord> Records, string Message)> FetchWithCacheOrAccountAsync(
+        string gameKey, string cookie, string uid, string region, CancellationToken ct)
     {
+        var cached = FindCachedUrl(gameKey);
+        var cachedError = "";
+        if (!string.IsNullOrWhiteSpace(cached))
+        {
+            var cacheResult = await FetchAllAsync(gameKey, uid, ToApiUrl(cached, gameKey), ct);
+            if (cacheResult.Records.Count > 0)
+                return (cacheResult.Records, "已读取游戏缓存 authkey，" + cacheResult.Message);
+            cachedError = cacheResult.Message;
+        }
+
+        if (!string.IsNullOrWhiteSpace(cookie))
+        {
+            var generated = await GenerateAuthKeyAsync(gameKey, cookie, uid, region);
+            if (generated.Url is not null)
+            {
+                var accountResult = await FetchAllAsync(gameKey, uid, generated.Url, ct);
+                if (accountResult.Records.Count > 0)
+                    return (accountResult.Records, generated.Message + "，" + accountResult.Message);
+                if (cachedError.Length == 0) cachedError = accountResult.Message;
+            }
+            else if (cachedError.Length == 0)
+            {
+                cachedError = generated.Message;
+            }
+        }
+
+        return (new List<GachaRecord>(),
+            cachedError.Length > 0 ? cachedError : "未找到游戏缓存 authkey，请先在游戏内打开一次抽卡记录页面");
+    }
+
+    public static async Task<(string? Url, string Message)> GenerateAuthKeyAsync(string gameKey, string cookie,
+        string uid, string region)    {
         if (!Games.TryGetValue(gameKey, out var game))
             return (null, "暂不支持该游戏");
         var mid = ExtractCookie(cookie, "account_mid_v2");
@@ -335,9 +398,12 @@ public static class GachaFetchService
                 var rank = item.GetProp("rank_type");
                 if (gameKey == "zzz" && int.TryParse(rank, out var zzzRank) && zzzRank is >= 2 and <= 4)
                     rank = (zzzRank + 1).ToString();
+                // 本地还没有记录、也没有角色列表时 UID 为空，接口返回的每一条记录仍带真实 uid；
+                // 先用它补上，否则拉回来的 1228 条记录会因为 Uid 为空被界面全部过滤掉。
+                var recordUid = string.IsNullOrWhiteSpace(uid) ? item.GetProp("uid") : uid;
                 records.Add(new GachaRecord
                 {
-                    Uid = uid,
+                    Uid = recordUid,
                     GameKey = gameKey,
                     GachaType = item.GetProp("gacha_type").Length > 0 ? item.GetProp("gacha_type") : gachaType,
                     ItemId = item.GetProp("item_id"),

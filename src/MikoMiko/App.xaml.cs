@@ -153,9 +153,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.60"), "v0.1.60", "MikoMiko 0.1.60",
+                    new Version("0.1.61"), "v0.1.61", "MikoMiko 0.1.61",
                     "· 安装器：修复选择安装路径页路径输入框与「浏览」按钮垂直错位\n· 安装器：禁止直接安装到磁盘根目录",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.60.exe", "");
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.61.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();
@@ -257,13 +257,24 @@ public partial class App : Application
                     : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap" ? "Anime"
                     : page is "VideoPlay" or "VideoOptions" or "VideoComments" ? "Video"
                     : page is "SettingsBottom" or "SettingsChangelog" or "SettingsGroups" ? "Settings"
-                    : page is "GachaSettings" ? "Gacha"
+                    : page is "GachaSettings" or "GachaUpdate" ? "Gacha"
                     : page == "MineQr" ? "Mine"
                     : page is "MineProfile" or "MineGame" or "MineSettings" ? "Mine"
                     : page == "MineAccount" ? "Mine"
                     : page is "Upload" or "UploadType" or "UploadArticle" ? "Home"
                     : page;
                 Shell.Navigate(navPage, pushHistory: false);
+                if (page == "GachaUpdate")
+                {
+                    var updateDelay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+                    updateDelay.Tick += (_, _) =>
+                    {
+                        updateDelay.Stop();
+                        Log(path, "gacha-update");
+                        FindChild<Views.GachaView>(MainWindow!)?.DebugUpdateRecords();
+                    };
+                    updateDelay.Start();
+                }
                 if (page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" or "Anime4K" or "AnimeTap")
                 {
                     if (page == "AnimeTap")
@@ -519,7 +530,8 @@ public partial class App : Application
                     }
                     if (page is not ("VideoPlay" or "VideoOptions" or "VideoComments")) Shell.Video.IsPlaying = false; // 截图时停在封面，避免抓到解码中的黑帧
                     var settle = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(
-                        page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 7000
+                        page == "GachaUpdate" ? 45000
+                        : page is "Anime" or "AnimeHome" or "AnimeMore" or "AnimeMovie" or "AnimeDownload" or "AnimeSearch" ? 7000
                         : page == "Anime4K" ? 22000 : page == "AnimeTap" ? 26000 : 400) };
                     settle.Tick += (_, _) =>
                     {

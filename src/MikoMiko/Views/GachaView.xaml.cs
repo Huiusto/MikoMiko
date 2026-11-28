@@ -1043,6 +1043,11 @@ public partial class GachaView : UserControl
 
     private bool _updating;
 
+    public void DebugUpdateRecords()
+    {
+        BtnUpdate_Click(null!, new RoutedEventArgs());
+    }
+
     private async void BtnUpdate_Click(object sender, RoutedEventArgs e)
     {
         if (_updating) return;
@@ -1066,7 +1071,11 @@ public partial class GachaView : UserControl
         TxtStatus.Text = $"正在读取 {gameLabel} 抽卡记录…";
         try
         {
-            if (!string.IsNullOrWhiteSpace(cookie))
+            var cachedUrl = GachaFetchService.FindCachedUrl(gameKey);
+            // 游戏刚打开过抽卡历史时，缓存 authkey 最可靠。此时不要先请求角色列表：
+            // 登录态失效或接口慢会让更新按钮一直卡在加载层，缓存明明有效却永远读不到。
+            if (!string.IsNullOrWhiteSpace(cookie) && string.IsNullOrWhiteSpace(uid)
+                && string.IsNullOrWhiteSpace(cachedUrl))
             {
                 var roles = await SignService.GetRolesAsync(cookie, biz);
                 roleList = roles.roles;
@@ -1078,8 +1087,13 @@ public partial class GachaView : UserControl
             }
             if (string.IsNullOrWhiteSpace(uid))
             {
-                ShowToast("请先登录米游社，或在游戏内打开一次抽卡记录页面");
-                return;
+                // 登录态可能失效，角色列表取不到 UID；只要游戏缓存里有刚打开的抽卡页，
+                // 仍然先拉记录，UID 从接口返回的记录里回填，不能在这里直接挡住。
+                if (string.IsNullOrWhiteSpace(cachedUrl))
+                {
+                    ShowToast("请先登录米游社，或在游戏内打开一次抽卡记录页面");
+                    return;
+                }
             }
 
             var roleInfo = roleList.FirstOrDefault(r => r.Uid == uid);
@@ -1091,18 +1105,12 @@ public partial class GachaView : UserControl
                 _ => "prod_gf_cn",
             });
 
-            var resolved = await GachaFetchService.ResolveUrlAsync(gameKey, cookie, uid, region,
-                string.IsNullOrWhiteSpace(cookie));
-            if (resolved.Url is null)
-            {
-                ShowToast("获取抽卡链接失败：" + resolved.Message);
-                TxtStatus.Text = resolved.Message;
-                return;
-            }
-
-            TxtStatus.Text = $"{resolved.Message}，正在拉取 {gameLabel} 记录…";
-            var fetched = await GachaFetchService.FetchAllAsync(gameKey, uid, resolved.Url, CancellationToken.None);
+            TxtStatus.Text = $"正在读取 {gameLabel} 抽卡记录…";
+            var fetched = await GachaFetchService.FetchWithCacheOrAccountAsync(
+                gameKey, cookie, uid, region, CancellationToken.None);
             var added = GachaFetchService.MergeRecords(fetched.Records);
+            if (string.IsNullOrWhiteSpace(uid))
+                uid = fetched.Records.Select(r => r.Uid).FirstOrDefault(u => !string.IsNullOrWhiteSpace(u)) ?? "";
             _uid = uid;
             ReloadData();
             if (fetched.Records.Count == 0)
