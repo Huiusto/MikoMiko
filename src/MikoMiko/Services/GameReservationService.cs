@@ -27,12 +27,14 @@ public static class GameReservationService
         string Introduction,
         IReadOnlyList<string> Tags,
         IReadOnlyList<Media> Medias,
-        string OfficialUrl);
+        string OfficialUrl,
+        string Slogan = "");
 
     private static readonly Dictionary<string, (string GameId, string Name, string OfficialUrl)> Games = new()
     {
         ["planet"] = ("ERYDdvf0w8", "星布谷地", "https://planet.mihoyo.com"),
         ["yinyuan"] = ("m8TGERqknS", "崩坏：因缘精灵", "https://yyjl.mihoyo.com"),
+        ["nodusfall"] = ("", "源初之结", "https://nodusfall.mihoyo.com/home"),
     };
 
     public static bool Supports(string key) => Games.ContainsKey(key);
@@ -54,11 +56,15 @@ public static class GameReservationService
             ? found
             : ("", key, "");
 
+        // 0.1.69：源初之结官方启动器接口尚未开放，使用随包素材构建同款预约页。
+        if (key == "nodusfall")
+            return LoadNodusfall(info.Name, info.OfficialUrl);
+
         try
         {
             var url = $"{ApiRoot}/getGameReservationContent?launcher_id={LauncherId}&language=zh-cn&game_id={info.GameId}";
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.UserAgent.ParseAdd("MikoMiko/0.1.68 HoYoPlay/1.0");
+            request.Headers.UserAgent.ParseAdd("MikoMiko/0.1.69 HoYoPlay/1.0");
             using var response = await Http.SendAsync(request).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             await using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
@@ -115,6 +121,27 @@ public static class GameReservationService
         {
             return Fallback(key, info.Name, info.OfficialUrl);
         }
+    }
+
+    private static Content LoadNodusfall(string name, string officialUrl)
+    {
+        const string baseUrl = "https://miko.local/reservation-nodusfall/";
+        var medias = Enumerable.Range(1, 8)
+            .Select(i =>
+            {
+                var url = $"{baseUrl}{i:00}.jpg";
+                return new Media("IMAGE", url, url);
+            })
+            .ToList();
+        return new Content(
+            "nodusfall",
+            name,
+            baseUrl + "logo.png",
+            "《源初之结》是由米哈游研发的奇幻写实题材动作游戏。玩家将以「织者」的身份踏入神权陨落、秩序崩塌的世界，结识强大的伙伴，共同迎战撼天动地的强敌，不断夺取存于世间的神格之力，并最终重建世界秩序。",
+            new[] { "奇幻写实", "动作", "开放世界", "米哈游" },
+            medias,
+            officialUrl,
+            baseUrl + "slogan.png");
     }
 
     private static Content Fallback(string key, string name, string officialUrl)

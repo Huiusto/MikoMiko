@@ -295,42 +295,33 @@ public partial class GachaView : UserControl
     }
 
     /// <summary>
-    /// 0.1.68：卡池卡按可视宽度自动分列，卡池多时折到第二行，不再把右侧卡池
-    /// 藏进横向滚动条。列数尽量均分（如 8 个卡池排成 4×2），每行卡高按行数
-    /// 均分可视高度；放不下时整个卡池区纵向滚动。
+    /// 0.1.69：卡池卡固定排成一行，不再折到下面。宽度足够时按数量均分铺满；
+    /// 窗口太窄时保持最小可读卡宽，改为横向滚动，所有卡池仍处在同一排。
     /// </summary>
     private void ResizePoolColumns()
     {
         if (_poolCount <= 0 || _poolCards.Count != _poolCount) return;
-        var available = PoolScroll.ViewportWidth - 36; // WrapPanel 左右各 18
+        var available = PoolScroll.ViewportWidth - 36; // StackPanel 左右各 18
         if (double.IsNaN(available) || available <= 0)
             available = Math.Max(0, ActualWidth - 38);
         if (double.IsNaN(available) || available <= 0) return;
 
         const double gap = 14;
-        const double minReadable = 220;
-        var maxColumns = Math.Max(1, (int)Math.Floor((available + gap) / (minReadable + gap)));
-        maxColumns = Math.Min(maxColumns, _poolCount);
-        var rows = (int)Math.Ceiling(_poolCount / (double)maxColumns);
-        var columns = (int)Math.Ceiling(_poolCount / (double)rows);
-        var cardWidth = Math.Max(120, (available - (columns - 1) * gap) / columns);
-
+        const double minReadable = 116;
+        var fitWidth = (available - (_poolCount - 1) * gap) / _poolCount;
+        var cardWidth = Math.Max(minReadable, fitWidth);
+        var contentWidth = _poolCount * cardWidth + (_poolCount - 1) * gap;
         var viewportHeight = PoolScroll.ViewportHeight;
-        var cardHeight = viewportHeight > 0
-            ? Math.Max(300, (viewportHeight - (rows - 1) * gap - 8) / rows)
-            : 390;
+        var cardHeight = Math.Max(390, viewportHeight - 8);
 
         for (var i = 0; i < _poolCards.Count; i++)
         {
             var card = _poolCards[i];
-            var column = i % columns;
-            var row = i / columns;
-            var isLastRow = row >= rows - 1;
             card.Width = cardWidth;
             card.Height = cardHeight;
-            card.Margin = new Thickness(0, 0, column == columns - 1 ? 0 : gap, isLastRow ? 0 : gap);
+            card.Margin = new Thickness(0, 0, i == _poolCards.Count - 1 ? 0 : gap, 0);
         }
-        PoolGrid.Width = available;
+        PoolGrid.Width = Math.Max(available, contentWidth);
     }
 
     private void BuildSummary(List<(PoolDef Def, PoolStat Stat)> stats, int totalPulls, int topPulls)

@@ -67,6 +67,14 @@ public partial class ReservationView : UserControl
             Directory.CreateDirectory(dataDir);
             var environment = await CoreWebView2Environment.CreateAsync(null, dataDir);
             await Web.EnsureCoreWebView2Async(environment);
+            // 原生素材（源初之结 logo / slogan / 宣传图）放在输出目录，映射成本地 https 域名，
+            // 这样 NavigateToString 里的相对资源不会受 about:blank 限制。
+            var launchAssets = Path.Combine(AppContext.BaseDirectory, "Assets", "Launch");
+            if (Directory.Exists(launchAssets))
+            {
+                Web.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                    "miko.local", launchAssets, CoreWebView2HostResourceAccessKind.Allow);
+            }
             Web.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
             Web.CoreWebView2.NavigationCompleted += (_, _) => { };
 
@@ -118,8 +126,10 @@ public partial class ReservationView : UserControl
         var template = ReadTemplate();
         var data = new
         {
+            key = content.Key,
             name = content.Name,
             logo = content.Logo,
+            slogan = content.Slogan,
             introduction = content.Introduction,
             tags = content.Tags,
             medias = content.Medias.Select(m => new { type = m.Type.Contains("VIDEO", StringComparison.OrdinalIgnoreCase) ? "video" : "image", cover = m.Cover, resource = m.Resource }),

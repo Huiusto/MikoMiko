@@ -48,6 +48,7 @@
 
   .info { min-width: 0; padding-right: 1vw; align-self: center; }
   .logo { max-width: 100%; max-height: 92px; object-fit: contain; display: block; margin-bottom: 26px; }
+  .slogan { display: none; }
   .logo-title { font-size: 34px; font-weight: 800; letter-spacing: 1px; margin-bottom: 24px; display: none; }
   .intro { font-size: 16px; line-height: 1.95; color: rgba(255,255,255,.9); white-space: pre-line;
     text-align: justify; margin-bottom: 24px; }
@@ -130,6 +131,14 @@
   .media-panel #videoBar { opacity: 0; pointer-events: none; transition: opacity .18s ease; }
   .media-panel:hover .nav-arrow,
   .media-panel:hover #videoBar { opacity: 1; pointer-events: auto; }
+
+  /* 源初之结：白色透明 logo 与 slogan 放在深色小底板上保证可见 */
+  body.nodusfall .logo { max-height: 150px; max-width: 190px; background: #15181D;
+    padding: 12px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 12px 32px rgba(24,30,38,.28); margin-bottom: 16px; }
+  body.nodusfall .slogan { display: block; max-width: 100%; max-height: 60px; object-fit: contain;
+    background: #15181D; padding: 10px 14px; border-radius: 12px;
+    margin: 0 0 24px; box-shadow: 0 10px 26px rgba(24,30,38,.2); }
 </style>
 </head>
 <body>
@@ -152,6 +161,7 @@
     </div>
     <div class="info">
       <img class="logo" id="logo" alt="">
+      <img class="slogan" id="slogan" alt="">
       <div class="logo-title" id="logoTitle"></div>
       <div class="intro" id="intro"></div>
       <div class="tags" id="tags"></div>
@@ -183,8 +193,10 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') post({ type: 'close' }); });
   $('reserve').onclick = () => post({ type: 'reserve', url: data.link });
 
+  if (data.key) document.body.classList.add(String(data.key));
   if (data.logo) { $('logo').src = data.logo; $('logo').style.display = 'block'; }
   else { $('logoTitle').textContent = data.name; $('logoTitle').style.display = 'block'; }
+  if (data.slogan) { $('slogan').src = data.slogan; }
   $('intro').textContent = data.introduction || '';
   (data.tags || []).forEach(t => {
     const span = document.createElement('span'); span.className = 'tag'; span.textContent = t;
