@@ -1,7 +1,6 @@
 using Microsoft.Web.WebView2.Core;
 using MikoMiko.Services;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -109,7 +108,7 @@ public partial class AnimeSitePlayerView : UserControl
                     StatusPanel.Visibility = Visibility.Visible;
                     Web.Visibility = Visibility.Hidden;
                     StatusTitle.Text = "站点播放页打开失败";
-                    StatusDetail.Text = $"HTTP 状态：{args.WebErrorStatus}。可以点右上角用系统浏览器打开，或换一个站点线路。";
+                    StatusDetail.Text = $"HTTP 状态：{args.WebErrorStatus}。请点左上角返回，换一个片源或线路。";
                 }
             };
 
@@ -123,7 +122,7 @@ public partial class AnimeSitePlayerView : UserControl
                     StatusPanel.Visibility = Visibility.Visible;
                     Web.Visibility = Visibility.Hidden;
                     StatusTitle.Text = "站点播放页打开超时";
-                    StatusDetail.Text = "站点可能被网络阻断。点左上角返回换一个来源，或点右上角用系统浏览器打开。";
+                    StatusDetail.Text = "站点可能被网络阻断。点左上角返回，换一个片源或线路。";
                 };
                 _loadWatchdog.Start();
                 try
@@ -155,15 +154,5 @@ public partial class AnimeSitePlayerView : UserControl
     {
         if (Web.CoreWebView2 is null) return;
         try { Web.CoreWebView2.Reload(); } catch { }
-    }
-
-    private void Browser_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_pageUrl)) return;
-        try
-        {
-            Process.Start(new ProcessStartInfo(_pageUrl) { UseShellExecute = true });
-        }
-        catch { }
     }
 }

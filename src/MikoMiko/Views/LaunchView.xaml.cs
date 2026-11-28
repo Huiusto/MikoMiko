@@ -35,6 +35,34 @@ public partial class LaunchView : UserControl
         ["bh3"] = ("Assets/Launch/bg_bh3.jpg", "fallback_bh3.jpg"),
     };
 
+    private static readonly Dictionary<string, (string Kicker, string Title, string Subtitle, string Url)[]> GameFeed = new()
+    {
+        ["genshin"] = new[]
+        {
+            ("版本资讯", "提瓦特近期内容", "活动玩法、限时任务与版本新内容一览", "https://ys.mihoyo.com/main/news"),
+            ("祈愿预告", "角色与武器祈愿", "查看当前与下一期祈愿池、角色试用安排", "https://ys.mihoyo.com/main/news"),
+            ("开发组", "版本优化说明", "开发组座谈会、体验调整与问题修复汇总", "https://ys.mihoyo.com/main/news"),
+        },
+        ["starrail"] = new[]
+        {
+            ("版本情报", "星穹列车新旅程", "版本活动、开拓任务与奖励一览", "https://sr.mihoyo.com/news"),
+            ("跃迁预告", "角色与光锥跃迁", "当前与下期跃迁、角色试用情报", "https://sr.mihoyo.com/news"),
+            ("开拓笔记", "玩法与活动日程", "限时玩法、历战余响与活动说明", "https://sr.mihoyo.com/news"),
+        },
+        ["zzz"] = new[]
+        {
+            ("版本速报", "新艾利都版本情报", "版本更新、活动日程与新内容速览", "https://zzz.mihoyo.com/news"),
+            ("代理人", "调频与代理人档案", "当期调频、代理人情报与配队参考", "https://zzz.mihoyo.com/news"),
+            ("限时委托", "活动与委托日程", "限时委托、战斗活动与奖励说明", "https://zzz.mihoyo.com/news"),
+        },
+        ["bh3"] = new[]
+        {
+            ("版本资讯", "崩坏3版本速览", "版本活动、主线更新与奖励一览", "https://bh3.mihoyo.com/main/news"),
+            ("补给预告", "角色与装备补给", "当期补给、角色装备与抽取建议", "https://bh3.mihoyo.com/main/news"),
+            ("主线剧情", "主线与活动日程", "最新章节、限时活动与玩法说明", "https://bh3.mihoyo.com/main/news"),
+        },
+    };
+
     private static readonly Dictionary<string, string> Websites = new()
     {
         ["genshin"] = "https://ys.mihoyo.com/",
@@ -211,6 +239,14 @@ public partial class LaunchView : UserControl
 
         foreach (var file in IconFiles.Values)
             CopyResource("Assets/Launch/icons/" + file, Path.Combine(iconDir, file));
+
+        var feedDir = Path.Combine(assetDir, "feed");
+        Directory.CreateDirectory(feedDir);
+        foreach (var (key, entries) in GameFeed)
+        {
+            for (var i = 0; i < entries.Length; i++)
+                CopyResource($"Assets/Launch/feed/{key}_{i + 1}.jpg", Path.Combine(feedDir, $"{key}_{i + 1}.jpg"));
+        }
     }
 
     private static void CopyResource(string resourcePath, string targetPath)
@@ -368,6 +404,7 @@ public partial class LaunchView : UserControl
         {
             games,
             selected = _selectedKey,
+            feed = BuildFeed(_selectedKey),
             backgrounds = items,
             officialBackgrounds = officialItems,
             preloadImages,
@@ -388,6 +425,26 @@ public partial class LaunchView : UserControl
 
         _ = Web.CoreWebView2.ExecuteScriptAsync(
             $"window.mikoInit({JsonSerializer.Serialize(state)});");
+    }
+
+    private object[] BuildFeed(string key)
+    {
+        if (!GameFeed.TryGetValue(key, out var entries)) return Array.Empty<object>();
+        var result = new List<object>(entries.Length);
+        for (var i = 0; i < entries.Length; i++)
+        {
+            var (kicker, title, subtitle, url) = entries[i];
+            var imagePath = Path.Combine(SettingsService.DataDirectory, "launch", "assets", "feed", $"{key}_{i + 1}.jpg");
+            result.Add(new
+            {
+                kicker,
+                title,
+                subtitle,
+                url,
+                image = ToUrl(imagePath) ?? $"https://{VirtualHost}/launch/assets/feed/{key}_{i + 1}.jpg",
+            });
+        }
+        return result.ToArray();
     }
 
     private void PushPatch(object patch)
@@ -826,6 +883,13 @@ public partial class LaunchView : UserControl
                 case "uninstall":
                     UninstallGame();
                     break;
+
+                case "openFeed":
+                {
+                    var url = ReadString(e.WebMessageAsJson, "url");
+                    if (!string.IsNullOrWhiteSpace(url)) OpenUrlRequested?.Invoke(url);
+                    break;
+                }
 
                 case "mhyy":
                     OpenUrlRequested?.Invoke("https://mhyy.mihoyo.com/");

@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 
 namespace MikoMiko.ViewModels;
 
@@ -128,7 +129,86 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
     public string AppName => AppInfo.Name;
     public string AppDataDirectory => AppInfo.DataDirectory;
-    public string ChangelogText => Loc.Instance["S.Changelog.Body"];
+    public string ChangelogText => BuildBriefChangelog(Loc.Instance["S.Changelog.Body"]);
+
+    private static string LatestChangelogEntry => Loc.Instance.Language switch
+    {
+        "zh-TW" =>
+            "0.1.71 · 追番/影視移除所有外部瀏覽器與網頁跳轉，只在本軟體內解析播放，失敗僅提示。" +
+            "啟動頁左下角新增目前遊戲的資訊卡片，滑鼠懸浮可切換上一張與下一張。" +
+            "更新日誌改為簡版，每版兩三句、帶顏文字，版本間用橫線隔開。 (๑•̀ㅂ•́)و✧",
+        "en-US" =>
+            "0.1.71 · Anime/Films no longer opens any external browser or web page; everything resolves and plays inside the app, with an in-app notice on failure. " +
+            "Launch adds a game news carousel at the lower-left, with previous and next buttons on hover. " +
+            "Settings now shows a concise changelog, two or three lines per version with kaomoji and dividers. (๑•̀ㅂ•́)و✧",
+        _ =>
+            "0.1.71 · 追番/影视去掉所有外部浏览器和网页跳转，只在本软件内解析播放，失败只提示。" +
+            "启动页左下角新增当前游戏的资讯卡片，鼠标悬浮可切换上一张和下一张。" +
+            "更新日志改为简版，每版两三句、带颜文字，版本间用横线隔开。 (๑•̀ㅂ•́)و✧",
+    };
+
+    private static readonly string[] ChangelogKaomoji =
+    {
+        "(๑•̀ㅂ•́)و✧", "(｡･ω･｡)ﾉ♡", "(๑>؂<๑)", "( •̀ ω •́ )✧", "(˶‾᷄ ⁻̫ ‾᷅˵)",
+        "(ง •̀_•́)ง", "٩(๑>◡<๑)۶", "(´･ω･`)",
+    };
+
+    /// <summary>把每版长日志压成两三句短句，并在版本之间插入横线。</summary>
+    private static string BuildBriefChangelog(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return LatestChangelogEntry;
+        var lines = raw.Replace("\r", "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (lines.Length == 0) return LatestChangelogEntry;
+
+        var builder = new StringBuilder();
+        var title = lines[0];
+        var versions = lines.Skip(1).Where(line => line.StartsWith("0.1.", StringComparison.Ordinal)).ToList();
+        var hasLatest = versions.Any(line => line.StartsWith("0.1.71", StringComparison.Ordinal));
+        if (!hasLatest) versions.Insert(0, LatestChangelogEntry);
+
+        builder.AppendLine(title);
+        for (var i = 0; i < versions.Count; i++)
+        {
+            builder.AppendLine();
+            builder.AppendLine(BriefLine(versions[i], i));
+            if (i == versions.Count - 1) continue;
+            builder.AppendLine();
+            builder.AppendLine("──────────────");
+            builder.AppendLine();
+        }
+        return builder.ToString().TrimEnd();
+    }
+
+    private static string BriefLine(string line, int index)
+    {
+        var dot = line.IndexOf('·');
+        var version = dot > 0 ? line[..dot].Trim() : string.Empty;
+        var body = dot > 0 ? line[(dot + 1)..].Trim() : line.Trim();
+        if (string.IsNullOrWhiteSpace(version)) return line;
+
+        var clauses = body.Replace('；', '。').Replace("\n", "。")
+            .Split('。', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(clause => clause.Length > 0)
+            .Select(clause => Shorten(clause.Trim(' ', '，', '、', '。', '；', '：')))
+            .Where(clause => clause.Length > 0)
+            .Take(3)
+            .ToList();
+        if (clauses.Count == 0) clauses.Add("细节与体验同步优化");
+        if (clauses.Count == 1) clauses.Add("细节与体验同步优化");
+
+        var text = string.Join("。", clauses) + "。";
+        return $"{version} · {text} {ChangelogKaomoji[index % ChangelogKaomoji.Length]}";
+    }
+
+    private static string Shorten(string text)
+    {
+        const int max = 58;
+        if (text.Length <= max) return text;
+        var cut = max;
+        var lastBreak = text.LastIndexOfAny(new[] { '，', '、', ' ' }, cut - 1);
+        if (lastBreak >= cut - 18) cut = lastBreak;
+        return text[..cut].TrimEnd('，', '、', ' ') + "…";
+    }
 
     public bool IsLoggedIn => !string.IsNullOrWhiteSpace(Settings.Cookie);
 

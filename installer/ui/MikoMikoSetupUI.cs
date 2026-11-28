@@ -19,15 +19,15 @@ using WinForms = System.Windows.Forms;
 [assembly: AssemblyProduct("MikoMiko")]
 [assembly: AssemblyCompany("MikoMiko Contributors")]
 [assembly: AssemblyDescription("MikoMiko 安装与卸载程序")]
-[assembly: AssemblyVersion("0.1.70.0")]
-[assembly: AssemblyFileVersion("0.1.70.0")]
+[assembly: AssemblyVersion("0.1.71.0")]
+[assembly: AssemblyFileVersion("0.1.71.0")]
 
 namespace MikoMikoSetup
 {
     internal static class Program
     {
         private const string AppName = "MikoMiko";
-        private const string AppVersion = "0.1.70";
+        private const string AppVersion = "0.1.71";
         private const string AppExe = "MikoMiko.exe";
         private const string Publisher = "MikoMiko Contributors";
         private const string AppUrl = "https://github.com/Huiusto/MikoMiko";

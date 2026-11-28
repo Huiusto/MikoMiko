@@ -341,7 +341,7 @@ public sealed partial class ShellViewModel : ObservableObject
         AnimePage?.ShowToast($"已在软件内缓冲《{playback.Title}》");
     }
 
-    /// <summary>追番目录里的指定作品：优先解析樱花TV 直连流，失败时在软件内打开站点播放页。</summary>
+    /// <summary>追番目录里的指定作品：在软件内解析直连流并交给内置播放器；失败只提示，不打开任何外部网页。</summary>
     private async void OpenAnimeCatalogInApp(string url, string title)
     {
         if (string.IsNullOrWhiteSpace(url)) return;
@@ -377,11 +377,7 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        AnimePage?.Suspend();
-        IsAnimePageOpen = false;
-        AnimeSitePlayerView = new Views.AnimeSitePlayerView(url, url, title, "第 1 集", "樱花动漫",
-            CloseAnimeSitePlayer);
-        IsAnimeSitePlayerOpen = true;
+        AnimePage?.ShowToast($"播放失败：《{title}》暂时无法获取视频流，请换一个来源或线路");
     }
 
     public void Navigate(string key, bool pushHistory = true)
