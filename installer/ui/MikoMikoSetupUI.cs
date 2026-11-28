@@ -19,15 +19,15 @@ using WinForms = System.Windows.Forms;
 [assembly: AssemblyProduct("MikoMiko")]
 [assembly: AssemblyCompany("MikoMiko Contributors")]
 [assembly: AssemblyDescription("MikoMiko 安装与卸载程序")]
-[assembly: AssemblyVersion("0.1.58.0")]
-[assembly: AssemblyFileVersion("0.1.58.0")]
+[assembly: AssemblyVersion("0.1.59.0")]
+[assembly: AssemblyFileVersion("0.1.59.0")]
 
 namespace MikoMikoSetup
 {
     internal static class Program
     {
         private const string AppName = "MikoMiko";
-        private const string AppVersion = "0.1.58";
+        private const string AppVersion = "0.1.59";
         private const string AppExe = "MikoMiko.exe";
         private const string Publisher = "MikoMiko Contributors";
         private const string AppUrl = "https://github.com/Huiusto/MikoMiko";
@@ -679,18 +679,26 @@ namespace MikoMikoSetup
             catch { _target = Program.DefaultInstallDir(); }
             _requiredBytes = Program.RequiredSpaceBytes();
 
+            // 用整条同色路径框盖住底图里烘焙的旧输入框和「浏览...」，
+            // 再统一绘制路径文字与按钮文字，避免两层边框叠加和基线不一致。
             var boxBack = new Border
             {
-                Background = Brushes.White,
-                CornerRadius = new CornerRadius(18),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0xCF, 0xE4, 0xFF)),
-                BorderThickness = new Thickness(1),
-                Width = 650,
-                Height = 52
+                Background = new SolidColorBrush(Color.FromRgb(0xFB, 0xFD, 0xFF)),
+                CornerRadius = new CornerRadius(29),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0xBF, 0xD9, 0xFA)),
+                BorderThickness = new Thickness(1.4),
+                Width = 807,
+                Height = 57
             };
-            Canvas.SetLeft(boxBack, 99);
-            Canvas.SetTop(boxBack, 410);
+            Canvas.SetLeft(boxBack, 81);
+            Canvas.SetTop(boxBack, 406);
             _pageCanvas.Children.Add(boxBack);
+
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+            boxBack.Child = row;
 
             _pathBox = new TextBox
             {
@@ -700,45 +708,73 @@ namespace MikoMikoSetup
                 Foreground = new SolidColorBrush(Color.FromRgb(0x50, 0x5A, 0x6B)),
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(8, 0, 8, 0),
+                Padding = new Thickness(28, 0, 4, 0),
                 VerticalContentAlignment = VerticalAlignment.Center,
-                Width = 640,
-                Height = 46,
                 TextWrapping = TextWrapping.NoWrap
             };
-            Canvas.SetLeft(_pathBox, 103);
-            Canvas.SetTop(_pathBox, 413);
-            _pageCanvas.Children.Add(_pathBox);
+            Grid.SetColumn(_pathBox, 0);
+            row.Children.Add(_pathBox);
             _pathBox.TextChanged += delegate { UpdateSpaceInfo(); };
+
+            var divider = new Border
+            {
+                Width = 1,
+                Height = 29,
+                Background = new SolidColorBrush(Color.FromRgb(0xD7, 0xE7, 0xFB)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(divider, 1);
+            row.Children.Add(divider);
+
+            var browseZone = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0xF7, 0xFB, 0xFF)),
+                CornerRadius = new CornerRadius(0, 22, 22, 0)
+            };
+            Grid.SetColumn(browseZone, 2);
+            row.Children.Add(browseZone);
+
+            var browseText = new TextBlock
+            {
+                Text = "浏览...",
+                FontFamily = UiFont,
+                FontSize = 19,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x49, 0x98, 0xE8)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            browseZone.Child = browseText;
 
             var spaceBack = new Border
             {
-                Background = new SolidColorBrush(Color.FromRgb(0xFA, 0xFB, 0xFE)),
-                Width = 540,
-                Height = 24
+                Background = new SolidColorBrush(Color.FromRgb(0xF8, 0xFA, 0xFE)),
+                Width = 560,
+                Height = 34
             };
             Canvas.SetLeft(spaceBack, 108);
-            Canvas.SetTop(spaceBack, 467);
+            Canvas.SetTop(spaceBack, 462);
             _pageCanvas.Children.Add(spaceBack);
 
             _spaceText = new TextBlock
             {
                 FontFamily = UiFont,
-                FontSize = 10.5,
+                FontSize = 11.5,
                 Foreground = new SolidColorBrush(Color.FromRgb(0x6B, 0x7A, 0x90)),
-                Width = 520,
+                Width = 540,
                 Height = 24,
                 TextAlignment = TextAlignment.Left,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            Canvas.SetLeft(_spaceText, 116);
+            Canvas.SetLeft(_spaceText, 128);
             Canvas.SetTop(_spaceText, 470);
             _pageCanvas.Children.Add(_spaceText);
             UpdateSpaceInfo();
 
             AddHotspot(_pageCanvas, 161, 507, 214, 55, ShowWelcome);
             AddHotspot(_pageCanvas, 558, 507, 218, 55, delegate { StartInstall(); });
-            AddHotspot(_pageCanvas, 748, 409, 130, 50, BrowseDirectory);
+            AddHotspot(_pageCanvas, 767, 406, 120, 57, BrowseDirectory);
         }
 
         private void UpdateSpaceInfo()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -281,7 +281,7 @@ public static class GameInstallApi
         try
         {
             using var req = new HttpRequestMessage(HttpMethod.Get, url);
-            req.Headers.TryAddWithoutValidation("User-Agent", "MikoMiko/0.1.58");
+            req.Headers.TryAddWithoutValidation("User-Agent", "MikoMiko/0.1.59");
             using var resp = await Http.SendAsync(req).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode) return null;
             return JsonDocument.Parse(await resp.Content.ReadAsStringAsync().ConfigureAwait(false));
