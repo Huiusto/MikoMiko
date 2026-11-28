@@ -39,12 +39,16 @@ public partial class GachaView : UserControl
         public string[] Types = Array.Empty<string>();
         public string[] PoolNames = Array.Empty<string>();
         public int TopRank = 5;
+        public int PityTarget = 90;
+        public string PityNote = "";
     }
 
     private sealed class PoolStat
     {
         public string Name = "";
         public int TopRank = 5;
+        public int PityTarget = 90;
+        public string PityNote = "";
         public int Total;
         public int TopCount;
         public int SecondCount;
@@ -55,7 +59,7 @@ public partial class GachaView : UserControl
         public DateTime Latest;
         public List<(string Name, string ItemType, int Pity, DateTime Time)> TopRows = new();
         public List<(string Name, string ItemType, int Pity, DateTime Time)> SecondRows = new();
-        public double Average => TopCount > 0 ? Total / (double)TopCount : 0;
+        public double Average => TopRows.Count > 0 ? TopRows.Average(r => r.Pity) : 0;
         public double TopRate => Total > 0 ? TopCount * 100d / Total : 0;
         public double SecondRate => Total > 0 ? SecondCount * 100d / Total : 0;
         public double ThirdRate => Total > 0 ? ThirdCount * 100d / Total : 0;
@@ -73,38 +77,44 @@ public partial class GachaView : UserControl
     {
         ["genshin"] = new[]
         {
-            new PoolDef { Name = "常驻祈愿", Types = new[] { "200" }, PoolNames = new[] { "常驻" } },
-            new PoolDef { Name = "角色活动祈愿", Types = new[] { "301", "400" }, PoolNames = new[] { "角色活动", "角色祈愿" } },
-            new PoolDef { Name = "武器活动祈愿", Types = new[] { "302" }, PoolNames = new[] { "武器活动", "武器祈愿" } },
-            new PoolDef { Name = "集录祈愿", Types = new[] { "500" }, PoolNames = new[] { "集录" } },
+            new PoolDef { Name = "常驻祈愿", Types = new[] { "200" }, PoolNames = new[] { "常驻" }, PityTarget = 90 },
+            new PoolDef { Name = "角色活动祈愿", Types = new[] { "301", "400" }, PoolNames = new[] { "角色活动", "角色祈愿" }, PityTarget = 90 },
+            new PoolDef { Name = "武器活动祈愿", Types = new[] { "302" }, PoolNames = new[] { "武器活动", "武器祈愿" }, PityTarget = 80 },
+            new PoolDef { Name = "集录祈愿", Types = new[] { "500" }, PoolNames = new[] { "集录" }, PityTarget = 90 },
         },
         ["genshin_beyond"] = new[]
         {
             // 千星奇域常驻颂愿本身没有 5★，这一列按 4★/3★/2★ 显示；
             // 活动颂愿有 5★，保持 5★/4★/3★。
-            new PoolDef { Name = "常驻颂愿", Types = new[] { "1000" }, PoolNames = new[] { "常驻颂愿" }, TopRank = 4 },
-            new PoolDef { Name = "活动颂愿", Types = new[] { "2000" }, PoolNames = new[] { "活动颂愿" } },
+            new PoolDef { Name = "常驻颂愿", Types = new[] { "1000" }, PoolNames = new[] { "常驻颂愿" }, TopRank = 4, PityTarget = 90 },
+            new PoolDef { Name = "活动颂愿", Types = new[] { "2000" }, PoolNames = new[] { "活动颂愿" }, PityTarget = 90 },
         },
         ["starrail"] = new[]
         {
-            new PoolDef { Name = "常驻跃迁", Types = new[] { "1" }, PoolNames = new[] { "常驻" } },
-            new PoolDef { Name = "角色活动跃迁", Types = new[] { "11" }, PoolNames = new[] { "角色" } },
-            new PoolDef { Name = "光锥活动跃迁", Types = new[] { "12" }, PoolNames = new[] { "光锥" } },
-            new PoolDef { Name = "联动跃迁", Types = new[] { "21" }, PoolNames = new[] { "联动", "合作" } },
+            new PoolDef { Name = "群星跃迁", Types = new[] { "1" }, PoolNames = new[] { "常驻" }, PityTarget = 90 },
+            new PoolDef { Name = "角色活动跃迁", Types = new[] { "11" }, PoolNames = new[] { "角色" }, PityTarget = 90 },
+            new PoolDef { Name = "光锥活动跃迁", Types = new[] { "12" }, PoolNames = new[] { "光锥" }, PityTarget = 80 },
+            new PoolDef { Name = "联动角色跃迁", Types = new[] { "21" }, PoolNames = new[] { "联动角色", "合作角色" }, PityTarget = 90 },
+            new PoolDef { Name = "联动光锥跃迁", Types = new[] { "22" }, PoolNames = new[] { "联动光锥", "合作光锥" }, PityTarget = 80 },
+            new PoolDef { Name = "新手跃迁", Types = new[] { "2" }, PoolNames = new[] { "新手" }, PityTarget = 50 },
         },
         ["zzz"] = new[]
         {
-            new PoolDef { Name = "常驻频段", Types = new[] { "1" }, PoolNames = new[] { "常驻" } },
-            new PoolDef { Name = "独家频段", Types = new[] { "2", "102" }, PoolNames = new[] { "独家", "角色" } },
-            new PoolDef { Name = "音擎频段", Types = new[] { "3", "103" }, PoolNames = new[] { "音擎", "武器" } },
-            new PoolDef { Name = "邦布频段", Types = new[] { "5" }, PoolNames = new[] { "邦布" } },
+            new PoolDef { Name = "常驻频段", Types = new[] { "1" }, PoolNames = new[] { "常驻" }, PityTarget = 90 },
+            new PoolDef { Name = "独家频段", Types = new[] { "2", "102" }, PoolNames = new[] { "独家", "角色" }, PityTarget = 90 },
+            new PoolDef { Name = "音擎频段", Types = new[] { "3", "103" }, PoolNames = new[] { "音擎", "武器" }, PityTarget = 80 },
+            new PoolDef { Name = "邦布频段", Types = new[] { "5" }, PoolNames = new[] { "邦布" }, PityTarget = 80 },
         },
         ["bh3"] = new[]
         {
-            new PoolDef { Name = "家园补给", Types = new[] { "1" }, PoolNames = new[] { "家园" } },
-            new PoolDef { Name = "精准补给", Types = new[] { "2" }, PoolNames = new[] { "精准" } },
-            new PoolDef { Name = "扩充补给", Types = new[] { "3" }, PoolNames = new[] { "扩充" } },
-            new PoolDef { Name = "活动补给", Types = new[] { "4" }, PoolNames = new[] { "活动" } },
+            new PoolDef { Name = "家园补给", Types = new[] { "1" }, PoolNames = new[] { "家园" }, PityTarget = 100 },
+            new PoolDef { Name = "扩充角色补给", Types = new[] { "3" }, PoolNames = new[] { "扩充角色", "扩充" }, PityTarget = 100 },
+            new PoolDef { Name = "精准补给", Types = new[] { "2" }, PoolNames = new[] { "精准" }, PityTarget = 50, PityNote = "50 抽 UP 保护 · 200 抽毕业（A/B 独立）" },
+            new PoolDef { Name = "扩充装备补给", Types = new[] { "8" }, PoolNames = new[] { "扩充装备" }, PityTarget = 50, PityNote = "50 抽 UP 保护 · 200 抽毕业（不跨期）" },
+            new PoolDef { Name = "装备补给", Types = new[] { "4" }, PoolNames = new[] { "装备", "神之键" }, PityTarget = 60, PityNote = "60 抽必出 UP 武器" },
+            new PoolDef { Name = "人偶补给", Types = new[] { "5" }, PoolNames = new[] { "人偶" }, PityTarget = 100, PityNote = "100 抽必出初始 S 人偶" },
+            new PoolDef { Name = "进阶补给", Types = new[] { "6" }, PoolNames = new[] { "进阶" }, PityTarget = 100, PityNote = "100 抽保底当期 S" },
+            new PoolDef { Name = "活动补给", Types = new[] { "7" }, PoolNames = new[] { "活动", "庆典" }, PityTarget = 100, PityNote = "100 抽必出 S 级" },
         },
     };
 
@@ -252,13 +262,13 @@ public partial class GachaView : UserControl
         {
             var records = gameRecords.Where(r => MatchPool(r, def)).ToList();
             foreach (var record in records) matched.Add(record);
-            var stat = BuildStat(def.Name, records, def.TopRank);
+            var stat = BuildStat(def.Name, records, def.TopRank, def.PityTarget, def.PityNote);
             stats.Add((def, stat));
         }
 
         var leftovers = gameRecords.Where(r => !matched.Contains(r)).ToList();
         if (leftovers.Count > 0)
-            stats.Add((new PoolDef { Name = "其他祈愿" }, BuildStat("其他祈愿", leftovers, 5)));
+            stats.Add((new PoolDef { Name = "其他祈愿" }, BuildStat("其他祈愿", leftovers, 5, 90, "")));
 
         var totalPulls = stats.Sum(p => p.Stat.Total);
         var topPulls = stats.Where(p => p.Stat.TopRank == 5).Sum(p => p.Stat.TopCount);
@@ -314,7 +324,7 @@ public partial class GachaView : UserControl
         var topLabel = $"{TopRank}★";
         var secondLabel = $"{TopRank - 1}★";
         var thirdLabel = $"{TopRank - 2}★";
-        var topAverage = topPulls > 0 ? totalPulls / (double)topPulls : 0;
+        var topAverage = stats.SelectMany(p => p.Stat.TopRows).Select(r => r.Pity).DefaultIfEmpty(0).Average();
         var limitedTop = stats
             .Where(p => p.Stat.TopRank == 5 && (
                         p.Stat.Name.Contains("活动") || p.Stat.Name.Contains("限定") ||
@@ -401,7 +411,8 @@ public partial class GachaView : UserControl
             Margin = new Thickness(0, 2, 0, 5),
         });
         var tops = stats.SelectMany(p => p.Stat.TopRows).Select(r => r.Pity).ToList();
-        ChartPanel.Children.Add(BuildPityStrip(tops, PityTarget, gold));
+        var chartTarget = stats.Count > 0 ? stats.Max(p => p.Stat.PityTarget) : 90;
+        ChartPanel.Children.Add(BuildPityStrip(tops, chartTarget, gold));
 
         ChartPanel.Children.Add(new TextBlock
         {
@@ -494,9 +505,15 @@ public partial class GachaView : UserControl
         return false;
     }
 
-    private static PoolStat BuildStat(string name, List<GachaRecord> records, int topRank)
+    private static PoolStat BuildStat(string name, List<GachaRecord> records, int topRank, int pityTarget, string pityNote)
     {
-        var stat = new PoolStat { Name = name, TopRank = topRank };
+        var stat = new PoolStat
+        {
+            Name = name,
+            TopRank = topRank,
+            PityTarget = pityTarget,
+            PityNote = pityNote,
+        };
         var ordered = records
             .OrderBy(r => r.Uid, StringComparer.Ordinal)
             .ThenBy(r => ParseTime(r.Time))
@@ -634,15 +651,27 @@ public partial class GachaView : UserControl
         var period = stat.Earliest > DateTime.MinValue
             ? $"{stat.Earliest:yyyy/MM/dd HH:mm} - {stat.Latest:yyyy/MM/dd HH:mm}"
             : "— —";
-        var periodText = new TextBlock
+        var meta = new StackPanel { Margin = new Thickness(0, 5, 0, 0) };
+        meta.Children.Add(new TextBlock
         {
             Text = period,
             FontSize = 10,
             Foreground = Theme("Brush.TextTertiary"),
-            Margin = new Thickness(0, 5, 0, 0),
-        };
-        Grid.SetRow(periodText, 1);
-        body.Children.Add(periodText);
+        });
+        var pityLabel = stat.PityNote.Length > 0
+            ? $"{stat.PityTarget} 抽 · {stat.PityNote}"
+            : $"{stat.PityTarget} 抽保底";
+        meta.Children.Add(new TextBlock
+        {
+            Text = pityLabel,
+            FontSize = 9,
+            Foreground = Theme("Brush.TextTertiary"),
+            Margin = new Thickness(0, 2, 0, 0),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            ToolTip = pityLabel,
+        });
+        Grid.SetRow(meta, 1);
+        body.Children.Add(meta);
 
         // 四行统计
         var statsPanel = new StackPanel { Margin = new Thickness(0, 10, 0, 9) };
@@ -737,7 +766,7 @@ public partial class GachaView : UserControl
         {
             var limited = topSelected && IsLimitedPool(_game, stat.Name);
             foreach (var row in rows.Take(120))
-                list.Children.Add(BuildRecordRow(row, topSelected, limited));
+                list.Children.Add(BuildRecordRow(row, topSelected, limited, stat.PityTarget, stat.PityNote));
         }
         scroll.Content = list;
         Grid.SetRow(scroll, 4);
@@ -746,10 +775,11 @@ public partial class GachaView : UserControl
         return card;
     }
 
-    private Border BuildRecordRow((string Name, string ItemType, int Pity, DateTime Time) row, bool topSelected, bool limited)
+    private Border BuildRecordRow((string Name, string ItemType, int Pity, DateTime Time) row, bool topSelected, bool limited, int pityTarget, string pityNote)
     {
         var rankColor = topSelected ? Color.FromRgb(0xE0, 0xB1, 0x5C) : Color.FromRgb(0xA9, 0x82, 0xD6);
-        var pityColor = PityColor(row.Pity, topSelected ? PityTarget : 10, topSelected);
+        var currentTarget = topSelected ? pityTarget : 10;
+        var pityColor = PityColor(row.Pity, currentTarget, topSelected);
         var wrap = new StackPanel { Margin = new Thickness(0, 0, 0, 2) };
 
         // 平铺记录行：高 32，行底 rank 软色，无独立卡片
@@ -834,29 +864,30 @@ public partial class GachaView : UserControl
 
         var value = new TextBlock
         {
-            Text = row.Pity.ToString(),
-            FontSize = 12,
+            Text = $"{row.Pity}/{currentTarget}",
+            FontSize = 11.5,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(pityColor),
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
             Margin = new Thickness(6, 0, 0, 0),
+            ToolTip = pityNote,
         };
         Grid.SetColumn(value, 3);
         line.Children.Add(value);
 
         rowBorder.Child = line;
         wrap.Children.Add(rowBorder);
-        wrap.Children.Add(BuildPityBar(row.Pity, topSelected ? PityTarget : 10, pityColor));
+        wrap.Children.Add(BuildPityBar(row.Pity, currentTarget, pityColor));
         return new Border { Child = wrap, Background = Brushes.Transparent };
     }
 
     private static bool IsLimitedPool(string game, string poolName) => game switch
     {
         "genshin" => poolName is "角色活动祈愿" or "武器活动祈愿",
-        "starrail" => poolName is "角色活动跃迁" or "光锥活动跃迁" or "角色联动跃迁" or "联动跃迁",
+        "starrail" => poolName is "角色活动跃迁" or "光锥活动跃迁" or "联动角色跃迁" or "联动光锥跃迁",
         "zzz" => poolName is "独家频段" or "音擎频段",
-        "bh3" => poolName is "精准补给" or "扩充补给" or "活动补给",
+        "bh3" => poolName is "精准补给" or "扩充角色补给" or "扩充装备补给" or "活动补给" or "装备补给" or "进阶补给" or "人偶补给",
         _ => false,
     };
 
@@ -1260,8 +1291,8 @@ public partial class GachaView : UserControl
         sb.AppendLine($"{label} 抽卡记录 · {(_uid == "" ? "全部 UID" : _uid)} · {filtered.Count} 条");
         foreach (var def in PoolDefs[_game])
         {
-            var stat = BuildStat(def.Name, filtered.Where(r => MatchPool(r, def)).ToList(), TopRank);
-            sb.AppendLine($"{def.Name}：{stat.Total} 抽，{TopRank}★ {stat.TopCount} 个，平均 {stat.Average:0.0} 抽，当前保底 {stat.Pity}/{PityTarget}");
+            var stat = BuildStat(def.Name, filtered.Where(r => MatchPool(r, def)).ToList(), def.TopRank, def.PityTarget, def.PityNote);
+            sb.AppendLine($"{def.Name}：{stat.Total} 抽，{def.TopRank}★ {stat.TopCount} 个，平均 {stat.Average:0.0} 抽，当前保底 {stat.Pity}/{stat.PityTarget}");
         }
         try
         {
