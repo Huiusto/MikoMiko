@@ -153,9 +153,9 @@ public partial class App : Application
             {
                 previewTimer.Stop();
                 var demo = new UpdateService.UpdateInfo(
-                    new Version("0.1.61"), "v0.1.61", "MikoMiko 0.1.61",
+                    new Version("0.1.62"), "v0.1.62", "MikoMiko 0.1.62",
                     "· 安装器：修复选择安装路径页路径输入框与「浏览」按钮垂直错位\n· 安装器：禁止直接安装到磁盘根目录",
-                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.61.exe", "");
+                    "https://github.com/Huiusto/MikoMiko/releases", "MikoMiko-Setup-0.1.62.exe", "");
                 new Views.UpdateWindow(demo, settings).Show();
             };
             previewTimer.Start();

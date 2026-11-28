@@ -4,7 +4,7 @@ namespace MikoMiko.Services;
 public static class AppInfo
 {
     public const string Name = "MikoMiko";
-    public const string Version = "0.1.61";
+    public const string Version = "0.1.62";
     public const string RepositoryUrl = "https://github.com/Huiusto/MikoMiko";
     public const string ReleasesApi = "https://api.github.com/repos/Huiusto/MikoMiko/releases/latest";
     public const string License = "MIT License";

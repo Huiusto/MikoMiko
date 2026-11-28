@@ -55,7 +55,7 @@ public static class GachaFetchService
         ["zzz"] = new("zzz", "nap_cn", "ZenlessZoneZero_Data", "ZenlessZoneZero_Data",
             "https://webstatic.mihoyo.com/nap/event/e20230424gacha",
             "https://webstatic.mihoyo.com/nap/event/e20230424gacha",
-            "https://public-operation-nap.mihoyo.com/common/gacha_record/api/getGachaLog",
+            "https://public-operation-common.mihoyo.com/common/gacha_record/api/getGachaLog",
             new[]
             {
                 new PoolDef("2", "独家频段", "102"),
@@ -104,18 +104,58 @@ public static class GachaFetchService
     public static string? FindCachedUrl(string gameKey)
     {
         if (!Games.TryGetValue(gameKey, out var game)) return null;
-        var root = MikoNestBridge.GetGameDir(gameKey);
-        if (string.IsNullOrWhiteSpace(root)) return null;
+        var files = EnumerateGameCacheFiles(game);
+        string? pageUrl = null;
+        foreach (var file in files.OrderByDescending(File.GetLastWriteTimeUtc))
+        {
+            var url = ReadUrlFromCache(file, game.CachePrefix, game.CacheAltPrefix);
+            if (string.IsNullOrWhiteSpace(url)) continue;
+            // 绝区零等新版页面会把完整 getGachaLog 请求缓存下来；这种 URL 自带正确域名和参数，
+            // 比把抽卡页前缀硬换成 API 域名可靠，优先直接使用。
+            if (IsDirectApiUrl(url)) return url;
+            pageUrl ??= url;
+        }
+        return pageUrl;
+    }
 
-        var dirs = new List<string> { game.DirHint, game.AltDirHint }.Distinct().ToList();
-        foreach (var dirName in dirs)
+    /// <summary>
+    /// 找出最近一次在游戏内打开抽卡记录的游戏。用于抽卡页首次打开时跟随用户刚操作的游戏，
+    /// 避免默认永远停在原神，把绝区零/星铁的 authkey 误读成原神记录。
+    /// </summary>
+    public static string? FindMostRecentGameKey()
+    {
+        string? bestKey = null;
+        var bestTime = DateTime.MinValue;
+        foreach (var pair in Games)
+        {
+            var files = EnumerateGameCacheFiles(pair.Value);
+            foreach (var file in files.OrderByDescending(File.GetLastWriteTimeUtc).Take(4))
+            {
+                var time = File.GetLastWriteTimeUtc(file);
+                if (time <= bestTime) break;
+                var url = ReadUrlFromCache(file, pair.Value.CachePrefix, pair.Value.CacheAltPrefix);
+                if (string.IsNullOrWhiteSpace(url)) continue;
+                bestKey = pair.Key;
+                bestTime = time;
+                break;
+            }
+        }
+        return bestKey;
+    }
+
+    private static List<string> EnumerateGameCacheFiles(GameDef game)
+    {
+        var files = new List<string>();
+        var root = MikoNestBridge.GetGameDir(game.Key);
+        if (string.IsNullOrWhiteSpace(root)) return files;
+
+        foreach (var dirName in new[] { game.DirHint, game.AltDirHint }.Distinct())
         {
             var dataDir = Path.Combine(root, dirName);
             if (!Directory.Exists(dataDir)) continue;
             var cacheRoot = Path.Combine(dataDir, "webCaches");
             if (!Directory.Exists(cacheRoot)) continue;
 
-            var files = new List<string>();
             var direct = Path.Combine(cacheRoot, "Cache", "Cache_Data");
             if (Directory.Exists(direct)) files.AddRange(EnumerateCacheFiles(direct));
             foreach (var versionDir in Directory.EnumerateDirectories(cacheRoot))
@@ -123,12 +163,32 @@ public static class GachaFetchService
                 var versionCache = Path.Combine(versionDir, "Cache", "Cache_Data");
                 if (Directory.Exists(versionCache)) files.AddRange(EnumerateCacheFiles(versionCache));
             }
+        }
+        return files;
+    }
 
-            foreach (var file in files.OrderByDescending(File.GetLastWriteTimeUtc))
+    private static bool IsDirectApiUrl(string url)
+        => url.Contains("getGachaLog", StringComparison.OrdinalIgnoreCase)
+           || url.Contains("getLdGachaLog", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>在缓存块里寻找完整的 getGachaLog 请求 URL（含 authkey）。</summary>
+    private static string? FindDirectApiUrl(string text)
+    {
+        var search = text.Length - 1;
+        while (search > 0)
+        {
+            var index = text.LastIndexOf("getGachaLog", search, StringComparison.OrdinalIgnoreCase);
+            if (index < 0) break;
+            var start = text.LastIndexOf("https://", index, StringComparison.OrdinalIgnoreCase);
+            if (start >= 0 && index - start < 512)
             {
-                var url = ReadUrlFromCache(file, game.CachePrefix, game.CacheAltPrefix);
-                if (!string.IsNullOrWhiteSpace(url)) return url;
+                var end = text.IndexOfAny(new[] { '\0', '"', '\'', '<', '>', '\r', '\n', ' ', '\t' }, index);
+                if (end < 0) end = text.Length;
+                var url = text[start..end].Trim();
+                if (url.Contains('?') && url.Contains("authkey", StringComparison.OrdinalIgnoreCase))
+                    return url;
             }
+            search = index - 1;
         }
         return null;
     }
@@ -157,6 +217,11 @@ public static class GachaFetchService
                     FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(stream);
                 var text = reader.ReadToEnd();
+
+                // 新版抽卡页（绝区零等）会直接缓存 getGachaLog 请求，优先取它，
+                // 这样域名、authkey 和页面初始化参数都保持官方原样。
+                var directApi = FindDirectApiUrl(text);
+                if (!string.IsNullOrWhiteSpace(directApi)) return directApi;
 
                 // 同一个缓存块里既有真正的抽卡页 URL，也有大量 gacha-df01aea2/xxx.js|png 静态资源。
                 // 旧实现只取最后一个 prefix 命中，经常命中图片后直接判空；这里向前遍历所有命中，
@@ -200,13 +265,21 @@ public static class GachaFetchService
         return null;
     }
 
-    /// <summary>把缓存的抽卡页面 URL 换成官方 API 地址。</summary>
+    /// <summary>把缓存的抽卡页面 URL 换成官方 API 地址；缓存本身已是 API 请求时原样保留。</summary>
     public static string ToApiUrl(string url, string gameKey)
     {
         if (string.IsNullOrWhiteSpace(url) || !Games.TryGetValue(gameKey, out var game)) return url;
+        var hash = url.IndexOf('#');
+        if (hash >= 0) url = url[..hash];
         var q = url.IndexOf('?');
         if (q < 0) return url;
-        var query = url[q..].Replace("#/log", "", StringComparison.OrdinalIgnoreCase);
+        var query = url[q..];
+
+        if (IsDirectApiUrl(url))
+            return query.Contains("game_biz=", StringComparison.OrdinalIgnoreCase)
+                ? url
+                : url + "&game_biz=" + game.Biz;
+
         var result = game.ApiPrefix + query;
         if (!query.Contains("game_biz=", StringComparison.OrdinalIgnoreCase))
             result += "&game_biz=" + game.Biz;
@@ -351,6 +424,38 @@ public static class GachaFetchService
         return (ordered, ordered.Count > 0 ? $"已获取 {ordered.Count} 条记录" : error.Length > 0 ? error : "该账号暂无抽卡记录");
     }
 
+    /// <summary>
+    /// 构造单个卡池的分页请求。缓存里原样保存的 getGachaLog URL 可能带页面初始化参数
+    /// （如 size=5、init_log_gacha_type），必须清掉分页/卡池旧参数再追加，否则会被
+    /// 官方接口按缓存里的旧 size 截断，永远只能拿到前几条。
+    /// </summary>
+    private static string BuildPoolUrl(string apiUrl, string gachaType, int page, string endId)
+    {
+        var hash = apiUrl.IndexOf('#');
+        if (hash >= 0) apiUrl = apiUrl[..hash];
+        var q = apiUrl.IndexOf('?');
+        var head = q < 0 ? apiUrl : apiUrl[..q];
+        var parts = q < 0
+            ? new List<string>()
+            : apiUrl[(q + 1)..].Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Where(p => !IsPagingParam(p))
+                .ToList();
+        parts.Add("gacha_type=" + gachaType);
+        parts.Add("page=" + page);
+        parts.Add("size=20");
+        if (endId.Length > 0) parts.Add("end_id=" + Uri.EscapeDataString(endId));
+        return head + "?" + string.Join("&", parts);
+    }
+
+    private static bool IsPagingParam(string pair)
+    {
+        var key = pair.Split('=', 2)[0];
+        return key.Equals("gacha_type", StringComparison.OrdinalIgnoreCase)
+               || key.Equals("page", StringComparison.OrdinalIgnoreCase)
+               || key.Equals("size", StringComparison.OrdinalIgnoreCase)
+               || key.Equals("end_id", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static async Task<(List<GachaRecord> Records, string Error)> FetchPoolAsync(string gameKey, string uid,
         string apiUrl, string gachaType, CancellationToken ct)
     {
@@ -365,9 +470,7 @@ public static class GachaFetchService
         for (var guard = 0; guard < 600; guard++)
         {
             ct.ThrowIfCancellationRequested();
-            var url = endpoint;
-            url += (url.Contains('?') ? "&" : "?") + $"gacha_type={gachaType}&page={page}&size=20&lang=zh-cn";
-            if (endId.Length > 0) url += "&end_id=" + Uri.EscapeDataString(endId);
+            var url = BuildPoolUrl(endpoint, gachaType, page, endId);
 
             var api = await MiHoYoHttp.GetPlainAsync(url, null, BbsUa);
             if (api.Retcode == -110)

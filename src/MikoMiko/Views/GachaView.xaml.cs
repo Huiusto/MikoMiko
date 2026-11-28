@@ -38,11 +38,13 @@ public partial class GachaView : UserControl
         public required string Name;
         public string[] Types = Array.Empty<string>();
         public string[] PoolNames = Array.Empty<string>();
+        public int TopRank = 5;
     }
 
     private sealed class PoolStat
     {
         public string Name = "";
+        public int TopRank = 5;
         public int Total;
         public int TopCount;
         public int SecondCount;
@@ -78,7 +80,9 @@ public partial class GachaView : UserControl
         },
         ["genshin_beyond"] = new[]
         {
-            new PoolDef { Name = "常驻颂愿", Types = new[] { "1000" }, PoolNames = new[] { "常驻颂愿" } },
+            // 千星奇域常驻颂愿本身没有 5★，这一列按 4★/3★/2★ 显示；
+            // 活动颂愿有 5★，保持 5★/4★/3★。
+            new PoolDef { Name = "常驻颂愿", Types = new[] { "1000" }, PoolNames = new[] { "常驻颂愿" }, TopRank = 4 },
             new PoolDef { Name = "活动颂愿", Types = new[] { "2000" }, PoolNames = new[] { "活动颂愿" } },
         },
         ["starrail"] = new[]
@@ -113,6 +117,7 @@ public partial class GachaView : UserControl
     private bool _showIcon = true;
     private bool _suppressGame;
     private bool _suppressUid;
+    private bool _gameInitialized;
     private DispatcherTimer? _toastTimer;
     private int _poolCount;
     private readonly List<Border> _poolCards = new();
@@ -121,7 +126,9 @@ public partial class GachaView : UserControl
     {
         InitializeComponent();
         ComboGame.ItemsSource = Games;
+        _suppressGame = true;
         ComboGame.SelectedIndex = 0;
+        _suppressGame = false;
         UpdateGameIcon(Games[0]);
         PoolScroll.SizeChanged += (_, _) => ResizePoolColumns();
         Loaded += (_, _) => ReloadData();
@@ -139,28 +146,25 @@ public partial class GachaView : UserControl
         MikoNestBridge.Reload();
         _records = MikoNestBridge.LoadGachaRecords().ToList();
 
-        if (_game != "genshin_beyond")
+        if (!_gameInitialized)
         {
-            var hasCurrent = _records.Any(r => r.GameKey == _game);
-            if (!hasCurrent)
+            _gameInitialized = true;
+            // 用户刚在哪个游戏里打开过抽卡历史，抽卡页就默认停在哪个游戏。
+            // 旧实现无条件默认原神，并在本地没有当前游戏记录时切回原神，
+            // 结果绝区零的更新请求实际发给了原神。
+            var recent = GachaFetchService.FindMostRecentGameKey();
+            if (!string.IsNullOrWhiteSpace(recent))
             {
-                var firstNormal = Games.FirstOrDefault(g => _records.Any(r => r.GameKey == g.Key));
-                if (firstNormal is not null)
-                {
-                    _game = firstNormal.Key;
-                    _beyond = false;
-                }
-                else if (_records.Any(r => r.GameKey == "genshin_beyond"))
-                {
-                    _game = "genshin_beyond";
-                    _beyond = true;
-                }
+                _game = recent;
+                _beyond = false;
             }
         }
 
         _suppressGame = true;
-        ComboGame.SelectedItem = Games.FirstOrDefault(g => g.Key == (CurrentBaseGame));
+        var gameChoice = Games.FirstOrDefault(g => g.Key == CurrentBaseGame);
+        ComboGame.SelectedItem = gameChoice;
         _suppressGame = false;
+        if (gameChoice is not null) UpdateGameIcon(gameChoice);
 
         UpdateBeyondBadge();
         RefreshUids();
@@ -248,16 +252,16 @@ public partial class GachaView : UserControl
         {
             var records = gameRecords.Where(r => MatchPool(r, def)).ToList();
             foreach (var record in records) matched.Add(record);
-            var stat = BuildStat(def.Name, records, TopRank);
+            var stat = BuildStat(def.Name, records, def.TopRank);
             stats.Add((def, stat));
         }
 
         var leftovers = gameRecords.Where(r => !matched.Contains(r)).ToList();
         if (leftovers.Count > 0)
-            stats.Add((new PoolDef { Name = "其他祈愿" }, BuildStat("其他祈愿", leftovers, TopRank)));
+            stats.Add((new PoolDef { Name = "其他祈愿" }, BuildStat("其他祈愿", leftovers, 5)));
 
         var totalPulls = stats.Sum(p => p.Stat.Total);
-        var topPulls = stats.Sum(p => p.Stat.TopCount);
+        var topPulls = stats.Where(p => p.Stat.TopRank == 5).Sum(p => p.Stat.TopCount);
         BuildSummary(stats, totalPulls, topPulls);
         BuildChart(stats);
 
@@ -312,13 +316,17 @@ public partial class GachaView : UserControl
         var thirdLabel = $"{TopRank - 2}★";
         var topAverage = topPulls > 0 ? totalPulls / (double)topPulls : 0;
         var limitedTop = stats
-            .Where(p => p.Stat.Name.Contains("活动") || p.Stat.Name.Contains("限定") ||
+            .Where(p => p.Stat.TopRank == 5 && (
+                        p.Stat.Name.Contains("活动") || p.Stat.Name.Contains("限定") ||
                         p.Stat.Name.Contains("独家") || p.Stat.Name.Contains("角色") ||
                         p.Stat.Name.Contains("武器") || p.Stat.Name.Contains("联动") ||
-                        p.Stat.Name.Contains("扩充") || p.Stat.Name.Contains("精准"))
+                        p.Stat.Name.Contains("扩充") || p.Stat.Name.Contains("精准") ||
+                        p.Stat.Name.Contains("颂愿")))
             .Sum(p => p.Stat.TopCount);
-        var secondTotal = stats.Sum(p => p.Stat.SecondCount);
-        var thirdTotal = stats.Sum(p => p.Stat.ThirdCount);
+        // 常驻颂愿按 4★ 上限统计，它的 TopCount 是 4★，需要归到 4★ 行；
+        // 其余卡池仍按 5★/4★/3★ 三档。
+        var secondTotal = stats.Sum(p => p.Stat.TopRank == 5 ? p.Stat.SecondCount : p.Stat.TopCount);
+        var thirdTotal = stats.Sum(p => p.Stat.TopRank == 5 ? p.Stat.ThirdCount : p.Stat.SecondCount);
 
         AddSummaryRow($"{topLabel} 平均", topPulls > 0 ? $"{topAverage:0.0}" : "—", "抽", "#E4BB72");
         AddSummaryRow($"{topLabel} 统计", topPulls.ToString(), $"{Rate(topPulls, totalPulls)}", "#E4BB72");
@@ -466,7 +474,10 @@ public partial class GachaView : UserControl
         return grid;
     }
 
-    private int TopRank => _game is "genshin" or "starrail" ? 5 : 4;
+    // 四个游戏的官方记录都已统一成 5★/4★/3★ 口径：
+    // 绝区零接口原始 rank_type 比界面星级小 1，拉取时已 +1；崩坏3、千星奇域活动颂愿本身也有 5★。
+    // 旧实现按游戏把上限写成 4，导致 5★→4★、4★→3★、3★→2★ 全部降了一档。
+    private int TopRank => 5;
 
     private int PityTarget => _game switch
     {
@@ -486,7 +497,7 @@ public partial class GachaView : UserControl
 
     private static PoolStat BuildStat(string name, List<GachaRecord> records, int topRank)
     {
-        var stat = new PoolStat { Name = name };
+        var stat = new PoolStat { Name = name, TopRank = topRank };
         var ordered = records
             .OrderBy(r => r.Uid, StringComparer.Ordinal)
             .ThenBy(r => ParseTime(r.Time))
@@ -542,9 +553,9 @@ public partial class GachaView : UserControl
         var topColor = Color.FromRgb(0xE0, 0xB1, 0x5C);
         var secondColor = Color.FromRgb(0xA9, 0x82, 0xD6);
         var thirdColor = Color.FromRgb(0x86, 0x9C, 0xB3);
-        var topLabel = $"{TopRank}★";
-        var secondLabel = $"{TopRank - 1}★";
-        var thirdLabel = $"{TopRank - 2}★";
+        var topLabel = $"{stat.TopRank}★";
+        var secondLabel = $"{stat.TopRank - 1}★";
+        var thirdLabel = $"{stat.TopRank - 2}★";
 
         var card = new Border
         {
